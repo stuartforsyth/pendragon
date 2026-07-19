@@ -38,8 +38,11 @@ notes or Discord.
     trust, but merciful at heart").
 - **Click the name** to copy just the name to the clipboard.
 - **Copy Statblock** to copy the entire NPC as text for your GM notes/Discord.
-- **Session roster** — keep a list of NPCs generated this session, then export
-  the whole roster to the clipboard or **save it to a Markdown file**.
+- **Session roster with GM notes** — keep a list of NPCs; add free-text **GM
+  notes** to each (plot points, interactions) that persist with the roster.
+  **Save/Load** the roster as JSON (full fidelity incl. notes), **Copy** it as
+  Markdown for reading, and click a roster entry to reload/edit it. You're
+  prompted before losing unsaved notes.
 - **Pronunciation hints** appear only when a name contains a tricky cluster
   (e.g. Cymric `ll`/`dd`/`w`, Irish `ch`, Roman hard `c`).
 

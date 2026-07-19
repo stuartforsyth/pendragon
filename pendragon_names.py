@@ -18,6 +18,7 @@ what the app produces.
 
 import copy
 import datetime
+import json
 import os
 import random
 import re
@@ -500,6 +501,11 @@ def format_statblock(r):
     if r.get("pronunciation"):
         lines.append("Pronunciation: " + "; ".join(r["pronunciation"]))
 
+    if r.get("notes", "").strip():
+        lines.append("")
+        lines.append("GM Notes:")
+        lines.append(r["notes"].rstrip())
+
     return "\n".join(lines)
 
 
@@ -542,6 +548,12 @@ def format_statblock_markdown(r):
         bullet("Naming", r["naming_note"])
     if r.get("pronunciation"):
         bullet("Pronunciation", "; ".join(r["pronunciation"]))
+
+    if r.get("notes", "").strip():
+        lines.append("")
+        lines.append("**GM Notes:**")
+        lines.append("")
+        lines.append(r["notes"].rstrip())
 
     return "\n".join(lines)
 
@@ -595,12 +607,13 @@ class App(tk.Tk):
     def __init__(self, generator):
         super().__init__()
         self.generator = generator
-        self._current = None  # last generated result dict
-        self.roster = []      # NPCs kept this session
+        self._current = None            # currently displayed result dict
+        self._current_in_roster = None  # index if the current NPC is a roster entry
+        self.roster = []                # NPCs kept this session
 
         self.title("Pendragon NPC Generator")
-        self.geometry("700x900")
-        self.minsize(660, 760)
+        self.geometry("780x1000")
+        self.minsize(720, 860)
 
         self.gender_var = tk.StringVar(value="Male")
         self.culture_var = tk.StringVar(value=self.generator.culture_names()[0])
@@ -703,17 +716,30 @@ class App(tk.Tk):
         self.subtitle = ttk.Label(out_frame, text="", foreground="#555")
         self.subtitle.pack(fill="x", padx=10, pady=(0, 6))
 
+        details_wrap = ttk.Frame(out_frame)
+        details_wrap.pack(fill="both", expand=True, padx=10, pady=(0, 6))
         self.details = tk.Text(
-            out_frame, height=13, wrap="word", relief="flat",
+            details_wrap, height=14, wrap="word", relief="flat",
             background=self.cget("background"), font=("TkDefaultFont", 11),
         )
-        self.details.pack(fill="both", expand=True, padx=10, pady=(0, 6))
+        self.details.pack(side="left", fill="both", expand=True)
+        dscroll = ttk.Scrollbar(details_wrap, orient="vertical",
+                                command=self.details.yview)
+        dscroll.pack(side="right", fill="y")
+        self.details.config(yscrollcommand=dscroll.set)
         self.details.tag_configure("label", font=("TkDefaultFont", 11, "bold"))
         self.details.tag_configure("desc", font=("TkDefaultFont", 11, "italic"),
                                    foreground="#333")
         self.details.tag_configure("famous", font=("TkDefaultFont", 11, "bold"),
                                    foreground="#8a4b00")
         self.details.configure(state="disabled")
+
+        # GM notes — free text per NPC, persisted with the roster.
+        notes_frame = ttk.LabelFrame(out_frame, text="GM Notes  (saved with the roster)")
+        notes_frame.pack(fill="x", padx=10, pady=(0, 8))
+        self.notes_text = tk.Text(notes_frame, height=4, wrap="word",
+                                  font=("TkDefaultFont", 11))
+        self.notes_text.pack(fill="x", padx=6, pady=6)
 
         self._build_roster_ui(parent)
 
@@ -738,11 +764,14 @@ class App(tk.Tk):
         self.add_btn = ttk.Button(bar, text="Add current", state="disabled",
                                   command=self.on_add_to_roster)
         self.add_btn.pack(side="left")
+        # Load is always available (you can load into an empty roster).
+        ttk.Button(bar, text="Load roster…", command=self.on_load_roster).pack(
+            side="left", padx=(6, 0))
         self.roster_buttons = []
         for text, cmd in (
             ("Remove", self.on_remove_from_roster),
             ("Clear", self.on_clear_roster),
-            ("Copy roster", self.on_copy_roster),
+            ("Copy Markdown", self.on_copy_roster),
             ("Save roster…", self.on_save_roster),
         ):
             b = ttk.Button(bar, text=text, command=cmd, state="disabled")
@@ -751,17 +780,54 @@ class App(tk.Tk):
 
     # -- actions -----------------------------------------------------------
 
+    # -- GM notes -----------------------------------------------------------
+
+    def _sync_notes_from_widget(self):
+        """Write the notes box back into the current NPC dict."""
+        if self._current is not None:
+            self._current["notes"] = self.notes_text.get("1.0", "end").rstrip("\n")
+
+    def _load_notes(self):
+        self.notes_text.delete("1.0", "end")
+        if self._current is not None:
+            self.notes_text.insert("1.0", self._current.get("notes", ""))
+
+    def _confirm_discard_notes(self):
+        """Before replacing the current NPC: guard unsaved notes. Returns True to proceed."""
+        self._sync_notes_from_widget()
+        cur = self._current
+        if cur and self._current_in_roster is None and cur.get("notes", "").strip():
+            ans = messagebox.askyesnocancel(
+                "Unsaved GM notes",
+                f"'{cur['full']}' has GM notes that aren't in the roster yet.\n\n"
+                "Add this NPC (with its notes) to the roster first?\n\n"
+                "Yes = add to roster and continue\n"
+                "No = discard the notes and continue\n"
+                "Cancel = go back",
+            )
+            if ans is None:
+                return False
+            if ans:
+                self.on_add_to_roster()
+        return True
+
+    # -- generation ---------------------------------------------------------
+
     def on_randomise(self):
         """One-click: randomise gender, class, and culture, then generate."""
+        if not self._confirm_discard_notes():
+            return
         gender = random.choice(("Male", "Female"))
         self.gender_var.set(gender)
         self.culture_var.set(random.choice(self.generator.culture_names()))
         rules = self.generator.rules
         if rules and rules.social_classes:
             self.class_var.set(rules.roll_class(gender))  # valid for the gender
-        self.on_generate()
+        self.on_generate(_checked=True)
 
-    def on_generate(self):
+    def on_generate(self, _checked=False):
+        if not _checked and not self._confirm_discard_notes():
+            return
         culture = self.culture_var.get()
         gender = self.gender_var.get()
         social_class = self.class_var.get()
@@ -772,6 +838,7 @@ class App(tk.Tk):
             return
 
         self._current = result
+        self._current_in_roster = None
         # A single-gender class (Lady) may have overridden the choice; reflect it.
         self.gender_var.set(result["gender"])
         self._refresh_display()
@@ -790,10 +857,12 @@ class App(tk.Tk):
         self.name_label.config(text=r["full"])
         self.subtitle.config(text=subtitle_str(r))
         self._render_details(r)
+        self._load_notes()
 
     def on_reroll(self):
         if not self._current:
             return
+        self._sync_notes_from_widget()  # keep any typed notes across the reroll
         field = self.reroll_var.get()
         try:
             self.generator.reroll_field(self._current, field)
@@ -895,36 +964,53 @@ class App(tk.Tk):
     def _refresh_roster(self):
         self.roster_list.delete(0, "end")
         for r in self.roster:
-            self.roster_list.insert("end", f"{r['full']}  ·  {subtitle_str(r)}")
+            mark = "  ✎" if r.get("notes", "").strip() else ""
+            self.roster_list.insert("end", f"{r['full']}  ·  {subtitle_str(r)}{mark}")
         state = "normal" if self.roster else "disabled"
         for b in self.roster_buttons:
             b.config(state=state)
 
+    def _reindex_current(self):
+        """Recompute which roster slot (if any) the current NPC is, by identity."""
+        self._current_in_roster = next(
+            (i for i, x in enumerate(self.roster) if x is self._current), None)
+
+    def _enable_npc_controls(self):
+        for b in self.copy_buttons:
+            b.config(state="normal")
+        self.add_btn.config(state="normal")
+        self.reroll_menu.config(state="readonly")
+        self.reroll_btn.config(state="normal")
+
     def on_roster_select(self, _event=None):
-        """Clicking a roster entry loads that NPC back into the result view."""
+        """Clicking a roster entry loads it into the result view for viewing/editing."""
         sel = self.roster_list.curselection()
         if not sel or sel[0] >= len(self.roster):
             return
-        # Work on a copy so rerolling the viewed NPC doesn't mutate the saved one.
-        self._current = copy.deepcopy(self.roster[sel[0]])
+        self._sync_notes_from_widget()  # preserve edits to the previous NPC
+        # Edit the roster entry live, so GM notes and edits stick to the saved NPC.
+        self._current = self.roster[sel[0]]
+        self._current_in_roster = sel[0]
         r = self._current
         self.gender_var.set(r["gender"])
         self.culture_var.set(r["culture"])
         if r.get("social_class"):
             self.class_var.set(r["social_class"])
         self._refresh_display()
-        for b in self.copy_buttons:
-            b.config(state="normal")
-        self.add_btn.config(state="normal")
-        self.reroll_menu.config(state="readonly")
-        self.reroll_btn.config(state="normal")
-        self.status.config(text=f"Viewing '{r['full']}' from the roster.",
+        self._enable_npc_controls()
+        self.status.config(text=f"Editing '{r['full']}' from the roster.",
                            foreground="#1a5fb4")
 
     def on_add_to_roster(self):
         if not self._current:
             return
-        self.roster.append(copy.deepcopy(self._current))  # snapshot, not a live ref
+        self._sync_notes_from_widget()
+        if self._current_in_roster is not None:  # already saved; nothing to add
+            self.status.config(text=f"'{self._current['full']}' is already in the roster.",
+                               foreground="#1a5fb4")
+            return
+        self.roster.append(self._current)  # keep editing this same object live
+        self._current_in_roster = len(self.roster) - 1
         self._refresh_roster()
         self.roster_list.see("end")
         self.status.config(
@@ -934,10 +1020,10 @@ class App(tk.Tk):
     def on_remove_from_roster(self):
         sel = self.roster_list.curselection()
         if not sel:
-            self.status.config(text="Select a roster entry to remove.",
-                               foreground="#a33")
+            self.status.config(text="Select a roster entry to remove.", foreground="#a33")
             return
         removed = self.roster.pop(sel[0])
+        self._reindex_current()
         self._refresh_roster()
         self.status.config(text=f"Removed '{removed['full']}' from roster.",
                            foreground="#1a5fb4")
@@ -946,32 +1032,68 @@ class App(tk.Tk):
         if self.roster and messagebox.askyesno(
                 "Clear roster", f"Remove all {len(self.roster)} NPCs from the roster?"):
             self.roster.clear()
+            self._current_in_roster = None
             self._refresh_roster()
             self.status.config(text="Roster cleared.", foreground="#1a5fb4")
 
     def on_copy_roster(self):
+        self._sync_notes_from_widget()
         if self.roster:
             self._to_clipboard(
                 format_roster_markdown(self.roster),
-                f"Copied roster ({len(self.roster)} NPCs) to clipboard.")
+                f"Copied roster ({len(self.roster)} NPCs) as Markdown.")
 
     def on_save_roster(self):
+        self._sync_notes_from_widget()
         if not self.roster:
             return
-        default = f"pendragon-npcs-{datetime.date.today().isoformat()}.md"
+        default = f"pendragon-roster-{datetime.date.today().isoformat()}.json"
         path = filedialog.asksaveasfilename(
-            title="Save roster", defaultextension=".md", initialfile=default,
-            filetypes=[("Markdown", "*.md"), ("Text", "*.txt"), ("All files", "*.*")],
+            title="Save roster", defaultextension=".json", initialfile=default,
+            filetypes=[("Roster (JSON)", "*.json"), ("Markdown", "*.md"),
+                       ("All files", "*.*")],
         )
         if not path:
             return
         try:
             with open(path, "w", encoding="utf-8") as fh:
-                fh.write(format_roster_markdown(self.roster))
+                if path.lower().endswith(".md"):
+                    fh.write(format_roster_markdown(self.roster))  # readable, not loadable
+                else:
+                    json.dump(self.roster, fh, ensure_ascii=False, indent=2)
         except OSError as exc:
             messagebox.showerror("Save failed", str(exc))
             return
         self.status.config(text=f"Saved {len(self.roster)} NPCs to {path}",
+                           foreground="#2a7d2a")
+
+    def on_load_roster(self):
+        path = filedialog.askopenfilename(
+            title="Load roster",
+            filetypes=[("Roster (JSON)", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            with open(path, encoding="utf-8") as fh:
+                loaded = json.load(fh)
+            if not isinstance(loaded, list):
+                raise ValueError("file is not a saved roster")
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            messagebox.showerror("Load failed",
+                                 f"Could not load roster:\n{exc}\n\n"
+                                 "Load a .json roster saved by this app.")
+            return
+        if self.roster and not messagebox.askyesno(
+                "Load roster",
+                f"Replace the current roster ({len(self.roster)} NPCs) with "
+                f"{len(loaded)} loaded NPCs?\n\nNo = append them instead."):
+            self.roster.extend(loaded)
+        else:
+            self.roster = loaded
+        self._reindex_current()
+        self._refresh_roster()
+        self.status.config(text=f"Loaded {len(loaded)} NPCs from {path}",
                            foreground="#2a7d2a")
 
 

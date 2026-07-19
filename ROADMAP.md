@@ -21,8 +21,11 @@ rather than scattering TODOs through the code.
 ## Table workflow (bigger, most useful in play)
 
 - [x] **Session roster + export** — keep a list of NPCs generated this session
-  (add/remove/clear); click an entry to reload it into the result view; copy
-  the whole roster to the clipboard or save it to a Markdown file.
+  (add/remove/clear); click an entry to reload/edit it; copy the whole roster
+  to the clipboard as Markdown.
+- [x] **GM notes + save/load** — per-NPC free-text notes for capturing play;
+  save/load the roster (incl. notes) as JSON; prompt before losing unsaved
+  notes. Roster JSON is the cross-session persistence for notes.
 - [ ] **Batch generate** — spin up a whole village, court, or warband at once
   (e.g. "generate 8") with a summary table.
 - [x] **Social class / rank** — Commoner / Squire / Knight / Lady / Noble /
