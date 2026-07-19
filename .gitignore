@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+
+# Source rulebooks (copyrighted; used locally to extract reference data)
+corerulebook.pdf
+gmhandbook.pdf

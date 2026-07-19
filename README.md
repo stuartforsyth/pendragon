@@ -66,6 +66,14 @@ edit that file — adding a new `**Culture**` heading with `*Male Names:*` /
 Source data: [Names by Culture (Pendragon 5th Edition)](https://scruffygrognard.wordpress.com/2015/05/18/names-by-culture-pendragon-5th-edition/)
 by ScruffyGrognard.
 
+## Rules reference
+
+The [`rules/`](rules/) folder holds NPC-relevant rules and lore extracted from
+the Pendragon 5e Core Rulebook and Gamemaster's Handbook (Traits, Passions,
+Directed Traits, Religion, Characteristics, and Distinctive Features). Future
+features draw on these Markdown files rather than parsing the copyrighted PDFs,
+which are kept locally and git-ignored. See [rules/README.md](rules/README.md).
+
 ## Possible future additions
 
 Ideas for turning this into a fuller "instant NPC" tool, leaning on Pendragon
