@@ -55,7 +55,10 @@ An **Encounter** tab for running human combat encounters (driven by
 `data/combat.json`):
 
 - **Generate an encounter** by theme (bandit ambush, conroi of knights, Saxon
-  raiders…) scaled to the number of players; a leader is auto-promoted.
+  raiders, and the Battle-Card conrois — Knights of Gorre/Lothian, Pictish
+  Pikemen, Cambrian Archers, etc.) scaled to the number of players (each card
+  carries its own scaling); a leader is auto-promoted.
+- **Ransom** and **Morale** rolls for battle-card foes (from the Actions menu).
 - **Add/remove** combatants at any time; each shows editable label, an
   **"engaged with"** field, and **cur/max HP** with −/+ and direct entry.
 - **Roll skill** (d20, with correct success/critical/fumble) and **roll damage**

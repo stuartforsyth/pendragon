@@ -4,3 +4,9 @@ __pycache__/
 # Source rulebooks (copyrighted; used locally to extract reference data)
 corerulebook.pdf
 gmhandbook.pdf
+battlecards.pdf
+
+# User-saved output (rosters, encounter logs)
+pendragon-roster-*.json
+pendragon-npcs-*.md
+pendragon-encounter-*.md

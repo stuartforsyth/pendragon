@@ -1,7 +1,6 @@
 {
   "schema_version": 1,
-  "_note": "Combat rules + human-foe bestiary parsed from the Pendragon Core Rulebook (Ch.2 & 7) and Gamemaster's Handbook ('Foes'). Data source for the Encounter Generator (see docs/encounter-generator-spec.md). Not yet wired into code.",
-
+  "_note": "Combat rules + human-foe bestiary for the Encounter Generator. Parsed from the Pendragon Core Rulebook (Ch.2 & 7), Gamemaster's Handbook ('Foes'), and the Battle Cards (unit conrois with per-player scaling, morale, and ransom). See docs/encounter-generator-spec.md.",
   "resolution": {
     "die": "1d20",
     "success": "roll <= skill value",
@@ -11,13 +10,11 @@
     "opposed": "both roll; the higher SUCCESSFUL roll wins and deals damage; equal successful rolls (or both critical) = tie and both strike; a successful-but-lower roll is a partial success and gains shield/parry protection",
     "damage_application": "winner's weapon damage minus defender Armor Points (+ shield) is applied to Hit Points; a single hit >= CON is a Major Wound; total damage >= SIZ triggers Knockdown; below Hit Points/4 = Unconscious; 0 = dead"
   },
-
   "critical_hit": {
     "melee_bonus": "on a critical hit, roll the weapon's damage dice PLUS the attacker's base Damage dice again (worked example: 5D6 -> 5D6+4D6)",
     "brawling": "a critical doubles Brawling Damage",
     "note": "transcribe exact wording from Core Rulebook Ch.7 'Winner's Outcome' at implementation"
   },
-
   "promotion": {
     "title_default": "Champion",
     "skill_bonus": 5,
@@ -25,285 +22,1717 @@
     "damage_bonus_dice": 1,
     "armour_bonus": 2,
     "glory_multiplier": 3,
-    "trait_bonus": { "Valorous": 3 }
+    "trait_bonus": {
+      "Valorous": 3
+    }
   },
-
   "tiers": {
     "rabble": "Poorly trained and equipped; combat skills ~8-10.",
     "trained": "Guards, retainers, mercenary footmen; skills ~12-15.",
     "veteran": "Experienced, well-equipped warriors; skills ~15.",
     "elite": "Knights and champions; skills ~15-20."
   },
-
   "weapons": {
-    "Arming Sword": { "skill": "Sword" },
-    "Sword": { "skill": "Sword" },
-    "Spear": { "skill": "Spear", "reach": true },
-    "Lance": { "skill": "Charge", "mounted": true, "reach": true },
-    "Dagger": { "skill": "Brawling" },
-    "Seax": { "skill": "Brawling" },
-    "Axe": { "skill": "Hafted" },
-    "Mace": { "skill": "Hafted" },
-    "Great Axe": { "skill": "Two-Handed Hafted", "hands": 2 },
-    "Club": { "skill": "Two-Handed Hafted", "hands": 2 },
-    "Self Bow": { "skill": "Bow", "ranged": true },
-    "Longbow": { "skill": "Bow", "ranged": true },
-    "Light Crossbow": { "skill": "Crossbow", "ranged": true },
-    "Javelin": { "skill": "Thrown Weapon", "ranged": true }
+    "Arming Sword": {
+      "skill": "Sword"
+    },
+    "Sword": {
+      "skill": "Sword"
+    },
+    "Spear": {
+      "skill": "Spear",
+      "reach": true
+    },
+    "Lance": {
+      "skill": "Charge",
+      "mounted": true,
+      "reach": true
+    },
+    "Dagger": {
+      "skill": "Brawling"
+    },
+    "Seax": {
+      "skill": "Brawling"
+    },
+    "Axe": {
+      "skill": "Hafted"
+    },
+    "Mace": {
+      "skill": "Hafted"
+    },
+    "Great Axe": {
+      "skill": "Two-Handed Hafted",
+      "hands": 2
+    },
+    "Club": {
+      "skill": "Two-Handed Hafted",
+      "hands": 2
+    },
+    "Self Bow": {
+      "skill": "Bow",
+      "ranged": true
+    },
+    "Longbow": {
+      "skill": "Bow",
+      "ranged": true
+    },
+    "Light Crossbow": {
+      "skill": "Crossbow",
+      "ranged": true
+    },
+    "Javelin": {
+      "skill": "Thrown Weapon",
+      "ranged": true
+    }
   },
-
-  "shields": { "Kite": 6, "Round": 6, "Targe": 4 },
-  "armour_pieces": { "Gambeson": 4 },
+  "shields": {
+    "Kite": 6,
+    "Round": 6,
+    "Targe": 4
+  },
+  "armour_pieces": {
+    "Gambeson": 4
+  },
   "armour_note": "Templates store a precomputed total 'armor_points'; the book's '+N' is the shield, stored separately as 'shield'. Full piece-by-piece armour values (Table 9.x) to transcribe if needed.",
-
   "enemy_templates": {
     "Bandit": {
       "description": "Curs and dogs, the lot of them",
       "tier": "rabble",
-      "characteristics": { "SIZ": 12, "DEX": 10, "STR": 12, "CON": 12, "APP": "1D6+5" },
+      "characteristics": {
+        "SIZ": 12,
+        "DEX": 10,
+        "STR": 12,
+        "CON": 12,
+        "APP": "1D6+5"
+      },
       "attacks": [
-        { "weapon": "Spear", "skill": "Spear", "value": 8, "damage": "4D6" },
-        { "weapon": "Self Bow", "skill": "Bow", "value": 8, "damage": "3D6" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 8, "damage": "2D6+4" }
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 8,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Self Bow",
+          "skill": "Bow",
+          "value": 8,
+          "damage": "3D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 8,
+          "damage": "2D6+4"
+        }
       ],
-      "health": { "hit_points": 24, "knockdown": 12, "major_wound": 12, "unconscious": 6 },
-      "other": { "movement": 16, "armor_points": 4, "shield": 0, "glory": 10, "healing_rate": 2 },
+      "health": {
+        "hit_points": 24,
+        "knockdown": 12,
+        "major_wound": 12,
+        "unconscious": 6
+      },
+      "other": {
+        "movement": 16,
+        "armor_points": 4,
+        "shield": 0,
+        "glory": 10,
+        "healing_rate": 2
+      },
       "armour_desc": "Gambeson",
-      "traits": { "Merciful": 7, "Trusting": 4, "Valorous": 8 },
-      "passions": { "Hate (Knights)": 12 },
-      "skills": { "Awareness": 18, "Hunting": 16 },
+      "traits": {
+        "Merciful": 7,
+        "Trusting": 4,
+        "Valorous": 8
+      },
+      "passions": {
+        "Hate (Knights)": 12
+      },
+      "skills": {
+        "Awareness": 18,
+        "Hunting": 16
+      },
       "promotion_title": "Gang Leader"
     },
     "Bowman": {
       "description": "A peasant archer, a castle defender",
       "tier": "trained",
-      "characteristics": { "SIZ": 10, "DEX": 12, "STR": 12, "CON": 13, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 10,
+        "DEX": 12,
+        "STR": 12,
+        "CON": 13,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Self Bow", "skill": "Bow", "value": 15, "damage": "3D6" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 10, "damage": "2D6+4" }
+        {
+          "weapon": "Self Bow",
+          "skill": "Bow",
+          "value": 15,
+          "damage": "3D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 10,
+          "damage": "2D6+4"
+        }
       ],
-      "health": { "hit_points": 23, "knockdown": 10, "major_wound": 13, "unconscious": 6 },
-      "other": { "movement": 17, "armor_points": 5, "shield": 0, "glory": 25, "healing_rate": 3 },
+      "health": {
+        "hit_points": 23,
+        "knockdown": 10,
+        "major_wound": 13,
+        "unconscious": 6
+      },
+      "other": {
+        "movement": 17,
+        "armor_points": 5,
+        "shield": 0,
+        "glory": 25,
+        "healing_rate": 3
+      },
       "armour_desc": "Gambeson and kettle helm",
-      "traits": { "Valorous": 10 },
-      "skills": { "Awareness": 12, "Hunting": 8 },
+      "traits": {
+        "Valorous": 10
+      },
+      "skills": {
+        "Awareness": 12,
+        "Hunting": 8
+      },
       "promotion_title": "Master Archer"
     },
     "Crossbowman": {
       "description": "Oftentimes a mercenary from the Continent",
       "tier": "trained",
-      "characteristics": { "SIZ": 10, "DEX": 12, "STR": 11, "CON": 12, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 10,
+        "DEX": 12,
+        "STR": 11,
+        "CON": 12,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Light Crossbow", "skill": "Crossbow", "value": 15, "damage": "1D6+10" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 10, "damage": "2D6+4" }
+        {
+          "weapon": "Light Crossbow",
+          "skill": "Crossbow",
+          "value": 15,
+          "damage": "1D6+10"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 10,
+          "damage": "2D6+4"
+        }
       ],
-      "health": { "hit_points": 22, "knockdown": 10, "major_wound": 12, "unconscious": 6 },
-      "other": { "movement": 17, "armor_points": 5, "shield": 0, "glory": 25, "healing_rate": 2 },
+      "health": {
+        "hit_points": 22,
+        "knockdown": 10,
+        "major_wound": 12,
+        "unconscious": 6
+      },
+      "other": {
+        "movement": 17,
+        "armor_points": 5,
+        "shield": 0,
+        "glory": 25,
+        "healing_rate": 2
+      },
       "armour_desc": "Gambeson and kettle helm",
-      "traits": { "Valorous": 8 },
-      "skills": { "Awareness": 10 },
+      "traits": {
+        "Valorous": 8
+      },
+      "skills": {
+        "Awareness": 10
+      },
       "promotion_title": "Master Arbalist"
     },
     "Spearman": {
       "description": "Member of a lord's retinue, guard of the hearth",
       "tier": "trained",
-      "characteristics": { "SIZ": 12, "DEX": 11, "STR": 12, "CON": 14, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 12,
+        "DEX": 11,
+        "STR": 12,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Spear", "skill": "Spear", "value": 15, "damage": "4D6" },
-        { "weapon": "Arming Sword", "skill": "Sword", "value": 12, "damage": "4D6" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 10, "damage": "2D6+4" }
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 15,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Arming Sword",
+          "skill": "Sword",
+          "value": 12,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 10,
+          "damage": "2D6+4"
+        }
       ],
-      "health": { "hit_points": 26, "knockdown": 12, "major_wound": 14, "unconscious": 7 },
-      "other": { "movement": 17, "armor_points": 7, "shield": 6, "glory": 25, "healing_rate": 3 },
+      "health": {
+        "hit_points": 26,
+        "knockdown": 12,
+        "major_wound": 14,
+        "unconscious": 7
+      },
+      "other": {
+        "movement": 17,
+        "armor_points": 7,
+        "shield": 6,
+        "glory": 25,
+        "healing_rate": 3
+      },
       "armour_desc": "Haubergeon, aketon, open helm + kite shield",
-      "traits": { "Valorous": 10 },
-      "passions": { "Fealty (Lord)": 10 },
-      "skills": { "Awareness": 12 },
+      "traits": {
+        "Valorous": 10
+      },
+      "passions": {
+        "Fealty (Lord)": 10
+      },
+      "skills": {
+        "Awareness": 12
+      },
       "promotion_title": "Sergeant-at-Arms"
     },
     "Veteran Spearman": {
       "description": "An experienced guardsman or grizzled mercenary footman",
       "tier": "veteran",
-      "characteristics": { "SIZ": 14, "DEX": 11, "STR": 13, "CON": 15, "APP": "2D6+2" },
+      "characteristics": {
+        "SIZ": 14,
+        "DEX": 11,
+        "STR": 13,
+        "CON": 15,
+        "APP": "2D6+2"
+      },
       "attacks": [
-        { "weapon": "Spear", "skill": "Spear", "value": 15, "damage": "5D6" },
-        { "weapon": "Arming Sword", "skill": "Sword", "value": 12, "damage": "5D6" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 10, "damage": "2D6+5" }
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 15,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Arming Sword",
+          "skill": "Sword",
+          "value": 12,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 10,
+          "damage": "2D6+5"
+        }
       ],
-      "health": { "hit_points": 29, "knockdown": 14, "major_wound": 15, "unconscious": 7 },
-      "other": { "movement": 17, "armor_points": 10, "shield": 6, "glory": 50, "healing_rate": 3 },
+      "health": {
+        "hit_points": 29,
+        "knockdown": 14,
+        "major_wound": 15,
+        "unconscious": 7
+      },
+      "other": {
+        "movement": 17,
+        "armor_points": 10,
+        "shield": 6,
+        "glory": 50,
+        "healing_rate": 3
+      },
       "armour_desc": "Hauberk, aketon, nasal helm + kite shield",
-      "traits": { "Valorous": 12 },
-      "passions": { "Fealty (Lord)": 12 },
-      "skills": { "Awareness": 14 },
+      "traits": {
+        "Valorous": 12
+      },
+      "passions": {
+        "Fealty (Lord)": 12
+      },
+      "skills": {
+        "Awareness": 14
+      },
       "promotion_title": "Captain of the Guard"
     },
     "Hill Man": {
       "description": "Typical member of a tribal war band",
       "tier": "trained",
-      "characteristics": { "SIZ": 10, "DEX": 13, "STR": 12, "CON": 15, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 10,
+        "DEX": 13,
+        "STR": 12,
+        "CON": 15,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Longbow", "skill": "Bow", "value": 14, "damage": "4D6" },
-        { "weapon": "Spear", "skill": "Spear", "value": 12, "damage": "4D6" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 12, "damage": "2D6+4" }
+        {
+          "weapon": "Longbow",
+          "skill": "Bow",
+          "value": 14,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 12,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 12,
+          "damage": "2D6+4"
+        }
       ],
-      "health": { "hit_points": 25, "knockdown": 10, "major_wound": 15, "unconscious": 6 },
-      "other": { "movement": 18, "armor_points": 0, "shield": 4, "glory": 25, "healing_rate": 3 },
+      "health": {
+        "hit_points": 25,
+        "knockdown": 10,
+        "major_wound": 15,
+        "unconscious": 6
+      },
+      "other": {
+        "movement": 18,
+        "armor_points": 0,
+        "shield": 4,
+        "glory": 25,
+        "healing_rate": 3
+      },
       "armour_desc": "Targe shield",
-      "traits": { "Prudent": 14, "Valorous": 12 },
-      "skills": { "Awareness": 13, "Hunting": 10 },
+      "traits": {
+        "Prudent": 14,
+        "Valorous": 12
+      },
+      "skills": {
+        "Awareness": 13,
+        "Hunting": 10
+      },
       "promotion_title": "War Chief"
     },
     "Mounted Sergeant": {
       "description": "Mounted guardsman or mercenary esquire",
       "tier": "trained",
-      "characteristics": { "SIZ": 12, "DEX": 11, "STR": 12, "CON": 14, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 12,
+        "DEX": 11,
+        "STR": 12,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Spear", "skill": "Spear", "value": 15, "damage": "4D6" },
-        { "weapon": "Arming Sword", "skill": "Sword", "value": 12, "damage": "4D6" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 10, "damage": "2D6+4" }
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 15,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Arming Sword",
+          "skill": "Sword",
+          "value": 12,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 10,
+          "damage": "2D6+4"
+        }
       ],
-      "health": { "hit_points": 26, "knockdown": 12, "major_wound": 14, "unconscious": 7 },
-      "other": { "movement": 17, "armor_points": 10, "shield": 6, "glory": 25, "healing_rate": 3 },
+      "health": {
+        "hit_points": 26,
+        "knockdown": 12,
+        "major_wound": 14,
+        "unconscious": 7
+      },
+      "other": {
+        "movement": 17,
+        "armor_points": 10,
+        "shield": 6,
+        "glory": 25,
+        "healing_rate": 3
+      },
       "armour_desc": "Hauberk, aketon, nasal helm + kite shield",
-      "traits": { "Valorous": 15 },
-      "passions": { "Fealty (Lord)": 15 },
-      "skills": { "Awareness": 12, "Battle": 10, "Horsemanship": 15 },
+      "traits": {
+        "Valorous": 15
+      },
+      "passions": {
+        "Fealty (Lord)": 15
+      },
+      "skills": {
+        "Awareness": 12,
+        "Battle": 10,
+        "Horsemanship": 15
+      },
       "promotion_title": "Captain"
     },
     "Average Knight": {
       "description": "A typical household or mercenary knight",
       "tier": "elite",
-      "characteristics": { "SIZ": 14, "DEX": 11, "STR": 14, "CON": 14, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 14,
+        "DEX": 11,
+        "STR": 14,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Lance", "skill": "Charge", "value": 15, "damage": "6D6" },
-        { "weapon": "Arming Sword", "skill": "Sword", "value": 15, "damage": "5D6" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 10, "damage": "2D6+5" }
+        {
+          "weapon": "Lance",
+          "skill": "Charge",
+          "value": 15,
+          "damage": "6D6"
+        },
+        {
+          "weapon": "Arming Sword",
+          "skill": "Sword",
+          "value": 15,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 10,
+          "damage": "2D6+5"
+        }
       ],
-      "health": { "hit_points": 28, "knockdown": 14, "major_wound": 14, "unconscious": 7 },
-      "other": { "movement": 18, "armor_points": 10, "shield": 6, "glory": 25, "healing_rate": 3 },
+      "health": {
+        "hit_points": 28,
+        "knockdown": 14,
+        "major_wound": 14,
+        "unconscious": 7
+      },
+      "other": {
+        "movement": 18,
+        "armor_points": 10,
+        "shield": 6,
+        "glory": 25,
+        "healing_rate": 3
+      },
       "armour_desc": "Hauberk, nasal helm, aketon + kite shield",
-      "traits": { "Valorous": "13+1D3" },
+      "traits": {
+        "Valorous": "13+1D3"
+      },
       "honor": "13+1D3",
-      "passions": { "Homage (Lord)": "13+1D3" },
-      "skills": { "Awareness": 9, "Battle": 10, "Courtesy": 10, "First Aid": 12, "Horsemanship": 15, "Hunting": 10, "Recognize": 9 },
+      "passions": {
+        "Homage (Lord)": "13+1D3"
+      },
+      "skills": {
+        "Awareness": 9,
+        "Battle": 10,
+        "Courtesy": 10,
+        "First Aid": 12,
+        "Horsemanship": 15,
+        "Hunting": 10,
+        "Recognize": 9
+      },
       "promotion_title": "Elite Commander"
     },
     "Veteran Knight": {
       "description": "A household or mercenary knight of many years' service, with the scars to show",
       "tier": "elite",
-      "characteristics": { "SIZ": 15, "DEX": 11, "STR": 15, "CON": 15, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 11,
+        "STR": 15,
+        "CON": 15,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Lance", "skill": "Charge", "value": 16, "damage": "6D6" },
-        { "weapon": "Arming Sword", "skill": "Sword", "value": 16, "damage": "5D6" },
-        { "weapon": "Mace", "skill": "Hafted", "value": 12, "damage": "5D6" },
-        { "weapon": "Dagger", "skill": "Brawling", "value": 12, "damage": "2D6+5" }
+        {
+          "weapon": "Lance",
+          "skill": "Charge",
+          "value": 16,
+          "damage": "6D6"
+        },
+        {
+          "weapon": "Arming Sword",
+          "skill": "Sword",
+          "value": 16,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Mace",
+          "skill": "Hafted",
+          "value": 12,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 12,
+          "damage": "2D6+5"
+        }
       ],
-      "health": { "hit_points": 30, "knockdown": 15, "major_wound": 15, "unconscious": 8 },
-      "other": { "movement": 18, "armor_points": 11, "shield": 6, "glory": 50, "healing_rate": 3 },
+      "health": {
+        "hit_points": 30,
+        "knockdown": 15,
+        "major_wound": 15,
+        "unconscious": 8
+      },
+      "other": {
+        "movement": 18,
+        "armor_points": 11,
+        "shield": 6,
+        "glory": 50,
+        "healing_rate": 3
+      },
       "armour_desc": "Advanced hauberk, aketon, nasal helm + kite shield",
-      "traits": { "Valorous": "14+1D6" },
+      "traits": {
+        "Valorous": "14+1D6"
+      },
       "honor": "13+1D6",
-      "passions": { "Homage/Fealty (Lord)": 15 },
-      "skills": { "Awareness": 10, "Battle": 11, "Courtesy": 11, "First Aid": 12, "Horsemanship": 16, "Hunting": 11, "Recognize": 10 },
+      "passions": {
+        "Homage/Fealty (Lord)": 15
+      },
+      "skills": {
+        "Awareness": 10,
+        "Battle": 11,
+        "Courtesy": 11,
+        "First Aid": 12,
+        "Horsemanship": 16,
+        "Hunting": 11,
+        "Recognize": 10
+      },
       "promotion_title": "Banneret"
     },
     "Saxon Ceorl": {
       "description": "The local Saxon levy",
       "tier": "rabble",
-      "characteristics": { "SIZ": 14, "DEX": 8, "STR": 12, "CON": 12, "APP": "2D6+2" },
+      "characteristics": {
+        "SIZ": 14,
+        "DEX": 8,
+        "STR": 12,
+        "CON": 12,
+        "APP": "2D6+2"
+      },
       "attacks": [
-        { "weapon": "Spear", "skill": "Spear", "value": 10, "damage": "4D6" },
-        { "weapon": "Seax", "skill": "Brawling", "value": 10, "damage": "2D6+5" },
-        { "weapon": "Javelin", "skill": "Thrown Weapon", "value": 10, "damage": "3D6" }
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 10,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Seax",
+          "skill": "Brawling",
+          "value": 10,
+          "damage": "2D6+5"
+        },
+        {
+          "weapon": "Javelin",
+          "skill": "Thrown Weapon",
+          "value": 10,
+          "damage": "3D6"
+        }
       ],
-      "health": { "hit_points": 26, "knockdown": 14, "major_wound": 12, "unconscious": 7 },
-      "other": { "movement": 15, "armor_points": 0, "shield": 6, "glory": 10, "healing_rate": 2 },
+      "health": {
+        "hit_points": 26,
+        "knockdown": 14,
+        "major_wound": 12,
+        "unconscious": 7
+      },
+      "other": {
+        "movement": 15,
+        "armor_points": 0,
+        "shield": 6,
+        "glory": 10,
+        "healing_rate": 2
+      },
       "armour_desc": "Round shield",
-      "traits": { "Valorous": 10 },
-      "passions": { "Loyalty (Lord)": 10 },
-      "skills": { "Awareness": 12, "Boating": 12 },
+      "traits": {
+        "Valorous": 10
+      },
+      "passions": {
+        "Loyalty (Lord)": 10
+      },
+      "skills": {
+        "Awareness": 12,
+        "Boating": 12
+      },
       "promotion_title": "Ceorl Headman"
     },
     "Rich Ceorl": {
       "description": "Better-equipped than their fellows",
       "tier": "trained",
-      "characteristics": { "SIZ": 16, "DEX": 8, "STR": 14, "CON": 14, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 16,
+        "DEX": 8,
+        "STR": 14,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Spear", "skill": "Spear", "value": 12, "damage": "5D6" },
-        { "weapon": "Axe", "skill": "Hafted", "value": 10, "damage": "5D6" },
-        { "weapon": "Seax", "skill": "Brawling", "value": 10, "damage": "2D6+5" },
-        { "weapon": "Javelin", "skill": "Thrown Weapon", "value": 12, "damage": "3D6" }
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 12,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Axe",
+          "skill": "Hafted",
+          "value": 10,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Seax",
+          "skill": "Brawling",
+          "value": 10,
+          "damage": "2D6+5"
+        },
+        {
+          "weapon": "Javelin",
+          "skill": "Thrown Weapon",
+          "value": 12,
+          "damage": "3D6"
+        }
       ],
-      "health": { "hit_points": 30, "knockdown": 16, "major_wound": 14, "unconscious": 8 },
-      "other": { "movement": 16, "armor_points": 7, "shield": 6, "glory": 25, "healing_rate": 3 },
+      "health": {
+        "hit_points": 30,
+        "knockdown": 16,
+        "major_wound": 14,
+        "unconscious": 8
+      },
+      "other": {
+        "movement": 16,
+        "armor_points": 7,
+        "shield": 6,
+        "glory": 25,
+        "healing_rate": 3
+      },
       "armour_desc": "Haubergeon, aketon, open helm + round shield",
-      "traits": { "Valorous": 12 },
-      "passions": { "Loyalty (Lord)": 10 },
-      "skills": { "Awareness": 15, "Boating": 12 },
+      "traits": {
+        "Valorous": 12
+      },
+      "passions": {
+        "Loyalty (Lord)": 10
+      },
+      "skills": {
+        "Awareness": 15,
+        "Boating": 12
+      },
       "promotion_title": "Village Champion"
     },
     "Heorthgeneat": {
       "description": "Saxon foot soldier; a full-time warrior of a lord's hall",
       "tier": "veteran",
-      "characteristics": { "SIZ": 16, "DEX": 8, "STR": 14, "CON": 16, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 16,
+        "DEX": 8,
+        "STR": 14,
+        "CON": 16,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Axe", "skill": "Hafted", "value": 16, "damage": "5D6" },
-        { "weapon": "Spear", "skill": "Spear", "value": 15, "damage": "5D6" },
-        { "weapon": "Seax", "skill": "Brawling", "value": 12, "damage": "2D6+5" },
-        { "weapon": "Javelin", "skill": "Thrown Weapon", "value": 15, "damage": "3D6" }
+        {
+          "weapon": "Axe",
+          "skill": "Hafted",
+          "value": 16,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 15,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Seax",
+          "skill": "Brawling",
+          "value": 12,
+          "damage": "2D6+5"
+        },
+        {
+          "weapon": "Javelin",
+          "skill": "Thrown Weapon",
+          "value": 15,
+          "damage": "3D6"
+        }
       ],
-      "health": { "hit_points": 32, "knockdown": 16, "major_wound": 16, "unconscious": 8 },
-      "other": { "movement": 16, "armor_points": 10, "shield": 6, "glory": 50, "healing_rate": 3 },
+      "health": {
+        "hit_points": 32,
+        "knockdown": 16,
+        "major_wound": 16,
+        "unconscious": 8
+      },
+      "other": {
+        "movement": 16,
+        "armor_points": 10,
+        "shield": 6,
+        "glory": 50,
+        "healing_rate": 3
+      },
       "armour_desc": "Hauberk, aketon, nasal helm + round shield",
-      "traits": { "Valorous": 15 },
-      "passions": { "Homage (Lord)": 13 },
-      "skills": { "Awareness": 15, "Boating": 15 },
+      "traits": {
+        "Valorous": 15
+      },
+      "passions": {
+        "Homage (Lord)": 13
+      },
+      "skills": {
+        "Awareness": 15,
+        "Boating": 15
+      },
       "promotion_title": "Hearth-Captain"
     },
     "Saxon Knight": {
       "description": "A pale imitation of the Cymric knight",
       "tier": "elite",
-      "characteristics": { "SIZ": 15, "DEX": 11, "STR": 14, "CON": 12, "APP": "2D6+3" },
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 11,
+        "STR": 14,
+        "CON": 12,
+        "APP": "2D6+3"
+      },
       "attacks": [
-        { "weapon": "Arming Sword", "skill": "Sword", "value": 15, "damage": "5D6" },
-        { "weapon": "Spear", "skill": "Charge", "value": 12, "damage": "5D6" },
-        { "weapon": "Seax", "skill": "Brawling", "value": 12, "damage": "2D6+5" }
+        {
+          "weapon": "Arming Sword",
+          "skill": "Sword",
+          "value": 15,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Charge",
+          "value": 12,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Seax",
+          "skill": "Brawling",
+          "value": 12,
+          "damage": "2D6+5"
+        }
       ],
-      "health": { "hit_points": 27, "knockdown": 15, "major_wound": 12, "unconscious": 7 },
-      "other": { "movement": 18, "armor_points": 9, "shield": 6, "glory": 25, "healing_rate": 2 },
+      "health": {
+        "hit_points": 27,
+        "knockdown": 15,
+        "major_wound": 12,
+        "unconscious": 7
+      },
+      "other": {
+        "movement": 18,
+        "armor_points": 9,
+        "shield": 6,
+        "glory": 25,
+        "healing_rate": 2
+      },
       "armour_desc": "Hauberk, aketon, open helm + round shield (-2 to all mounted attacks)",
-      "traits": { "Valorous": 15 },
-      "passions": { "Homage (Lord)": 15 },
-      "skills": { "Awareness": 12, "Battle": 12, "Horsemanship": 12 },
+      "traits": {
+        "Valorous": 15
+      },
+      "passions": {
+        "Homage (Lord)": 15
+      },
+      "skills": {
+        "Awareness": 12,
+        "Battle": 12,
+        "Horsemanship": 12
+      },
       "promotion_title": "Thegn"
     },
     "Aetheling": {
       "description": "A chieftain who commands many loyal huscarls",
       "tier": "elite",
-      "characteristics": { "SIZ": 16, "DEX": 12, "STR": 15, "CON": 15, "APP": "2D6+4" },
+      "characteristics": {
+        "SIZ": 16,
+        "DEX": 12,
+        "STR": 15,
+        "CON": 15,
+        "APP": "2D6+4"
+      },
       "attacks": [
-        { "weapon": "Arming Sword", "skill": "Sword", "value": 20, "damage": "5D6" },
-        { "weapon": "Axe", "skill": "Hafted", "value": 16, "damage": "5D6" },
-        { "weapon": "Spear", "skill": "Spear", "value": 16, "damage": "5D6" }
+        {
+          "weapon": "Arming Sword",
+          "skill": "Sword",
+          "value": 20,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Axe",
+          "skill": "Hafted",
+          "value": 16,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 16,
+          "damage": "5D6"
+        }
       ],
-      "health": { "hit_points": 31, "knockdown": 16, "major_wound": 15, "unconscious": 8 },
-      "other": { "movement": 19, "armor_points": 11, "shield": 6, "glory": 50, "healing_rate": 3 },
+      "health": {
+        "hit_points": 31,
+        "knockdown": 16,
+        "major_wound": 15,
+        "unconscious": 8
+      },
+      "other": {
+        "movement": 19,
+        "armor_points": 11,
+        "shield": 6,
+        "glory": 50,
+        "healing_rate": 3
+      },
       "armour_desc": "Hauberk, aketon, advanced nasal helm + round shield",
-      "traits": { "Generous": 15, "Proud": 16, "Reckless": 13, "Valorous": 16 },
-      "directed_traits": { "Suspicious (Britons)": 5 },
+      "traits": {
+        "Generous": 15,
+        "Proud": 16,
+        "Reckless": 13,
+        "Valorous": 16
+      },
+      "directed_traits": {
+        "Suspicious (Britons)": 5
+      },
       "honor": "12+1D6",
-      "passions": { "Homage (Lord)": 16, "Hate (Britons)": 14 },
-      "skills": { "Awareness": 15, "Recognize": 10 },
+      "passions": {
+        "Homage (Lord)": 16,
+        "Hate (Britons)": 14
+      },
+      "skills": {
+        "Awareness": 15,
+        "Recognize": 10
+      },
       "promotion_title": "Warlord"
+    },
+    "Knights of Gorre": {
+      "description": "Stern archaic-looking knights of Gorre; may counter-charge",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 11,
+        "STR": 15,
+        "CON": 15,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear or Sword",
+          "skill": "Charge",
+          "value": 17,
+          "damage": "6D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 15,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 17,
+          "damage": "5D6"
+        }
+      ],
+      "health": {
+        "hit_points": 30,
+        "knockdown": 15,
+        "major_wound": 15,
+        "unconscious": 8
+      },
+      "other": {
+        "armor_points": 7,
+        "shield": 6,
+        "glory": 50,
+        "morale_loss": "1D6+3",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Haubergeon, aketon, open helm + kite shield",
+      "morale_minimum": 13,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 1,
+          "type": "Poor Knight",
+          "amount": "£3"
+        },
+        {
+          "min": 2,
+          "max": 5,
+          "type": "Household Knight",
+          "amount": "£4"
+        },
+        {
+          "min": 6,
+          "max": 6,
+          "type": "Vassal Knight",
+          "amount": "£10"
+        }
+      ],
+      "notes": "Stern archaic-looking knights of Gorre; may counter-charge.",
+      "per_player": 1.0,
+      "promotion_title": "Gorre Banneret",
+      "traits": {
+        "Valorous": 18
+      },
+      "skills": {
+        "Horsemanship": 17
+      }
+    },
+    "Knights of Lothian": {
+      "description": "An extra-large conroi from King Lot's Lothian; they strike harder; may counter-charge",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 16,
+        "DEX": 11,
+        "STR": 16,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear or Sword",
+          "skill": "Charge",
+          "value": 17,
+          "damage": "6D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 15,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 17,
+          "damage": "5D6"
+        }
+      ],
+      "health": {
+        "hit_points": 31,
+        "knockdown": 16,
+        "major_wound": 14,
+        "unconscious": 8
+      },
+      "other": {
+        "armor_points": 10,
+        "shield": 6,
+        "glory": 50,
+        "morale_loss": "2D6",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Hauberk, aketon, nasal helm + kite shield",
+      "morale_minimum": 13,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 1,
+          "type": "Poor Knight",
+          "amount": "£3"
+        },
+        {
+          "min": 2,
+          "max": 6,
+          "type": "Household Knight",
+          "amount": "£4"
+        }
+      ],
+      "notes": "An extra-large conroi from King Lot's Lothian; they strike harder; may counter-charge.",
+      "per_player": 1.5,
+      "promotion_title": "Lothian Banneret",
+      "traits": {
+        "Valorous": 15
+      },
+      "skills": {
+        "Horsemanship": 17
+      }
+    },
+    "Knights of Malahaut": {
+      "description": "Knights dressed like Roman cavalry, with large oval shields; may counter-charge",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 14,
+        "DEX": 11,
+        "STR": 14,
+        "CON": 13,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear or Sword",
+          "skill": "Charge",
+          "value": 15,
+          "damage": "6D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 13,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 15,
+          "damage": "5D6"
+        }
+      ],
+      "health": {
+        "hit_points": 27,
+        "knockdown": 14,
+        "major_wound": 13,
+        "unconscious": 7
+      },
+      "other": {
+        "armor_points": 11,
+        "shield": 6,
+        "glory": 25,
+        "morale_loss": "2D6",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Hauberk, aketon, advanced nasal helm + scutum",
+      "morale_minimum": 13,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 1,
+          "type": "Poor Knight",
+          "amount": "£3"
+        },
+        {
+          "min": 2,
+          "max": 6,
+          "type": "Household Knight",
+          "amount": "£4"
+        }
+      ],
+      "notes": "Knights dressed like Roman cavalry, with large oval shields; may counter-charge.",
+      "per_player": 1.0,
+      "promotion_title": "Malahaut Banneret",
+      "traits": {
+        "Valorous": 15
+      },
+      "skills": {
+        "Horsemanship": 15
+      }
+    },
+    "Knights of Cornwall": {
+      "description": "A conroi of poor but motivated knights from Cornwall; may counter-charge",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 13,
+        "DEX": 12,
+        "STR": 13,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear or Sword",
+          "skill": "Charge",
+          "value": 15,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 12,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 15,
+          "damage": "4D6"
+        }
+      ],
+      "health": {
+        "hit_points": 26,
+        "knockdown": 13,
+        "major_wound": 14,
+        "unconscious": 7
+      },
+      "other": {
+        "armor_points": 9,
+        "shield": 6,
+        "glory": 25,
+        "morale_loss": "1D6+1",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Hauberk, aketon, open helm + kite shield",
+      "morale_minimum": 12,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 2,
+          "type": "Poor Knight",
+          "amount": "£3"
+        },
+        {
+          "min": 3,
+          "max": 5,
+          "type": "Household Knight",
+          "amount": "£4"
+        },
+        {
+          "min": 6,
+          "max": 6,
+          "type": "Vassal Knight",
+          "amount": "£10"
+        }
+      ],
+      "notes": "A conroi of poor but motivated knights from Cornwall; may counter-charge.",
+      "per_player": 1.0,
+      "promotion_title": "Cornish Banneret",
+      "traits": {
+        "Valorous": 15
+      },
+      "skills": {
+        "Horsemanship": 15
+      }
+    },
+    "Northern Prickers": {
+      "description": "Rough men on hill ponies from the Roman Wall; armed with lances; may counter-charge",
+      "tier": "trained",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 10,
+        "DEX": 13,
+        "STR": 12,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Lance",
+          "skill": "Charge",
+          "value": 10,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Mace",
+          "skill": "Hafted",
+          "value": 13,
+          "damage": "4D6"
+        }
+      ],
+      "health": {
+        "hit_points": 24,
+        "knockdown": 10,
+        "major_wound": 14,
+        "unconscious": 6
+      },
+      "other": {
+        "armor_points": 8,
+        "shield": 4,
+        "glory": 25,
+        "morale_loss": "1D6",
+        "knight_value": "½",
+        "healing_rate": 0
+      },
+      "armour_desc": "Haubergeon, aketon, nasal helm + targe",
+      "morale_minimum": 10,
+      "ransom": null,
+      "notes": "Rough men on hill ponies from the Roman Wall; armed with lances; may counter-charge. Mace +1D6 vs mail.",
+      "per_player": 1.0,
+      "promotion_title": "Pricker Headman",
+      "skills": {
+        "Horsemanship": 16
+      }
+    },
+    "Pictish Pikemen": {
+      "description": "Painted, unarmoured mountain men with long spears; flee if a third are slain",
+      "tier": "rabble",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 10,
+        "DEX": 15,
+        "STR": 10,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Two-handed Spear",
+          "skill": "Spear",
+          "value": 10,
+          "damage": "5D6"
+        }
+      ],
+      "health": {
+        "hit_points": 24,
+        "knockdown": 10,
+        "major_wound": 14,
+        "unconscious": 6
+      },
+      "other": {
+        "armor_points": 0,
+        "shield": 0,
+        "glory": 10,
+        "morale_loss": "1D6+1",
+        "knight_value": "⅛",
+        "healing_rate": 0
+      },
+      "armour_desc": "None",
+      "morale_minimum": 8,
+      "ransom": null,
+      "notes": "Painted, unarmoured mountain men with long spears; flee if a third are slain.",
+      "per_player": 2.0,
+      "promotion_title": "Pict War-leader"
+    },
+    "Pictish Javeliniers": {
+      "description": "Skirmishers who hurl javelins then melt away; always attempt to Evade in melee",
+      "tier": "rabble",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 10,
+        "DEX": 15,
+        "STR": 10,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Javelin (Melee)",
+          "skill": "Spear",
+          "value": 8,
+          "damage": "1D6+3"
+        },
+        {
+          "weapon": "Javelin",
+          "skill": "Thrown Weapon",
+          "value": 18,
+          "damage": "3D6"
+        }
+      ],
+      "health": {
+        "hit_points": 24,
+        "knockdown": 10,
+        "major_wound": 14,
+        "unconscious": 6
+      },
+      "other": {
+        "armor_points": 0,
+        "shield": 0,
+        "glory": 5,
+        "morale_loss": "1D6",
+        "knight_value": "⅛",
+        "healing_rate": 0
+      },
+      "armour_desc": "None",
+      "morale_minimum": 5,
+      "ransom": null,
+      "notes": "Skirmishers who hurl javelins then melt away; always attempt to Evade in melee.",
+      "per_player": 3.0,
+      "promotion_title": "Pict War-leader"
+    },
+    "Pictish Knifemen": {
+      "description": "Grubby little men with wicked daggers; target horses first; flee at one-third down",
+      "tier": "rabble",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 8,
+        "DEX": 16,
+        "STR": 8,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 15,
+          "damage": "2D6+3"
+        }
+      ],
+      "health": {
+        "hit_points": 22,
+        "knockdown": 8,
+        "major_wound": 14,
+        "unconscious": 6
+      },
+      "other": {
+        "armor_points": 0,
+        "shield": 0,
+        "glory": 5,
+        "morale_loss": "3D6",
+        "knight_value": "⅛",
+        "healing_rate": 0
+      },
+      "armour_desc": "None",
+      "morale_minimum": 5,
+      "ransom": null,
+      "notes": "Grubby little men with wicked daggers; target horses first; flee at one-third down.",
+      "per_player": 3.0,
+      "promotion_title": "Pict War-leader"
+    },
+    "Saxon Warriors": {
+      "description": "Seasoned armoured Saxons; form a shield wall vs a charge; fight until three-quarters are down",
+      "tier": "veteran",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 10,
+        "STR": 15,
+        "CON": 15,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Battle Axe",
+          "skill": "Hafted",
+          "value": 14,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 14,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 14,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Great Axe",
+          "skill": "Two-Handed Hafted",
+          "value": 14,
+          "damage": "7D6"
+        }
+      ],
+      "health": {
+        "hit_points": 30,
+        "knockdown": 15,
+        "major_wound": 15,
+        "unconscious": 8
+      },
+      "other": {
+        "armor_points": 5,
+        "shield": 6,
+        "glory": 25,
+        "morale_loss": "1D6+2",
+        "knight_value": "¼",
+        "healing_rate": 0
+      },
+      "armour_desc": "Haubergeon, open helm + round shield; no shield with Great Axe",
+      "morale_minimum": 8,
+      "ransom": null,
+      "notes": "Seasoned armoured Saxons; form a shield wall vs a charge; fight until three-quarters are down. Axes -1D6 shield protection.",
+      "per_player": 2.0,
+      "promotion_title": "Saxon Thegn",
+      "traits": {
+        "Valorous": 13
+      }
+    },
+    "Irish Kerns": {
+      "description": "Poorly-armed mercenaries from Ireland; make up in numbers what they lack in skill; target horses; flee once more than half are down",
+      "tier": "rabble",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 11,
+        "DEX": 12,
+        "STR": 9,
+        "CON": 15,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Inferior Sword",
+          "skill": "Sword",
+          "value": 8,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Battle Axe",
+          "skill": "Hafted",
+          "value": 8,
+          "damage": "3D6"
+        },
+        {
+          "weapon": "Mace",
+          "skill": "Hafted",
+          "value": 8,
+          "damage": "3D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 8,
+          "damage": "3D6"
+        }
+      ],
+      "health": {
+        "hit_points": 28,
+        "knockdown": 11,
+        "major_wound": 15,
+        "unconscious": 7
+      },
+      "other": {
+        "armor_points": 4,
+        "shield": 0,
+        "glory": 10,
+        "morale_loss": "1D6-1",
+        "knight_value": "⅛",
+        "healing_rate": 0
+      },
+      "armour_desc": "Targe",
+      "morale_minimum": 6,
+      "ransom": null,
+      "notes": "Poorly-armed mercenaries from Ireland; make up in numbers what they lack in skill; target horses; flee once more than half are down.",
+      "per_player": 4.0,
+      "promotion_title": "Kern Captain"
+    },
+    "Cambrian Archers": {
+      "description": "Hill archers wielding the dreaded longbow; loose arrows before contact; may flee if a third are injured",
+      "tier": "trained",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 10,
+        "DEX": 13,
+        "STR": 12,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Longbow",
+          "skill": "Bow",
+          "value": 12,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Dagger",
+          "skill": "Brawling",
+          "value": 11,
+          "damage": "2D6+4"
+        }
+      ],
+      "health": {
+        "hit_points": 24,
+        "knockdown": 10,
+        "major_wound": 14,
+        "unconscious": 6
+      },
+      "other": {
+        "armor_points": 0,
+        "shield": 0,
+        "glory": 25,
+        "morale_loss": "1D6+1",
+        "knight_value": "⅛",
+        "healing_rate": 0
+      },
+      "armour_desc": "None",
+      "morale_minimum": 6,
+      "ransom": null,
+      "notes": "Hill archers wielding the dreaded longbow; loose arrows before contact; may flee if a third are injured.",
+      "per_player": 3.0,
+      "promotion_title": "Master Archer"
+    },
+    "Breton Mercenary Knights": {
+      "description": "A conroi of mercenary knights from Little Britain; may counter-charge",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 13,
+        "DEX": 12,
+        "STR": 12,
+        "CON": 15,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear or Sword",
+          "skill": "Charge",
+          "value": 12,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 12,
+          "damage": "4D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 15,
+          "damage": "4D6"
+        }
+      ],
+      "health": {
+        "hit_points": 27,
+        "knockdown": 13,
+        "major_wound": 15,
+        "unconscious": 7
+      },
+      "other": {
+        "armor_points": 9,
+        "shield": 6,
+        "glory": 25,
+        "morale_loss": "1D6+2",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Hauberk, aketon, open helm + kite shield",
+      "morale_minimum": 12,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 2,
+          "type": "Poor Knight",
+          "amount": "£3"
+        },
+        {
+          "min": 3,
+          "max": 5,
+          "type": "Household Knight",
+          "amount": "£4"
+        },
+        {
+          "min": 6,
+          "max": 6,
+          "type": "Vassal Knight",
+          "amount": "£10"
+        }
+      ],
+      "notes": "A conroi of mercenary knights from Little Britain; may counter-charge.",
+      "per_player": 1.0,
+      "promotion_title": "Breton Banneret",
+      "traits": {
+        "Valorous": 13
+      },
+      "skills": {
+        "Horsemanship": 16
+      }
     }
   },
-
   "encounter_themes": {
-    "Bandit ambush": { "core": ["Bandit"], "leader": "Bandit", "per_player": 1.0 },
-    "Highwaymen": { "core": ["Bowman", "Spearman"], "leader": "Veteran Spearman", "per_player": 1.0 },
-    "Conroi of knights": { "core": ["Average Knight"], "leader": "Veteran Knight", "per_player": 1.0 },
-    "Saxon raiders": { "core": ["Saxon Ceorl", "Rich Ceorl"], "leader": "Heorthgeneat", "per_player": 1.0 },
-    "Hillmen war band": { "core": ["Hill Man"], "leader": "Hill Man", "per_player": 1.0 }
+    "Bandit ambush": {
+      "core": [
+        "Bandit"
+      ],
+      "leader": "Bandit",
+      "per_player": 1.0
+    },
+    "Highwaymen": {
+      "core": [
+        "Bowman",
+        "Spearman"
+      ],
+      "leader": "Veteran Spearman",
+      "per_player": 1.0
+    },
+    "Conroi of knights": {
+      "core": [
+        "Average Knight"
+      ],
+      "leader": "Veteran Knight",
+      "per_player": 1.0
+    },
+    "Saxon raiders": {
+      "core": [
+        "Saxon Ceorl",
+        "Rich Ceorl"
+      ],
+      "leader": "Heorthgeneat",
+      "per_player": 1.0
+    },
+    "Hillmen war band": {
+      "core": [
+        "Hill Man"
+      ],
+      "leader": "Hill Man",
+      "per_player": 1.0
+    },
+    "Knights of Gorre": {
+      "core": [
+        "Knights of Gorre"
+      ],
+      "per_player": 1.0,
+      "morale_minimum": 13
+    },
+    "Knights of Lothian": {
+      "core": [
+        "Knights of Lothian"
+      ],
+      "per_player": 1.5,
+      "morale_minimum": 13
+    },
+    "Knights of Malahaut": {
+      "core": [
+        "Knights of Malahaut"
+      ],
+      "per_player": 1.0,
+      "morale_minimum": 13
+    },
+    "Knights of Cornwall": {
+      "core": [
+        "Knights of Cornwall"
+      ],
+      "per_player": 1.0,
+      "morale_minimum": 12
+    },
+    "Northern Prickers": {
+      "core": [
+        "Northern Prickers"
+      ],
+      "per_player": 1.0,
+      "morale_minimum": 10
+    },
+    "Pictish Pikemen": {
+      "core": [
+        "Pictish Pikemen"
+      ],
+      "per_player": 2.0,
+      "morale_minimum": 8
+    },
+    "Pictish Javeliniers": {
+      "core": [
+        "Pictish Javeliniers"
+      ],
+      "per_player": 3.0,
+      "morale_minimum": 5
+    },
+    "Pictish Knifemen": {
+      "core": [
+        "Pictish Knifemen"
+      ],
+      "per_player": 3.0,
+      "morale_minimum": 5
+    },
+    "Saxon Warriors": {
+      "core": [
+        "Saxon Warriors"
+      ],
+      "per_player": 2.0,
+      "morale_minimum": 8
+    },
+    "Irish Kerns": {
+      "core": [
+        "Irish Kerns"
+      ],
+      "per_player": 4.0,
+      "morale_minimum": 6
+    },
+    "Cambrian Archers": {
+      "core": [
+        "Cambrian Archers"
+      ],
+      "per_player": 3.0,
+      "morale_minimum": 6
+    },
+    "Breton Mercenary Knights": {
+      "core": [
+        "Breton Mercenary Knights"
+      ],
+      "per_player": 1.0,
+      "morale_minimum": 12
+    }
   }
 }

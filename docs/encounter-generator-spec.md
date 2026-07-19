@@ -130,9 +130,18 @@ fields (see §6.2). Captured values so far:
 | **Saxon Knight** | elite | 27 | 9+6 | Sword 15 / Charge 12 | 5D6 | 25 |
 | **Ætheling** (chieftain) | elite | 31 | — | Sword 20 / Axe 16 / Spear 16 | 5D6 | — |
 
-Still to transcribe at implementation: **Foot Soldier**, **Knight**,
-**Mercenary Knight**, **Berserk** (GM Handbook / Core). The list is
-data-driven, so adding more later is "add a key."
+Still to transcribe: **Foot Soldier**, **Berserk** (GM Handbook / Core). The
+list is data-driven, so adding more later is "add a key."
+
+### 5.2 Battle Cards (unit conrois)
+The **Battle Cards** add 12 themed foe conrois — Knights of Gorre / Lothian /
+Malahaut / Cornwall, Northern Prickers, Pictish Pikemen / Javeliniers /
+Knifemen, Saxon Warriors, Irish Kerns, Cambrian Archers, Breton Mercenary
+Knights. Each is both an **enemy template** and an **encounter theme** carrying
+the card's own **per-player scaling** (e.g. javeliniers ×3, Saxons ×2, Lothian
+×1.5), a **Morale** value (`morale_minimum` + `morale_loss`), a **Knight Value**,
+and a **Ransom** table (1D6 → knight type → £). These extra fields are optional
+on a template, so the base bestiary is unaffected.
 
 ### Skill tiers (user story: differentiate skill)
 Templates already span a skill range; group them by a `tier` field:
@@ -245,8 +254,10 @@ Cancel), then clears combatants, the **combat log**, and the **GM notes**.
   combatant's basic stats at a glance.
 - The **"engaged with"** name is **logged when set** and listed in the saved
   log's combatants summary (see §10), so the pairing is recorded.
-- **Promote/Demote** button per row → champion/elite (§5.1). Promoted rows are
-  **visually prominent** (bold + a ★ and title, e.g. "Bandit 2 — Gang Leader").
+- **Actions menu** per row → **Promote/Demote** (champion/elite, §5.1),
+  **Knock out/Revive**, and for battle-card foes **Roll ransom** (1D6 on the
+  card's table) and **Morale check** (d20 vs Morale — holds or flees). Promoted
+  rows are **visually prominent** (bold + a ★ and title).
 - **Status styling:** `unconscious` and `dead` rows are **greyed out and
   struck-through**, visually distinct from active combatants. A quick
   "down/slay" toggle is available. (Downed elites still grey out.)

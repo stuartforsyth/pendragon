@@ -58,7 +58,8 @@ class Combatant:
         self.promotion_title = template.get("promotion_title", "Champion")
 
         ch = template["characteristics"]
-        app = roll_expr(ch["APP"]) if isinstance(ch["APP"], str) else ch["APP"]
+        app_raw = ch.get("APP", "2D6+3")  # battle-card foes list no APP
+        app = roll_expr(app_raw) if isinstance(app_raw, str) else app_raw
         self.characteristics = {
             "SIZ": ch["SIZ"], "DEX": ch["DEX"], "STR": ch["STR"],
             "CON": ch["CON"], "APP": app,
@@ -67,6 +68,7 @@ class Combatant:
 
         self.attacks = copy.deepcopy(template["attacks"])
         self.skills = dict(template.get("skills", {}))
+        self.notes = template.get("notes", "")
         h, o = template["health"], template["other"]
         jitter = random.randint(-2, 2) if hp_jitter else 0
         self.max_hp = max(1, h["hit_points"] + jitter)
@@ -79,6 +81,12 @@ class Combatant:
         self.movement = o.get("movement", 0)
         self.glory = o.get("glory", 0)
         self.healing_rate = o.get("healing_rate", 0)
+
+        # Battle-card extras (morale + ransom); harmless defaults otherwise.
+        self.morale_minimum = template.get("morale_minimum")
+        self.morale_loss = o.get("morale_loss", "")
+        self.knight_value = o.get("knight_value", "")
+        self.ransom = template.get("ransom")  # list of {min,max,type,amount} or None
 
         self.elite = False
         self._base = None          # snapshot for demotion
@@ -384,15 +392,23 @@ class EncounterTab(ttk.Frame):
         ttk.Button(row, text="Dmg",
                    command=lambda cc=c, v=wv: self._roll_damage(cc, v.get())).grid(row=0, column=7)
 
-        # Actions
-        ptext = "Demote" if c.elite else "Promote"
-        ttk.Button(row, text=ptext, width=7,
-                   command=lambda cc=c: self._toggle_promote(cc)).grid(row=0, column=8, padx=(8, 0))
-        ko_text = "Revive" if c.down else "KO"
-        ttk.Button(row, text=ko_text, width=6,
-                   command=lambda cc=c: self._toggle_down(cc)).grid(row=0, column=9, padx=(4, 0))
+        # Actions menu (promote/demote, knock out/revive, ransom, morale)
+        mb = ttk.Menubutton(row, text="Actions ▾", width=9)
+        menu = tk.Menu(mb, tearoff=0)
+        menu.add_command(label="Demote" if c.elite else "Promote to champion",
+                         command=lambda cc=c: self._toggle_promote(cc))
+        menu.add_command(label="Revive" if c.down else "Knock out",
+                         command=lambda cc=c: self._toggle_down(cc))
+        if c.ransom:
+            menu.add_command(label="Roll ransom",
+                             command=lambda cc=c: self._roll_ransom(cc))
+        if c.morale_minimum:
+            menu.add_command(label="Morale check",
+                             command=lambda cc=c: self._morale_check(cc))
+        mb["menu"] = menu
+        mb.grid(row=0, column=8, padx=(8, 0))
         ttk.Button(row, text="✕", width=2,
-                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=10, padx=(4, 0))
+                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=9, padx=(4, 0))
 
         # Stat detail line: characteristics · attacks · skills (spelled out)
         ch = c.characteristics
@@ -403,9 +419,11 @@ class EncounterTab(ttk.Frame):
         if c.skills:
             detail += "   ·   Skills: " + ", ".join(f"{k} {v}" for k, v in c.skills.items())
         detail += f"   ·   Armour {c.armor_total()}, Major Wound {c.major_wound}"
-        tk.Label(row, text=detail, anchor="w", justify="left", wraplength=720,
+        if c.morale_minimum:
+            detail += f", Morale {c.morale_minimum}"
+        tk.Label(row, text=detail, anchor="w", justify="left", wraplength=740,
                  font=("TkDefaultFont", 8), fg=("#aaa" if down else "#666")
-                 ).grid(row=1, column=0, columnspan=11, sticky="w", padx=(6, 0))
+                 ).grid(row=1, column=0, columnspan=10, sticky="w", padx=(6, 0))
 
     # -- actions -----------------------------------------------------------
 
@@ -469,6 +487,24 @@ class EncounterTab(ttk.Frame):
             c._out = None
             self._log(f"{c.log_name} brought back up")
         self._refresh_rows()
+
+    def _roll_ransom(self, c):
+        if not c.ransom:
+            return
+        roll = random.randint(1, 6)
+        row = next((r for r in c.ransom if r["min"] <= roll <= r["max"]), None)
+        if row:
+            self._log(f"{c.log_name} ransom (1D6={roll}): {row['type']} — {row['amount']}")
+        else:
+            self._log(f"{c.log_name} ransom (1D6={roll}): none")
+
+    def _morale_check(self, c):
+        # Morale = d20 roll-under the unit's Morale value; fail = would flee.
+        roll, outcome = resolve_skill(c.morale_minimum)
+        result = "holds" if outcome in ("success", "critical") else "FLEES"
+        self._log(f"{c.log_name} morale check ({c.morale_minimum}): {roll} — {result}")
+        self.set_status(f"{c.display_name} morale {c.morale_minimum}: {roll} — {result}",
+                        OUTCOME_COLOR.get(outcome, "#000"))
 
     def on_add_round_note(self):
         text = self.round_note.get().strip()
