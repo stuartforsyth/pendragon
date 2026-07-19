@@ -611,14 +611,21 @@ class App(tk.Tk):
     # -- layout ------------------------------------------------------------
 
     def _build_ui(self):
+        # Global status bar, pinned at the bottom and shared by every tab.
+        self.status = ttk.Label(self, text="Ready.", foreground="#2a7d2a")
+        self.status.pack(side="bottom", fill="x", padx=10, pady=(0, 6))
+
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill="both", expand=True)
+
+        gen_tab = ttk.Frame(self.notebook)
+        self.notebook.add(gen_tab, text="NPC Generator")
+        self._build_generator_tab(gen_tab)
+
+    def _build_generator_tab(self, parent):
         pad = {"padx": 10, "pady": 6}
 
-        ttk.Label(
-            self, text="Pendragon NPC Generator",
-            font=("TkDefaultFont", 16, "bold"),
-        ).pack(anchor="w", **pad)
-
-        options = ttk.Frame(self)
+        options = ttk.Frame(parent)
         options.pack(fill="x", **pad)
 
         gender_box = ttk.LabelFrame(options, text="Gender")
@@ -650,7 +657,7 @@ class App(tk.Tk):
                 grid, text=c, value=c, variable=self.culture_var
             ).grid(row=i // cols, column=i % cols, sticky="w", padx=6, pady=2)
 
-        buttons = ttk.Frame(self)
+        buttons = ttk.Frame(parent)
         buttons.pack(anchor="w", fill="x", padx=10, pady=(2, 4))
         ttk.Button(buttons, text="Generate", command=self.on_generate).pack(side="left")
         ttk.Button(buttons, text="Randomise", command=self.on_randomise).pack(
@@ -668,7 +675,7 @@ class App(tk.Tk):
             self.copy_buttons.append(b)
 
         # Reroll a single field.
-        reroll = ttk.Frame(self)
+        reroll = ttk.Frame(parent)
         reroll.pack(anchor="w", padx=10, pady=(0, 8))
         ttk.Label(reroll, text="Reroll:").pack(side="left")
         self.reroll_var = tk.StringVar(value=self.generator.reroll_fields()[0])
@@ -682,7 +689,7 @@ class App(tk.Tk):
         )
         self.reroll_btn.pack(side="left", padx=(6, 0))
 
-        out_frame = ttk.LabelFrame(self, text="Result  (click the name to copy just the name)")
+        out_frame = ttk.LabelFrame(parent, text="Result  (click the name to copy just the name)")
         out_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
         self.name_font = tkfont.Font(family="TkDefaultFont", size=18, weight="bold")
@@ -708,13 +715,10 @@ class App(tk.Tk):
                                    foreground="#8a4b00")
         self.details.configure(state="disabled")
 
-        self._build_roster_ui()
+        self._build_roster_ui(parent)
 
-        self.status = ttk.Label(self, text="Ready.", foreground="#2a7d2a")
-        self.status.pack(fill="x", padx=10, pady=(0, 6))
-
-    def _build_roster_ui(self):
-        frame = ttk.LabelFrame(self, text="Session roster")
+    def _build_roster_ui(self, parent):
+        frame = ttk.LabelFrame(parent, text="Session roster")
         frame.pack(fill="both", padx=10, pady=(0, 6))
 
         top = ttk.Frame(frame)
