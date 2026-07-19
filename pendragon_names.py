@@ -266,14 +266,13 @@ class Generator:
 
         if self.rules is not None:
             result["naming_note"] = self.rules.naming_notes.get(culture, "")
-            if self.rules.manner:
-                result["manner"] = random.choice(self.rules.manner)
             if self.rules.social_classes:
                 self._fill_class(result, cls)
             religion = self.rules.religion_for(culture)
             result["religion"] = religion
             self._fill_characteristics(result)
             result["traits"] = self.rules.roll_traits(religion)
+            result["manner"] = self.rules.compose_manner(result["traits"])
             result["passions"] = self.rules.roll_passions(religion)
             result["directed"] = self.rules.roll_directed_trait()
 
@@ -302,12 +301,12 @@ class Generator:
             self._fill_class(r)
         elif field == "Skills":
             self._fill_skills(r)
-        elif field == "Manner":
-            if self.rules.manner:
-                r["manner"] = random.choice(self.rules.manner)
+        elif field == "Manner":  # re-phrase from the current traits
+            r["manner"] = self.rules.compose_manner(r["traits"])
         elif field == "Religion":
             r["religion"] = self.rules.religion_for(r["culture"])
             r["traits"] = self.rules.roll_traits(r["religion"])
+            r["manner"] = self.rules.compose_manner(r["traits"])
             r["passions"] = self.rules.roll_passions(r["religion"])
         elif field == "Characteristics":
             self._fill_characteristics(r)
@@ -315,6 +314,7 @@ class Generator:
             r["appearance"] = self.rules.roll_appearance(r["stats"]["APP"])
         elif field == "Personality Traits":
             r["traits"] = self.rules.roll_traits(r["religion"])
+            r["manner"] = self.rules.compose_manner(r["traits"])
         elif field == "Passions":
             r["passions"] = self.rules.roll_passions(r["religion"])
         elif field == "Directed Trait":
@@ -325,8 +325,20 @@ class Generator:
 # Statblock formatting (shared by the display and the clipboard)
 # ---------------------------------------------------------------------------
 
+FAMOUS = 16  # a trait value of 16+ is Famous
+
+
+def _trait_entry(left, lval, right, rval):
+    return f"{left} {lval}/{right} {rval}"
+
+
 def _traits_str(traits):
-    return ", ".join(f"{d} {dv}/{s} {sv}" for d, dv, s, sv in traits)
+    """All 13 pairs; Famous ones wrapped in ** (renders bold in Markdown/Discord)."""
+    parts = []
+    for left, lval, right, rval in traits:
+        entry = _trait_entry(left, lval, right, rval)
+        parts.append(f"**{entry}**" if max(lval, rval) >= FAMOUS else entry)
+    return ", ".join(parts)
 
 
 def _passions_str(passions):
@@ -692,6 +704,8 @@ class App(tk.Tk):
         self.details.tag_configure("label", font=("TkDefaultFont", 11, "bold"))
         self.details.tag_configure("desc", font=("TkDefaultFont", 11, "italic"),
                                    foreground="#333")
+        self.details.tag_configure("famous", font=("TkDefaultFont", 11, "bold"),
+                                   foreground="#8a4b00")
         self.details.configure(state="disabled")
 
         self._build_roster_ui()
@@ -808,7 +822,13 @@ class App(tk.Tk):
 
         if r.get("traits"):
             self.details.insert("end", "\n")
-            row("Personality Traits", _traits_str(r["traits"]))
+            self.details.insert("end", "Personality Traits: ", ("label",))
+            for i, (left, lval, right, rval) in enumerate(r["traits"]):
+                if i:
+                    self.details.insert("end", ", ")
+                tag = ("famous",) if max(lval, rval) >= FAMOUS else ()
+                self.details.insert("end", _trait_entry(left, lval, right, rval), tag)
+            self.details.insert("end", "\n")
         if r.get("passions"):
             row("Passions", _passions_str(r["passions"]))
         if r.get("directed"):

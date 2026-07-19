@@ -565,20 +565,6 @@
       ]
     }
   },
-  "manner": [
-    "cheerful and talkative",
-    "wary of strangers",
-    "proud and easily slighted",
-    "pious and softly spoken",
-    "boastful after a cup of ale",
-    "shrewd and calculating",
-    "quick to laugh",
-    "sullen and taciturn",
-    "courteous and formal",
-    "restless and impatient",
-    "generous to a fault",
-    "quietly watchful"
-  ],
   "social_classes": {
     "Commoner": {
       "description": "A peasant, labourer, or townsfolk; no martial training.",
@@ -823,5 +809,139 @@
     "Lady": 10,
     "Noble": 8,
     "Clergy": 12
+  },
+  "trait_manner": {
+    "layers": {
+      "demeanour": [
+        "Energetic",
+        "Modest",
+        "Valorous",
+        "Trusting",
+        "Temperate"
+      ],
+      "moral": [
+        "Chaste",
+        "Forgiving",
+        "Generous",
+        "Honest",
+        "Just",
+        "Merciful",
+        "Prudent",
+        "Spiritual"
+      ]
+    },
+    "surface": {
+      "Energetic": [
+        "brisk and full of energy",
+        "restless and always in motion"
+      ],
+      "Lazy": [
+        "languid and unhurried",
+        "slow-moving and easily idle"
+      ],
+      "Modest": [
+        "modest and unassuming",
+        "quiet and self-effacing"
+      ],
+      "Proud": [
+        "proud and easily slighted",
+        "haughty and imperious"
+      ],
+      "Valorous": [
+        "bold and unflinching",
+        "fearless in bearing"
+      ],
+      "Cowardly": [
+        "timid and skittish",
+        "nervous and easily cowed"
+      ],
+      "Trusting": [
+        "open and easy-going",
+        "warm and unguarded"
+      ],
+      "Suspicious": [
+        "guarded and slow to trust",
+        "wary and watchful"
+      ],
+      "Temperate": [
+        "calm and measured",
+        "restrained and even-tempered"
+      ],
+      "Indulgent": [
+        "indulgent and pleasure-loving",
+        "expansive and self-indulgent"
+      ]
+    },
+    "at_heart": {
+      "Chaste": [
+        "chaste",
+        "pure of conduct"
+      ],
+      "Lustful": [
+        "lustful",
+        "hot-blooded"
+      ],
+      "Forgiving": [
+        "forgiving",
+        "quick to pardon"
+      ],
+      "Vengeful": [
+        "vengeful",
+        "one to nurse a grudge"
+      ],
+      "Generous": [
+        "generous",
+        "open-handed"
+      ],
+      "Selfish": [
+        "grasping",
+        "self-serving"
+      ],
+      "Honest": [
+        "honest and plain-dealing",
+        "true to their word"
+      ],
+      "Deceitful": [
+        "sly and deceitful",
+        "not to be trusted"
+      ],
+      "Just": [
+        "fair-minded",
+        "even-handed"
+      ],
+      "Arbitrary": [
+        "capricious",
+        "high-handed"
+      ],
+      "Merciful": [
+        "merciful",
+        "gentle at the last"
+      ],
+      "Cruel": [
+        "cruel",
+        "hard and unforgiving"
+      ],
+      "Prudent": [
+        "prudent",
+        "careful and canny"
+      ],
+      "Reckless": [
+        "reckless",
+        "heedless of danger"
+      ],
+      "Spiritual": [
+        "devout",
+        "pious"
+      ],
+      "Worldly": [
+        "worldly",
+        "practical to the bone"
+      ]
+    },
+    "connectors": [
+      "but",
+      "though",
+      "yet"
+    ]
   }
 }

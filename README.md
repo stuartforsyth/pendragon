@@ -28,11 +28,14 @@ notes or Discord.
     Move, Damage, Healing, Major Wound, Knockdown, Unconscious).
   - **Appearance** — height from SIZ plus **Distinctive Features** drawn from
     the rulebook tables (their number/tone set by APP), and eye colour.
-  - **Personality Traits** — a couple of defining traits, biased toward the
-    NPC's religion.
+  - **Personality Traits** — all 13 trait pairs, rolled by the rulebook Random
+    Method (2D6+3 per trait, Valorous 2D6+8, ±3 for the religion's virtues).
+    Famous traits (16+) are highlighted.
   - **Passions** — Honor, Homage, Love (Family), a religion-specific Devotion,
     and one motivating Passion (a hook).
-  - **Manner** — a plain-language roleplay hint.
+  - **Manner** — a compound roleplay hint derived from the traits: the outward
+    demeanour trait plus the underlying moral one (e.g. "guarded and slow to
+    trust, but merciful at heart").
 - **Click the name** to copy just the name to the clipboard.
 - **Copy Statblock** to copy the entire NPC as text for your GM notes/Discord.
 - **Session roster** — keep a list of NPCs generated this session, then export

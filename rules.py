@@ -22,8 +22,11 @@ CHAR_ORDER = ("SIZ", "DEX", "STR", "CON", "APP")
 # Top-level keys every valid data file must provide.
 REQUIRED_KEYS = (
     "trait_pairs", "religions", "culture_religion", "passions",
-    "characteristics", "appearance", "directed_traits", "naming", "manner",
+    "characteristics", "appearance", "directed_traits", "naming", "trait_manner",
 )
+
+# A trait value of 16+ is "Famous" — it may dictate how the character acts.
+FAMOUS_THRESHOLD = 16
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +85,12 @@ class Rules:
         self.naming_notes = naming["notes"]
         self.pronunciation = naming["pronunciation"]
 
-        self.manner = data["manner"]
+        tm = data["trait_manner"]
+        self.demeanour_lefts = set(tm["layers"]["demeanour"])
+        self.moral_lefts = set(tm["layers"]["moral"])
+        self.trait_surface = tm["surface"]
+        self.trait_at_heart = tm["at_heart"]
+        self.manner_connectors = tm.get("connectors", ["but"])
 
         # Optional: social classes + skills.
         self.social_classes = data.get("social_classes", {})
@@ -208,29 +216,46 @@ class Rules:
     # -- traits ------------------------------------------------------------
 
     def roll_traits(self, religion):
-        if not self.trait_pairs:
-            return []
+        """Generate all 13 trait pairs by the rulebook Random Method.
+
+        Roll 2D6+3 for each left-hand trait (Valorous 2D6+8); +3 if that trait
+        is one of the religion's virtues, -3 if its opposite is. Right = 20-left.
+        Returns a list of (left, left_value, right, right_value).
+        """
         favoured = set(self.religions.get(religion, {}).get("favoured", []))
-        chosen, used = [], set()
+        profile = []
+        for left, right in self.trait_pairs:
+            val = _roll(2, 6) + (8 if left == "Valorous" else 3)
+            if left in favoured:
+                val += 3
+            elif right in favoured:
+                val -= 3
+            val = _clamp(val, 0, 20)
+            profile.append((left, val, right, 20 - val))
+        return profile
 
-        # A defining religious virtue (16-19 on the favoured side).
-        fav_pairs = [p for p in self.trait_pairs if favoured & {p[0], p[1]}]
-        if fav_pairs:
-            pair = random.choice(fav_pairs)
-            virtue = pair[0] if pair[0] in favoured else pair[1]
-            other = pair[1] if virtue == pair[0] else pair[0]
-            val = random.randint(16, 19)
-            chosen.append((virtue, val, other, 20 - val))
-            used.add(pair)
+    def compose_manner(self, profile):
+        """Compound manner: a surface demeanour trait + an 'at heart' moral one."""
+        def dominant(candidates):  # most pronounced pair -> (pole, deviation)
+            best = None
+            for left, lval, right, rval in candidates:
+                pole = left if lval >= rval else right
+                deviation = abs(lval - 10)
+                if best is None or deviation > best[1]:
+                    best = (pole, deviation)
+            return best[0] if best else None
 
-        # A second, random personality trait (13-18 on a random side).
-        remaining = [p for p in self.trait_pairs if p not in used]
-        if remaining:
-            left, right = random.choice(remaining)
-            dominant, sub = random.choice([(left, right), (right, left)])
-            val = random.randint(13, 18)
-            chosen.append((dominant, val, sub, 20 - val))
-        return chosen
+        surface_pole = dominant([p for p in profile if p[0] in self.demeanour_lefts])
+        heart_pole = dominant([p for p in profile if p[0] in self.moral_lefts])
+
+        surface = (random.choice(self.trait_surface[surface_pole])
+                   if surface_pole in self.trait_surface else "")
+        heart = (random.choice(self.trait_at_heart[heart_pole])
+                 if heart_pole in self.trait_at_heart else "")
+
+        if surface and heart:
+            return f"{surface}, {random.choice(self.manner_connectors)} {heart} at heart"
+        return surface or heart
 
     # -- passions ----------------------------------------------------------
 

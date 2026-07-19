@@ -31,6 +31,11 @@ rather than scattering TODOs through the code.
 
 ## Flavour & depth
 
+- [x] **Rulebook-accurate traits + trait-driven manner** — generate all 13 pairs
+  by the Random Method (±3 for religion virtues), highlight Famous traits, and
+  derive the manner from the profile (surface demeanour + moral "at heart").
+
+
 - [ ] **Campaign year + age** — set the GPC year (485–566); age the NPC and
   adjust stats, and derive era-appropriate cultural Passions (e.g. Salisbury →
   `Hate (Saxons)`).
