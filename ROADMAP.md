@@ -24,9 +24,9 @@ rather than scattering TODOs through the code.
   session; save/append them to a Markdown file.
 - [ ] **Batch generate** — spin up a whole village, court, or warband at once
   (e.g. "generate 8") with a summary table.
-- [ ] **Social class / rank** — Commoner / Knight / Noble weighting that also
-  unlocks a proper **skills block** (a combat weapon skill + a couple of
-  courtly skills), turning a statblock into something runnable in a fight.
+- [x] **Social class / rank** — Commoner / Squire / Knight / Lady / Noble /
+  Clergy, each with a **skills block**, a **Glory** value, and class-appropriate
+  attire (used in the image prompt). Selectable in the UI or rolled at random.
 
 ## Flavour & depth
 

@@ -223,7 +223,25 @@ class Generator:
         r["height"] = self.rules.height_for(stats["SIZ"])
         r["appearance"] = self.rules.roll_appearance(stats["APP"])
 
-    def generate(self, culture, gender):
+    def _fill_class(self, r, requested=None):
+        """(Re)roll the social class and its skills/Glory in place."""
+        if not (self.rules and self.rules.social_classes):
+            return
+        if requested and requested in self.rules.social_classes:
+            cls = requested
+        else:  # "Random", None, or unknown -> weighted random
+            cls = self.rules.roll_class()
+        r["social_class"] = cls
+        r["attire"] = self.rules.social_classes[cls].get("attire", "")
+        self._fill_skills(r)
+
+    def _fill_skills(self, r):
+        rolled = self.rules.roll_skills(r.get("social_class"))
+        if rolled:
+            r["skills"] = rolled["skills"]
+            r["glory"] = rolled["glory"]
+
+    def generate(self, culture, gender, social_class=None):
         result = {"culture": culture, "gender": gender}
         self._fill_name(result)
 
@@ -231,6 +249,7 @@ class Generator:
             result["naming_note"] = self.rules.naming_notes.get(culture, "")
             if self.rules.manner:
                 result["manner"] = random.choice(self.rules.manner)
+            self._fill_class(result, social_class)
             religion = self.rules.religion_for(culture)
             result["religion"] = religion
             self._fill_characteristics(result)
@@ -244,10 +263,13 @@ class Generator:
     def reroll_fields(self):
         if self.rules is None:
             return ["Name"]
-        return [
+        fields = [
             "Name", "Religion", "Characteristics", "Appearance",
             "Personality Traits", "Passions", "Directed Trait", "Manner",
         ]
+        if self.rules.social_classes:
+            fields[1:1] = ["Class", "Skills"]  # right after Name
+        return fields
 
     def reroll_field(self, r, field):
         """Reroll a single component of an existing result in place."""
@@ -256,7 +278,11 @@ class Generator:
             return
         if self.rules is None:
             return
-        if field == "Manner":
+        if field == "Class":
+            self._fill_class(r)
+        elif field == "Skills":
+            self._fill_skills(r)
+        elif field == "Manner":
             if self.rules.manner:
                 r["manner"] = random.choice(self.rules.manner)
         elif field == "Religion":
@@ -287,14 +313,25 @@ def _passions_str(passions):
     return ", ".join(f"{n} {v}" for n, v in passions)
 
 
-def format_statblock(r):
-    """Render a result dict as a plain-text statblock for the clipboard."""
-    lines = [r["full"]]
+def _skills_str(skills):
+    return ", ".join(f"{k} {v}" for k, v in
+                     sorted(skills.items(), key=lambda kv: (-kv[1], kv[0])))
 
-    sub = f"{r['gender']} · {r['culture']}"
+
+def subtitle_str(r):
+    """The '<gender> <class> · <culture> · <religion>' summary line."""
+    sub = r["gender"]
+    if r.get("social_class"):
+        sub += f" {r['social_class']}"
+    sub += f" · {r['culture']}"
     if r.get("religion"):
         sub += f" · {r['religion']}"
-    lines.append(sub)
+    return sub
+
+
+def format_statblock(r):
+    """Render a result dict as a plain-text statblock for the clipboard."""
+    lines = [r["full"], subtitle_str(r)]
 
     if r.get("appearance"):
         a = r["appearance"]
@@ -321,6 +358,10 @@ def format_statblock(r):
             f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
             f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}"
         )
+    if r.get("skills"):
+        lines.append("Skills: " + _skills_str(r["skills"]))
+    if r.get("glory") is not None:
+        lines.append(f"Glory: {r['glory']}")
 
     if r.get("naming_note"):
         lines.append(f"Naming: {r['naming_note']}")
@@ -332,13 +373,7 @@ def format_statblock(r):
 
 def format_statblock_markdown(r):
     """Render a result dict as a Markdown block for game notes."""
-    lines = [f"## {r['full']}"]
-
-    sub = f"*{r['gender']} · {r['culture']}"
-    if r.get("religion"):
-        sub += f" · {r['religion']}"
-    lines.append(sub + "*")
-    lines.append("")
+    lines = [f"## {r['full']}", f"*{subtitle_str(r)}*", ""]
 
     def bullet(label, value):
         lines.append(f"- **{label}:** {value}")
@@ -366,6 +401,10 @@ def format_statblock_markdown(r):
                f"HP {d['Hit Points']} · Move {d['Move']} · Damage {d['Damage']} · "
                f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
                f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}")
+    if r.get("skills"):
+        bullet("Skills", _skills_str(r["skills"]))
+    if r.get("glory") is not None:
+        bullet("Glory", r["glory"])
     if r.get("naming_note"):
         bullet("Naming", r["naming_note"])
     if r.get("pronunciation"):
@@ -376,8 +415,9 @@ def format_statblock_markdown(r):
 
 def build_image_prompt(r):
     """Build a period-accurate image-generation prompt from the NPC."""
-    subject = f"{r['gender'].lower()} {r['culture']}"
-    parts = [f"character portrait of a {subject} person"]
+    social = f"{r['social_class'].lower()} " if r.get("social_class") else ""
+    subject = f"{r['gender'].lower()} {r['culture']} {social}person".replace("  ", " ")
+    parts = [f"character portrait of a {subject}"]
 
     a = r.get("appearance")
     if a:
@@ -388,11 +428,11 @@ def build_image_prompt(r):
     if r.get("height"):
         parts.append(f"about {r['height']} tall")
 
+    attire = r.get("attire") or "period Dark Ages clothing"
     style = (
-        "sub-Roman Britain, 5th-6th century, Dark Ages, "
-        "mail hauberk or wool tunic and cloak, no plate armour, "
-        "historically grounded, muted natural colours, overcast light, "
-        "painterly, detailed face, head and shoulders"
+        f"sub-Roman Britain, 5th-6th century, Dark Ages, wearing {attire}, "
+        "no plate armour, historically grounded, muted natural colours, "
+        "overcast light, painterly, detailed face, head and shoulders"
     )
     negative = (
         "Negative prompt: plate armour, full helm, gothic castle, renaissance, "
@@ -417,6 +457,7 @@ class App(tk.Tk):
 
         self.gender_var = tk.StringVar(value="Male")
         self.culture_var = tk.StringVar(value=self.generator.culture_names()[0])
+        self.class_var = tk.StringVar(value="Random")
 
         self._build_ui()
 
@@ -439,6 +480,18 @@ class App(tk.Tk):
             ttk.Radiobutton(
                 gender_box, text=g, value=g, variable=self.gender_var
             ).pack(anchor="w", padx=8, pady=2)
+
+        # Class selector (only if the rules data defines social classes).
+        classes = self.generator.rules.class_names() if self.generator.rules else []
+        if classes:
+            class_box = ttk.LabelFrame(options, text="Class")
+            class_box.pack(side="left", fill="y", padx=(0, 10))
+            cgrid = ttk.Frame(class_box)
+            cgrid.pack(padx=4, pady=4)
+            for i, c in enumerate(["Random"] + classes):
+                ttk.Radiobutton(
+                    cgrid, text=c, value=c, variable=self.class_var
+                ).grid(row=i // 2, column=i % 2, sticky="w", padx=6, pady=1)
 
         culture_box = ttk.LabelFrame(options, text="Culture")
         culture_box.pack(side="left", fill="both", expand=True)
@@ -510,8 +563,9 @@ class App(tk.Tk):
     def on_generate(self):
         culture = self.culture_var.get()
         gender = self.gender_var.get()
+        social_class = self.class_var.get()
         try:
-            result = self.generator.generate(culture, gender)
+            result = self.generator.generate(culture, gender, social_class)
         except ValueError as exc:
             messagebox.showwarning("No names", str(exc))
             return
@@ -530,10 +584,7 @@ class App(tk.Tk):
     def _refresh_display(self):
         r = self._current
         self.name_label.config(text=r["full"])
-        sub = f"{r['gender']} · {r['culture']}"
-        if r.get("religion"):
-            sub += f" · {r['religion']}"
-        self.subtitle.config(text=sub)
+        self.subtitle.config(text=subtitle_str(r))
         self._render_details(r)
 
     def on_reroll(self):
@@ -584,6 +635,10 @@ class App(tk.Tk):
                 f"HP {d['Hit Points']} · Move {d['Move']} · Damage {d['Damage']} · "
                 f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
                 f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}")
+        if r.get("skills"):
+            row("Skills", _skills_str(r["skills"]))
+        if r.get("glory") is not None:
+            row("Glory", r["glory"])
 
         if r.get("naming_note"):
             self.details.insert("end", "\n")

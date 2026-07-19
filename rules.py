@@ -84,6 +84,33 @@ class Rules:
 
         self.manner = data["manner"]
 
+        # Optional: social classes + skills.
+        self.social_classes = data.get("social_classes", {})
+        self.class_weights = data.get("class_weights", {})
+
+    # -- social class + skills ---------------------------------------------
+
+    def class_names(self):
+        return list(self.social_classes)
+
+    def roll_class(self):
+        """Pick a random social class, weighted by class_weights."""
+        classes = self.class_names()
+        if not classes:
+            return None
+        weights = [self.class_weights.get(c, 1) for c in classes]
+        return random.choices(classes, weights=weights)[0]
+
+    def roll_skills(self, social_class):
+        """Return {'skills': {name: value}, 'glory': int} for a class, or None."""
+        info = self.social_classes.get(social_class)
+        if not info:
+            return None
+        skills = {name: random.randint(lo, hi)
+                  for name, (lo, hi) in info["skills"].items()}
+        glory = random.randint(*info["glory"])
+        return {"skills": skills, "glory": glory}
+
     # -- religion ----------------------------------------------------------
 
     def religion_for(self, culture):

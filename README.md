@@ -10,10 +10,12 @@ notes or Discord.
 
 ## Features
 
-- **Gender** (Male / Female) and **Culture** radio buttons — cultures are read
-  live from `Names by Culture.md`.
+- **Gender**, **Class**, and **Culture** radio buttons — cultures are read live
+  from `Names by Culture.md`; Class can be a specific rank or **Random**.
 - **Generate** a random name with a culture-appropriate surname or byname.
-- **A full rolled-up NPC**, driven by the `rules/` reference files:
+- **A full rolled-up NPC**, driven by `data/rules.json`:
+  - **Social class** (Commoner, Squire, Knight, Lady, Noble, Clergy) with a
+    **skills block** and a **Glory** value.
   - **Religion** (defaulted by culture).
   - **Characteristics** (SIZ/DEX/STR/CON/APP) with derived stats (Hit Points,
     Move, Damage, Healing, Major Wound, Knockdown, Unconscious).
