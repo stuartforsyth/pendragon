@@ -13,11 +13,24 @@ notes or Discord.
 - **Gender** (Male / Female) and **Culture** radio buttons — cultures are read
   live from `Names by Culture.md`.
 - **Generate** a random name with a culture-appropriate surname or byname.
-- **Click the name to copy** the full name to the system clipboard.
-- **Random NPC traits** flavoured for Arthurian Britain: Size, Appearance
-  (with hair), Eye colour, Identifying mark, and Demeanour.
+- **A full rolled-up NPC**, driven by the `rules/` reference files:
+  - **Religion** (defaulted by culture).
+  - **Characteristics** (SIZ/DEX/STR/CON/APP) with derived stats (Hit Points,
+    Move, Damage, Healing, Major Wound, Knockdown, Unconscious).
+  - **Appearance** — height from SIZ plus **Distinctive Features** drawn from
+    the rulebook tables (their number/tone set by APP), and eye colour.
+  - **Personality Traits** — a couple of defining traits, biased toward the
+    NPC's religion.
+  - **Passions** — Honor, Homage, Love (Family), a religion-specific Devotion,
+    and one motivating Passion (a hook).
+  - **Manner** — a plain-language roleplay hint.
+- **Click the name** to copy just the name to the clipboard.
+- **Copy Statblock** to copy the entire NPC as text for your GM notes/Discord.
 - **Pronunciation hints** appear only when a name contains a tricky cluster
   (e.g. Cymric `ll`/`dd`/`w`, Irish `ch`, Roman hard `c`).
+
+If the `rules/` files are missing, the app degrades gracefully to name-only
+mode.
 
 ## Requirements
 
@@ -76,14 +89,12 @@ which are kept locally and git-ignored. See [rules/README.md](rules/README.md).
 
 ## Possible future additions
 
-Ideas for turning this into a fuller "instant NPC" tool, leaning on Pendragon
-5e mechanics:
+Ideas for taking the "instant NPC" tool further:
 
-- Personality Traits (the 13 paired traits) and a defining Passion.
-- Religion defaulted by culture (Wotanic / Christian / Pagan).
-- Social class / rank with a quick stat block (SIZ, DEX, STR, CON, APP).
+- Social class / rank weighting (commoner vs. knight stat blocks).
 - Save a session roster and export NPCs to Markdown.
 - Lock and re-roll individual fields; batch-generate a village or warband.
+- A full skills list and combat weapon skill for knightly NPCs.
 
 ## License
 
