@@ -16,8 +16,28 @@ import json
 import math
 import os
 import random
+import re
 
 CHAR_ORDER = ("SIZ", "DEX", "STR", "CON", "APP")
+
+_EXPR_TOKEN = re.compile(r"([+-]?)(\d+)[dD](\d+)|([+-]?)(\d+)")
+
+
+def roll_expr(expr):
+    """Roll a dice expression like '2D6+4', '5D6', '1D6+10', or a plain '12'.
+
+    Sums each NdM term and each constant, honouring + / - signs. Returns an int.
+    """
+    total = 0
+    for m in _EXPR_TOKEN.finditer(str(expr).replace(" ", "")):
+        if m.group(3):  # a dice term NdM
+            sign = -1 if m.group(1) == "-" else 1
+            n, faces = int(m.group(2)), int(m.group(3))
+            total += sign * sum(random.randint(1, faces) for _ in range(n))
+        elif m.group(5) is not None:  # a constant
+            sign = -1 if m.group(4) == "-" else 1
+            total += sign * int(m.group(5))
+    return total
 
 # Top-level keys every valid data file must provide.
 REQUIRED_KEYS = (
@@ -95,6 +115,9 @@ class Rules:
         # Optional: social classes + skills.
         self.social_classes = data.get("social_classes", {})
         self.class_weights = data.get("class_weights", {})
+
+        # Optional: combat data (loaded from data/combat.json by load_rules).
+        self.combat = None
 
     # -- social class + skills ---------------------------------------------
 
@@ -344,7 +367,18 @@ def load_rules(path):
         raise RulesError(f"{path} is not valid JSON: {exc}") from exc
 
     _validate(data)
-    return Rules(data)
+    rules = Rules(data)
+
+    # Optional combat data (Encounter Generator); absent = combat features off.
+    combat_path = os.path.join(os.path.dirname(path), "combat.json")
+    if os.path.isfile(combat_path):
+        try:
+            with open(combat_path, encoding="utf-8") as fh:
+                rules.combat = json.load(fh)
+        except json.JSONDecodeError as exc:
+            raise RulesError(f"{combat_path} is not valid JSON: {exc}") from exc
+
+    return rules
 
 
 if __name__ == "__main__":  # quick self-test

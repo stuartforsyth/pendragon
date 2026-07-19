@@ -27,6 +27,7 @@ import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import filedialog, messagebox, ttk
 
+import encounter as encounter_module
 import rules as rules_module
 
 # ---------------------------------------------------------------------------
@@ -634,6 +635,15 @@ class App(tk.Tk):
         gen_tab = ttk.Frame(self.notebook)
         self.notebook.add(gen_tab, text="NPC Generator")
         self._build_generator_tab(gen_tab)
+
+        # Encounter tab (only if combat data is available).
+        if self.generator.rules and self.generator.rules.combat:
+            enc_tab = encounter_module.EncounterTab(
+                self.notebook, self.generator.rules, self._set_status)
+            self.notebook.add(enc_tab, text="Encounter")
+
+    def _set_status(self, text, color="#2a7d2a"):
+        self.status.config(text=text, foreground=color)
 
     def _build_generator_tab(self, parent):
         pad = {"padx": 10, "pady": 6}

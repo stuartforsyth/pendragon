@@ -1,6 +1,6 @@
 # Specification 1 — Encounter Generator (human encounters)
 
-Status: **agreed, not yet implemented.** A new "Encounter" tab in the existing
+Status: **implemented** (v1). A new "Encounter" tab in the existing
 Pendragon app for quickly building and running **human** combat encounters
 scaled to the number of players. Beasts/creatures are a later specification.
 

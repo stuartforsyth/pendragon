@@ -1,0 +1,474 @@
+#!/usr/bin/env python3
+"""
+Encounter Generator for the Pendragon app (human encounters).
+
+Model + combat resolution + the "Encounter" notebook tab. Data comes from
+``data/combat.json`` via ``rules.Rules.combat`` (see docs/encounter-generator-spec.md).
+Reuses ``rules.roll_expr`` for all dice.
+"""
+
+import copy
+import datetime
+import random
+import tkinter as tk
+from tkinter import filedialog, font as tkfont, messagebox, ttk
+
+from rules import roll_expr
+
+
+# ---------------------------------------------------------------------------
+# Combat resolution (rulebook: d20 roll-under; crit = exact; fumble = nat 20)
+# ---------------------------------------------------------------------------
+
+def resolve_skill(value):
+    """Roll d20 against a skill value. Returns (roll, outcome)."""
+    roll = random.randint(1, 20)
+    if value >= 20:
+        return roll, ("critical" if roll == 20 else "success")
+    if roll == 20:
+        return roll, "fumble"
+    if roll == value:
+        return roll, "critical"
+    if roll < value:
+        return roll, "success"
+    return roll, "failure"
+
+
+def roll_damage(damage_expr, base_dice, critical):
+    """Roll weapon damage; a critical adds the attacker's base Damage dice again."""
+    base = roll_expr(damage_expr)
+    if critical:
+        bonus_expr = f"{base_dice}D6"
+        bonus = roll_expr(bonus_expr)
+        return base + bonus, f"{damage_expr} = {base}  +critical {bonus_expr} = {bonus}  ->  {base + bonus}"
+    return base, f"{damage_expr} = {base}"
+
+
+# ---------------------------------------------------------------------------
+# Combatant
+# ---------------------------------------------------------------------------
+
+class Combatant:
+    def __init__(self, type_name, template, label, hp_jitter=True):
+        self.type = type_name
+        self.label = label
+        self.engaged_with = ""
+        self.description = template.get("description", "")
+        self.tier = template.get("tier", "")
+        self.promotion_title = template.get("promotion_title", "Champion")
+
+        ch = template["characteristics"]
+        app = roll_expr(ch["APP"]) if isinstance(ch["APP"], str) else ch["APP"]
+        self.characteristics = {
+            "SIZ": ch["SIZ"], "DEX": ch["DEX"], "STR": ch["STR"],
+            "CON": ch["CON"], "APP": app,
+        }
+        self.base_damage_dice = max(1, round((ch["STR"] + ch["SIZ"]) / 6))
+
+        self.attacks = copy.deepcopy(template["attacks"])
+        h, o = template["health"], template["other"]
+        jitter = random.randint(-2, 2) if hp_jitter else 0
+        self.max_hp = max(1, h["hit_points"] + jitter)
+        self.cur_hp = self.max_hp
+        self.knockdown = h["knockdown"]
+        self.major_wound = h["major_wound"]
+        self.unconscious = h["unconscious"]
+        self.armor_points = o.get("armor_points", 0)
+        self.shield = o.get("shield", 0)
+        self.movement = o.get("movement", 0)
+        self.glory = o.get("glory", 0)
+        self.healing_rate = o.get("healing_rate", 0)
+
+        self.elite = False
+        self._base = None  # snapshot for demotion
+
+    # -- status ------------------------------------------------------------
+
+    @property
+    def status(self):
+        if self.cur_hp <= 0:
+            return "dead"
+        if self.cur_hp < self.unconscious:
+            return "unconscious"
+        return "active"
+
+    @property
+    def down(self):
+        return self.status != "active"
+
+    @property
+    def display_name(self):
+        return f"{self.label} — {self.promotion_title}" if self.elite else self.label
+
+    def armor_total(self):
+        return self.armor_points + self.shield
+
+    # -- promotion ---------------------------------------------------------
+
+    def promote(self, cfg):
+        if self.elite:
+            return
+        self._base = {
+            "attacks": copy.deepcopy(self.attacks),
+            "max_hp": self.max_hp, "cur_hp": self.cur_hp,
+            "unconscious": self.unconscious, "armor_points": self.armor_points,
+            "glory": self.glory,
+        }
+        for atk in self.attacks:
+            atk["value"] += cfg.get("skill_bonus", 5)
+            atk["damage"] = f"{atk['damage']}+{cfg.get('damage_bonus_dice', 1)}D6"
+        mult = cfg.get("hp_multiplier", 1.5)
+        self.max_hp = round(self.max_hp * mult)
+        self.cur_hp = round(self.cur_hp * mult)
+        self.unconscious = max(1, round(self.max_hp / 4))
+        self.armor_points += cfg.get("armour_bonus", 0)
+        self.glory *= cfg.get("glory_multiplier", 1)
+        self.elite = True
+
+    def demote(self):
+        if not self.elite or not self._base:
+            return
+        self.attacks = self._base["attacks"]
+        self.max_hp = self._base["max_hp"]
+        self.cur_hp = min(self.cur_hp, self.max_hp)
+        self.unconscious = self._base["unconscious"]
+        self.armor_points = self._base["armor_points"]
+        self.glory = self._base["glory"]
+        self.elite = False
+        self._base = None
+
+
+# ---------------------------------------------------------------------------
+# Encounter + log
+# ---------------------------------------------------------------------------
+
+class Encounter:
+    def __init__(self, combat):
+        self.combat = combat
+        self.templates = combat["enemy_templates"]
+        self.themes = combat.get("encounter_themes", {})
+        self.promotion_cfg = combat.get("promotion", {})
+        self.combatants = []
+        self._counts = {}
+
+    def clear(self):
+        self.combatants = []
+        self._counts = {}
+
+    def add_one(self, type_name):
+        template = self.templates[type_name]
+        self._counts[type_name] = self._counts.get(type_name, 0) + 1
+        label = f"{type_name} {self._counts[type_name]}"
+        c = Combatant(type_name, template, label)
+        self.combatants.append(c)
+        return c
+
+    def remove(self, combatant):
+        if combatant in self.combatants:
+            self.combatants.remove(combatant)
+
+    def promote(self, combatant):
+        combatant.promote(self.promotion_cfg)
+
+    def generate_from_theme(self, theme_name, n_players):
+        theme = self.themes[theme_name]
+        self.clear()
+        core = theme.get("core", list(self.templates))
+        count = max(1, round(n_players * theme.get("per_player", 1.0)))
+        for _ in range(count):
+            self.add_one(random.choice(core))
+        leader = theme.get("leader")
+        if leader and leader in self.templates:
+            self.promote(self.add_one(leader))
+        return self.combatants
+
+
+class CombatLog:
+    def __init__(self):
+        self.entries = []
+        self.gm_notes = ""
+
+    def add(self, line):
+        stamp = datetime.datetime.now().strftime("%H:%M")
+        self.entries.append(f"[{stamp}] {line}")
+
+    def clear(self):
+        self.entries = []
+
+    def text(self):
+        return "\n".join(self.entries)
+
+    def to_markdown(self):
+        today = datetime.date.today().isoformat()
+        out = [f"# Encounter Log — {today}", ""]
+        out.extend(self.entries or ["(no events logged)"])
+        if self.gm_notes.strip():
+            out += ["", "## GM Notes", "", self.gm_notes.rstrip()]
+        return "\n".join(out) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# GUI — the Encounter tab
+# ---------------------------------------------------------------------------
+
+OUTCOME_COLOR = {
+    "critical": "#1a7a1a", "success": "#2a7d2a",
+    "failure": "#a33", "fumble": "#c00",
+}
+
+
+class EncounterTab(ttk.Frame):
+    def __init__(self, parent, rules, set_status):
+        super().__init__(parent)
+        self.rules = rules
+        self.set_status = set_status
+        self.encounter = Encounter(rules.combat)
+        self.log = CombatLog()
+        self._build_ui()
+
+    # -- layout ------------------------------------------------------------
+
+    def _build_ui(self):
+        self.norm_font = tkfont.Font(family="TkDefaultFont", size=10)
+        self.down_font = tkfont.Font(family="TkDefaultFont", size=10, overstrike=1)
+        self.elite_font = tkfont.Font(family="TkDefaultFont", size=10, weight="bold")
+
+        setup = ttk.Frame(self)
+        setup.pack(fill="x", padx=10, pady=(10, 4))
+        ttk.Label(setup, text="Players:").pack(side="left")
+        self.players_var = tk.IntVar(value=4)
+        ttk.Spinbox(setup, from_=1, to=20, width=4,
+                    textvariable=self.players_var).pack(side="left", padx=(4, 10))
+        ttk.Label(setup, text="Encounter:").pack(side="left")
+        self.theme_var = tk.StringVar(value=next(iter(self.encounter.themes), ""))
+        ttk.Combobox(setup, textvariable=self.theme_var, width=20, state="readonly",
+                     values=list(self.encounter.themes)).pack(side="left", padx=(4, 10))
+        ttk.Button(setup, text="Generate encounter",
+                   command=self.on_generate).pack(side="left")
+        ttk.Button(setup, text="Clear", command=self.on_clear).pack(side="left", padx=(6, 0))
+
+        addrow = ttk.Frame(self)
+        addrow.pack(fill="x", padx=10, pady=(0, 6))
+        ttk.Label(addrow, text="Add combatant:").pack(side="left")
+        self.add_var = tk.StringVar(value=next(iter(self.encounter.templates), ""))
+        ttk.Combobox(addrow, textvariable=self.add_var, width=20, state="readonly",
+                     values=list(self.encounter.templates)).pack(side="left", padx=(4, 6))
+        ttk.Button(addrow, text="Add", command=self.on_add).pack(side="left")
+
+        # Scrollable combatant tracker.
+        tracker = ttk.LabelFrame(self, text="Combatants")
+        tracker.pack(fill="both", expand=True, padx=10, pady=(0, 6))
+        canvas = tk.Canvas(tracker, highlightthickness=0)
+        vs = ttk.Scrollbar(tracker, orient="vertical", command=canvas.yview)
+        self.rows_frame = ttk.Frame(canvas)
+        self.rows_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=self.rows_frame, anchor="nw")
+        canvas.configure(yscrollcommand=vs.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        vs.pack(side="right", fill="y")
+
+        # Log + GM notes side by side.
+        bottom = ttk.Frame(self)
+        bottom.pack(fill="both", padx=10, pady=(0, 8))
+
+        log_frame = ttk.LabelFrame(bottom, text="Combat log")
+        log_frame.pack(side="left", fill="both", expand=True)
+        self.log_text = tk.Text(log_frame, height=7, wrap="word", state="disabled",
+                                font=("TkDefaultFont", 9))
+        self.log_text.pack(fill="both", expand=True, padx=6, pady=(6, 2))
+        logbar = ttk.Frame(log_frame)
+        logbar.pack(fill="x", padx=6, pady=(0, 6))
+        ttk.Button(logbar, text="Copy log", command=self.on_copy_log).pack(side="left")
+        ttk.Button(logbar, text="Save log…", command=self.on_save_log).pack(
+            side="left", padx=(6, 0))
+
+        notes_frame = ttk.LabelFrame(bottom, text="GM Notes  (saved into the log file)")
+        notes_frame.pack(side="left", fill="both", expand=True, padx=(8, 0))
+        self.notes_text = tk.Text(notes_frame, height=7, wrap="word",
+                                  font=("TkDefaultFont", 10))
+        self.notes_text.pack(fill="both", expand=True, padx=6, pady=6)
+
+        self._refresh_rows()
+
+    # -- combatant rows ----------------------------------------------------
+
+    def _refresh_rows(self):
+        for w in self.rows_frame.winfo_children():
+            w.destroy()
+        if not self.encounter.combatants:
+            ttk.Label(self.rows_frame, foreground="#777",
+                      text="No combatants. Generate an encounter or add one above."
+                      ).grid(row=0, column=0, padx=8, pady=8, sticky="w")
+            return
+        for i, c in enumerate(self.encounter.combatants):
+            self._build_row(i, c)
+
+    def _build_row(self, i, c):
+        row = ttk.Frame(self.rows_frame)
+        row.grid(row=i, column=0, sticky="ew", padx=2, pady=1)
+
+        down = c.down
+        name_font = self.down_font if down else (self.elite_font if c.elite else self.norm_font)
+        fg = "#999" if down else ("#8a4b00" if c.elite else "#000")
+
+        star = "★ " if c.elite else ""
+        name = tk.Label(row, text=f"{star}{c.display_name}", width=22, anchor="w",
+                        font=name_font, fg=fg)
+        name.grid(row=0, column=0, sticky="w")
+
+        # Engaged-with
+        eng = ttk.Entry(row, width=14)
+        eng.insert(0, c.engaged_with)
+        eng.grid(row=0, column=1, padx=(4, 6))
+        eng.bind("<KeyRelease>", lambda e, cc=c, w=eng: setattr(cc, "engaged_with", w.get()))
+
+        # HP
+        ttk.Label(row, text="HP").grid(row=0, column=2)
+        hp_var = tk.StringVar(value=str(c.cur_hp))
+        hp_entry = ttk.Entry(row, width=4, textvariable=hp_var)
+        hp_entry.grid(row=0, column=3)
+        hp_entry.bind("<Return>", lambda e, cc=c, v=hp_var: self._set_hp(cc, v.get()))
+        hp_entry.bind("<FocusOut>", lambda e, cc=c, v=hp_var: self._set_hp(cc, v.get()))
+        ttk.Label(row, text=f"/{c.max_hp}").grid(row=0, column=4)
+        ttk.Button(row, text="−", width=2,
+                   command=lambda cc=c: self._adjust_hp(cc, -1)).grid(row=0, column=5)
+        ttk.Button(row, text="+", width=2,
+                   command=lambda cc=c: self._adjust_hp(cc, +1)).grid(row=0, column=6)
+
+        # Weapon + roll buttons
+        weapons = [a["weapon"] for a in c.attacks]
+        wv = tk.StringVar(value=weapons[0] if weapons else "")
+        ttk.Combobox(row, textvariable=wv, values=weapons, width=13,
+                     state="readonly").grid(row=0, column=7, padx=(8, 2))
+        ttk.Button(row, text="Skill",
+                   command=lambda cc=c, v=wv: self._roll_skill(cc, v.get())).grid(row=0, column=8)
+        ttk.Button(row, text="Dmg",
+                   command=lambda cc=c, v=wv: self._roll_damage(cc, v.get())).grid(row=0, column=9)
+
+        # Armour + thresholds (compact)
+        ttk.Label(row, text=f"Arm {c.armor_total()} · MW {c.major_wound}",
+                  foreground=fg).grid(row=0, column=10, padx=(8, 4))
+
+        # Actions
+        ptext = "Demote" if c.elite else "Promote"
+        ttk.Button(row, text=ptext, width=7,
+                   command=lambda cc=c: self._toggle_promote(cc)).grid(row=0, column=11)
+        ttk.Button(row, text="Down", width=5,
+                   command=lambda cc=c: self._set_hp(cc, "0")).grid(row=0, column=12, padx=(4, 0))
+        ttk.Button(row, text="✕", width=2,
+                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=13, padx=(4, 0))
+
+    # -- actions -----------------------------------------------------------
+
+    def _log(self, line):
+        self.log.add(line)
+        self.log_text.configure(state="normal")
+        self.log_text.insert("end", self.log.entries[-1] + "\n")
+        self.log_text.see("end")
+        self.log_text.configure(state="disabled")
+
+    def _sync_notes(self):
+        self.log.gm_notes = self.notes_text.get("1.0", "end").rstrip("\n")
+
+    def _set_hp(self, c, text):
+        try:
+            new = int(text)
+        except (TypeError, ValueError):
+            self._refresh_rows()
+            return
+        old, prev_status = c.cur_hp, c.status
+        c.cur_hp = min(new, c.max_hp)
+        if c.cur_hp != old:
+            note = ""
+            if c.status != prev_status and c.down:
+                note = f" ({c.status})"
+            self._log(f"{c.display_name}: {old} → {c.cur_hp} HP{note}")
+        self._refresh_rows()
+
+    def _adjust_hp(self, c, delta):
+        self._set_hp(c, str(c.cur_hp + delta))
+
+    def _roll_skill(self, c, weapon):
+        atk = next((a for a in c.attacks if a["weapon"] == weapon), None)
+        if not atk:
+            return
+        roll, outcome = resolve_skill(atk["value"])
+        self._log(f"{c.display_name} rolls {weapon} ({atk['value']}): {roll} — {outcome.upper()}")
+        self.set_status(f"{c.display_name} {weapon} {atk['value']}: rolled {roll} — {outcome}",
+                        OUTCOME_COLOR.get(outcome, "#000"))
+
+    def _roll_damage(self, c, weapon):
+        atk = next((a for a in c.attacks if a["weapon"] == weapon), None)
+        if not atk:
+            return
+        crit = messagebox.askyesno(
+            "Critical hit?",
+            f"Was {c.display_name}'s {weapon} attack a critical hit?\n\n"
+            "Yes adds the critical bonus dice.")
+        total, breakdown = roll_damage(atk["damage"], c.base_damage_dice, crit)
+        self._log(f"{c.display_name} {weapon} damage: {breakdown}")
+        self.set_status(f"{c.display_name} {weapon} damage: {total}", "#1a5fb4")
+
+    def _toggle_promote(self, c):
+        if c.elite:
+            c.demote()
+            self._log(f"{c.display_name} demoted to a common {c.type}")
+        else:
+            self.encounter.promote(c)
+            self._log(f"{c.label} promoted to {c.promotion_title} (elite)")
+        self._refresh_rows()
+
+    def _remove(self, c):
+        self.encounter.remove(c)
+        self._log(f"{c.display_name} removed from the encounter")
+        self._refresh_rows()
+
+    def on_generate(self):
+        theme = self.theme_var.get()
+        if not theme:
+            return
+        self.encounter.generate_from_theme(theme, self.players_var.get())
+        names = ", ".join(c.display_name for c in self.encounter.combatants)
+        self._log(f"Generated '{theme}' for {self.players_var.get()} players: {names}")
+        self._refresh_rows()
+        self.set_status(f"Generated {len(self.encounter.combatants)} combatants.", "#2a7d2a")
+
+    def on_add(self):
+        t = self.add_var.get()
+        if t in self.encounter.templates:
+            c = self.encounter.add_one(t)
+            self._log(f"Added {c.display_name}")
+            self._refresh_rows()
+
+    def on_clear(self):
+        if self.encounter.combatants and not messagebox.askyesno(
+                "Clear encounter", "Remove all combatants?"):
+            return
+        self.encounter.clear()
+        self._refresh_rows()
+        self.set_status("Encounter cleared.", "#1a5fb4")
+
+    def on_copy_log(self):
+        self._sync_notes()
+        self.clipboard_clear()
+        self.clipboard_append(self.log.to_markdown())
+        self.update()
+        self.set_status("Copied combat log to clipboard.", "#1a5fb4")
+
+    def on_save_log(self):
+        self._sync_notes()
+        default = f"pendragon-encounter-{datetime.date.today().isoformat()}.md"
+        path = filedialog.asksaveasfilename(
+            title="Save combat log", defaultextension=".md", initialfile=default,
+            filetypes=[("Markdown", "*.md"), ("Text", "*.txt"), ("All files", "*.*")])
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(self.log.to_markdown())
+        except OSError as exc:
+            messagebox.showerror("Save failed", str(exc))
+            return
+        self.set_status(f"Saved combat log to {path}", "#2a7d2a")

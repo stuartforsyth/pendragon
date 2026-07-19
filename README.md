@@ -49,6 +49,23 @@ notes or Discord.
 If the `rules/` files are missing, the app degrades gracefully to name-only
 mode.
 
+## Encounter Generator (second tab)
+
+An **Encounter** tab for running human combat encounters (driven by
+`data/combat.json`):
+
+- **Generate an encounter** by theme (bandit ambush, conroi of knights, Saxon
+  raiders…) scaled to the number of players; a leader is auto-promoted.
+- **Add/remove** combatants at any time; each shows editable label, an
+  **"engaged with"** field, and **cur/max HP** with −/+ and direct entry.
+- **Roll skill** (d20, with correct success/critical/fumble) and **roll damage**
+  (weapon dice, adding the critical bonus dice) per weapon.
+- **Promote** any combatant to a champion/elite (Gang Leader, Elite Commander…):
+  tougher HP, skills, damage, armour, and Glory.
+- Downed (unconscious/dead) combatants are **greyed out and struck through**.
+- A **combat log** records events; a **GM Notes** box captures the fight, and
+  both are written to the saved/exported log file.
+
 ## Requirements
 
 - Python 3 with Tkinter (`tkinter` ships with most Python installs; on some
