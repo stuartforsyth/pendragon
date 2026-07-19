@@ -12,7 +12,8 @@ scaled to the number of players. Beasts/creatures are a later specification.
   spearmen, conrois of knights, Saxon raiders, etc.) scaled to party size.
 - Run the fight with a lightweight tracker: current HP, who each enemy is
   engaged with, and dice rolls for skills and damage (with correct criticals).
-- Keep a **readable combat log** for recap.
+- Keep a **readable combat log** for recap, plus a free-text **GM notes** box
+  for the GM's own account of the fight.
 
 ### Non-goals (out of scope for this spec)
 - Beasts and creatures (future spec).
@@ -49,6 +50,8 @@ scaled to the number of players. Beasts/creatures are a later specification.
   as a second `ttk.Notebook` page.
 - **Roster export pattern** (`format_roster_markdown`, save-to-file dialog) —
   mirror it for the **combat log export**.
+- **GM-notes widget + unsaved-notes prompt** (from the NPC tab) — reuse the same
+  pattern for the encounter's GM Notes box (§7), rather than building a new one.
 - **Derived-stat formulas** (HP=CON+SIZ, Knockdown=SIZ, Major Wound=CON,
   Unconscious=HP/4, Move) — reuse only when a stat is randomised; otherwise use
   the template's fixed values.
@@ -159,7 +162,9 @@ Promotion is logged (§10).
   - `elite` (bool) + `base_stats` snapshot for reversible promotion (§5.1).
 - **`Encounter`** — `list[Combatant]`; `add(template, n)`, `remove(idx)`,
   `scale_to_players(n)`.
-- **`CombatLog`** — ordered list of readable event lines; `to_markdown()`.
+- **`CombatLog`** — ordered list of readable event lines + a `gm_notes` string
+  (the free-text GM box); `to_markdown()` renders both (events, then a
+  `## GM Notes` section) so a saved log contains the GM's account too.
 
 ### 6.2 `combat.json` schema (sketch)
 ```jsonc
@@ -220,8 +225,15 @@ difficulty/veterancy (optional) · **Generate encounter** · **Add enemy**
   struck-through**, visually distinct from active combatants. A quick
   "down/slay" toggle is available. (Downed elites still grey out.)
 
-**Combat log panel:** read-only text of events; **Copy log** and **Save log…**
-(reuse the roster export pattern).
+**Combat log panel:** read-only text of auto-generated events; **Copy log** and
+**Save log…** (reuse the roster export pattern).
+
+**GM Notes box:** an editable free-text field where the GM records key moments,
+wounds, and events during the encounter (reuses the NPC tab's GM-notes widget).
+These notes are **written into the log file when the log is saved** (§10), so
+they persist alongside the mechanical event log. Consistent with the NPC tab,
+the GM is **prompted before an action that would discard unsaved GM notes**
+(e.g. Generate encounter / Clear).
 
 ---
 
@@ -253,6 +265,10 @@ Session-only encounter, but a persistent readable log. Log entries include:
 - Damage rolls: "Bandit 2 Spear damage 4D6 = 14 (critical: +4D6)".
 - HP/status changes: "Bandit 2: 24 → 6 (unconscious)", "Sir Kay's foe slain".
 - Promotions: "Bandit 2 promoted to Gang Leader (elite)".
+- **GM notes:** the free-text GM Notes box (§7) — the GM's own record of key
+  moments, wounds, and events. **When the log is saved to file, these notes are
+  written into it** as a `## GM Notes` section, so the recap has both the
+  mechanical event log and the GM's narrative account.
 - Export: **Copy log** / **Save log…** to Markdown (mirrors roster export).
 
 ---
@@ -289,6 +305,8 @@ Session-only encounter, but a persistent readable log. Log entries include:
 - [ ] Downed (unconscious/dead) combatants are greyed out and struck-through.
 - [ ] A readable combat log records combatants, engagements, rolls, and damage,
       and can be copied/saved.
+- [ ] A GM Notes box lets the GM capture key moments, wounds, and events during
+      the encounter; those notes are written into the log file when it is saved.
 
 ---
 
