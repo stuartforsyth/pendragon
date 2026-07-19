@@ -159,34 +159,38 @@ class Rules:
         return "Plain", 1, 1, None
 
     def _draw_features(self, polarity, n):
+        """Return up to n (category, feature) pairs, preferring distinct categories."""
         if n <= 0:
             return []
         buckets = [(cat, feat) for cat, d in self.features.items()
                    for feat in d.get(polarity, [])]
         random.shuffle(buckets)
-        chosen, used_cat = [], set()
+        chosen, used_cat, seen = [], set(), set()
         for cat, feat in buckets:  # prefer distinct categories first
             if cat not in used_cat:
-                chosen.append(feat)
+                chosen.append((cat, feat))
                 used_cat.add(cat)
+                seen.add(feat)
             if len(chosen) >= n:
                 return chosen
         for cat, feat in buckets:
-            if feat not in chosen:
-                chosen.append(feat)
+            if feat not in seen:
+                chosen.append((cat, feat))
+                seen.add(feat)
             if len(chosen) >= n:
                 break
         return chosen[:n]
 
     def roll_appearance(self, app):
         desc, npos, nneg, special = self._app_row(app)
-        features = list(self._draw_features("positive", npos))
-        features += self._draw_features("negative", nneg)
+        details = list(self._draw_features("positive", npos))
+        details += self._draw_features("negative", nneg)
         if special:
-            features.append(special.lower())
+            details.append((None, special.lower()))
         return {
             "descriptor": desc,
-            "features": features,
+            "features": [feat for _cat, feat in details],
+            "feature_details": [[cat, feat] for cat, feat in details],
             "eyes": random.choice(self.eye_colours),
         }
 

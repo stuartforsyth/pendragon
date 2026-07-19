@@ -13,6 +13,9 @@ notes or Discord.
 - **Gender**, **Class**, and **Culture** radio buttons — cultures are read live
   from `Names by Culture.md`; Class can be a specific rank or **Random**.
 - **Generate** a random name with a culture-appropriate surname or byname.
+- **A read-aloud description** — a short "You see a…" paragraph assembled from
+  all the details (build, looks, class attire, eyes, distinctive features,
+  manner) for the moment the party meets the NPC.
 - **A full rolled-up NPC**, driven by `data/rules.json`:
   - **Social class** (Commoner, Squire, Knight, Lady, Noble, Clergy) with a
     **skills block** and a **Glory** value.

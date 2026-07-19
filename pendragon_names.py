@@ -329,9 +329,109 @@ def subtitle_str(r):
     return sub
 
 
+# -- read-aloud description --------------------------------------------------
+
+_SIZE_WORD = [(8, "slight"), (11, ""), (14, "tall"), (17, "powerfully built"),
+              (99, "towering")]
+
+_LOOKS_WORD = {
+    "Infirm": "frail", "Unseemly": "unsightly", "Ill-favored": "plain-featured",
+    "Plain": "plain", "Fair": "fair-featured", "Elegant": "elegant",
+}
+
+_ROLE_NOUN = {"Clergy": "cleric"}  # others use the class name lowercased
+
+
+def _size_word(siz):
+    if siz is None:
+        return ""
+    for threshold, word in _SIZE_WORD:
+        if siz <= threshold:
+            return word
+    return ""
+
+
+def _looks_word(descriptor, gender):
+    if descriptor == "Surpassing":
+        return "strikingly beautiful" if gender == "Female" else "strikingly handsome"
+    return _LOOKS_WORD.get(descriptor, "")
+
+
+def _natural_join(items):
+    items = [i for i in items if i]
+    if len(items) <= 1:
+        return items[0] if items else ""
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return f"{', '.join(items[:-1])}, and {items[-1]}"
+
+
+_FACE_ADJECTIVES = ("rough", "bright-eyed", "clean-shaven")
+
+
+def _feature_phrase(category, feat):
+    """Turn a bare Distinctive Feature into a readable noun phrase."""
+    low = feat.lower()
+    if category == "Hair" and "hair" not in low and \
+            low not in ("bald", "balding", "thinning", "mangy", "patchy"):
+        return f"{feat} hair"
+    if category == "Speech" and "accent" not in low and low not in ("lisp", "stutter"):
+        return f"{feat} voice"
+    if category == "Physique" and " " not in feat:
+        return f"{feat} figure"
+    return feat
+
+
+def _articled(phrase, category):
+    """Prefix 'a'/'an' where it reads well; skip plurals, hair, and adjectives."""
+    low = phrase.lower()
+    if category is None or low.startswith(("a ", "an ", "the ")):
+        return phrase
+    if phrase.endswith("s") or "hair" in low:  # plural or uncountable
+        return phrase
+    noun_like = (low.endswith(("figure", "voice")) or category == "Speech"
+                 or (category == "Face" and low not in _FACE_ADJECTIVES))
+    if not noun_like:
+        return phrase
+    return ("an " if low[0] in "aeiou" else "a ") + phrase
+
+
+def build_description(r):
+    """A short read-aloud paragraph pulling together all generated detail."""
+    gender = r["gender"]
+    subj = "She" if gender == "Female" else "He"
+    role = _ROLE_NOUN.get(r.get("social_class"),
+                          (r["social_class"].lower() if r.get("social_class")
+                           else ("woman" if gender == "Female" else "man")))
+
+    appearance = r.get("appearance") or {}
+    stats = r.get("stats") or {}
+    adjs = _natural_join([
+        _size_word(stats.get("SIZ")),
+        _looks_word(appearance.get("descriptor"), gender),
+    ])
+
+    lead = f"You see a {adjs} {r['culture']} {role}" if adjs else \
+           f"You see a {r['culture']} {role}"
+    if r.get("attire"):
+        lead += f", wearing {r['attire']}"
+    sentences = [lead + "."]
+
+    details = appearance.get("feature_details") or \
+        [[None, f] for f in appearance.get("features", [])]
+    detail_items = ([f"{appearance['eyes']} eyes"] if appearance.get("eyes") else [])
+    detail_items += [_articled(_feature_phrase(cat, feat), cat) for cat, feat in details]
+    if detail_items:
+        sentences.append(f"{subj} has {_natural_join(detail_items)}.")
+    if r.get("manner"):
+        sentences.append(f"{subj} seems {r['manner']}.")
+
+    return " ".join(sentences)
+
+
 def format_statblock(r):
     """Render a result dict as a plain-text statblock for the clipboard."""
-    lines = [r["full"], subtitle_str(r)]
+    lines = [r["full"], subtitle_str(r), "", build_description(r), ""]
 
     if r.get("appearance"):
         a = r["appearance"]
@@ -373,7 +473,8 @@ def format_statblock(r):
 
 def format_statblock_markdown(r):
     """Render a result dict as a Markdown block for game notes."""
-    lines = [f"## {r['full']}", f"*{subtitle_str(r)}*", ""]
+    lines = [f"## {r['full']}", f"*{subtitle_str(r)}*", "",
+             f"> {build_description(r)}", ""]
 
     def bullet(label, value):
         lines.append(f"- **{label}:** {value}")
@@ -553,6 +654,8 @@ class App(tk.Tk):
         )
         self.details.pack(fill="both", expand=True, padx=10, pady=(0, 6))
         self.details.tag_configure("label", font=("TkDefaultFont", 11, "bold"))
+        self.details.tag_configure("desc", font=("TkDefaultFont", 11, "italic"),
+                                   foreground="#333")
         self.details.configure(state="disabled")
 
         self.status = ttk.Label(self, text="Ready.", foreground="#2a7d2a")
@@ -606,6 +709,9 @@ class App(tk.Tk):
         def row(label, value):
             self.details.insert("end", f"{label}: ", ("label",))
             self.details.insert("end", f"{value}\n")
+
+        # Read-aloud description paragraph, above everything else.
+        self.details.insert("end", build_description(r) + "\n\n", ("desc",))
 
         if r.get("appearance"):
             a = r["appearance"]
