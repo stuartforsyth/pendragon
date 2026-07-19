@@ -307,16 +307,6 @@ def format_statblock(r):
         sub += f" · {r['religion']}"
     lines.append(sub)
 
-    if r.get("stats"):
-        st = r["stats"]
-        lines.append("  ".join(f"{k} {st[k]}" for k in ("SIZ", "DEX", "STR", "CON", "APP")))
-        d = r["derived"]
-        lines.append(
-            f"HP {d['Hit Points']} · Move {d['Move']} · Damage {d['Damage']} · "
-            f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
-            f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}"
-        )
-
     if r.get("appearance"):
         a = r["appearance"]
         height = f", ~{r['height']} tall" if r.get("height") else ""
@@ -330,6 +320,17 @@ def format_statblock(r):
         lines.append("Personality Traits: " + _traits_str(r["traits"]))
     if r.get("passions"):
         lines.append("Passions: " + _passions_str(r["passions"]))
+
+    if r.get("stats"):
+        st = r["stats"]
+        lines.append("  ".join(f"{k} {st[k]}" for k in ("SIZ", "DEX", "STR", "CON", "APP")))
+        d = r["derived"]
+        lines.append(
+            f"HP {d['Hit Points']} · Move {d['Move']} · Damage {d['Damage']} · "
+            f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
+            f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}"
+        )
+
     if r.get("naming_note"):
         lines.append(f"Naming: {r['naming_note']}")
     if r.get("pronunciation"):
@@ -454,16 +455,6 @@ class App(tk.Tk):
             self.details.insert("end", f"{label}: ", ("label",))
             self.details.insert("end", f"{value}\n")
 
-        if r.get("stats"):
-            st = r["stats"]
-            row("Characteristics",
-                "  ".join(f"{k} {st[k]}" for k in ("SIZ", "DEX", "STR", "CON", "APP")))
-            d = r["derived"]
-            row("Derived",
-                f"HP {d['Hit Points']} · Move {d['Move']} · Damage {d['Damage']} · "
-                f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
-                f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}")
-
         if r.get("appearance"):
             a = r["appearance"]
             height = f", ~{r['height']} tall" if r.get("height") else ""
@@ -479,6 +470,17 @@ class App(tk.Tk):
             row("Personality Traits", _traits_str(r["traits"]))
         if r.get("passions"):
             row("Passions", _passions_str(r["passions"]))
+
+        if r.get("stats"):
+            self.details.insert("end", "\n")
+            st = r["stats"]
+            row("Characteristics",
+                "  ".join(f"{k} {st[k]}" for k in ("SIZ", "DEX", "STR", "CON", "APP")))
+            d = r["derived"]
+            row("Derived",
+                f"HP {d['Hit Points']} · Move {d['Move']} · Damage {d['Damage']} · "
+                f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
+                f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}")
 
         if r.get("naming_note"):
             self.details.insert("end", "\n")
