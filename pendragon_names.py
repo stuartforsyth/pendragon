@@ -707,6 +707,7 @@ class App(tk.Tk):
         top.pack(fill="both", expand=True, padx=6, pady=(6, 2))
         self.roster_list = tk.Listbox(top, height=5, activestyle="dotbox")
         self.roster_list.pack(side="left", fill="both", expand=True)
+        self.roster_list.bind("<<ListboxSelect>>", self.on_roster_select)
         scroll = ttk.Scrollbar(top, orient="vertical",
                                command=self.roster_list.yview)
         scroll.pack(side="right", fill="y")
@@ -874,6 +875,27 @@ class App(tk.Tk):
         state = "normal" if self.roster else "disabled"
         for b in self.roster_buttons:
             b.config(state=state)
+
+    def on_roster_select(self, _event=None):
+        """Clicking a roster entry loads that NPC back into the result view."""
+        sel = self.roster_list.curselection()
+        if not sel or sel[0] >= len(self.roster):
+            return
+        # Work on a copy so rerolling the viewed NPC doesn't mutate the saved one.
+        self._current = copy.deepcopy(self.roster[sel[0]])
+        r = self._current
+        self.gender_var.set(r["gender"])
+        self.culture_var.set(r["culture"])
+        if r.get("social_class"):
+            self.class_var.set(r["social_class"])
+        self._refresh_display()
+        for b in self.copy_buttons:
+            b.config(state="normal")
+        self.add_btn.config(state="normal")
+        self.reroll_menu.config(state="readonly")
+        self.reroll_btn.config(state="normal")
+        self.status.config(text=f"Viewing '{r['full']}' from the roster.",
+                           foreground="#1a5fb4")
 
     def on_add_to_roster(self):
         if not self._current:

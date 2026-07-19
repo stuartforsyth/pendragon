@@ -21,8 +21,8 @@ rather than scattering TODOs through the code.
 ## Table workflow (bigger, most useful in play)
 
 - [x] **Session roster + export** — keep a list of NPCs generated this session
-  (add/remove/clear), then copy the whole roster to the clipboard or save it to
-  a Markdown file.
+  (add/remove/clear); click an entry to reload it into the result view; copy
+  the whole roster to the clipboard or save it to a Markdown file.
 - [ ] **Batch generate** — spin up a whole village, court, or warband at once
   (e.g. "generate 8") with a summary table.
 - [x] **Social class / rank** — Commoner / Squire / Knight / Lady / Noble /
