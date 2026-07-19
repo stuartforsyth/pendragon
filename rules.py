@@ -49,6 +49,18 @@ REQUIRED_KEYS = (
 FAMOUS_THRESHOLD = 16
 
 
+def _phrase_feature(category, feat):
+    """Turn a bare distinctive feature into a readable phrase (hair/voice/build)."""
+    low = feat.lower()
+    if category == "Hair" and "hair" not in low and low not in ("bald", "balding"):
+        return f"{feat} hair"
+    if category == "Speech" and "accent" not in low and low not in ("lisp", "stutter"):
+        return f"{feat} voice"
+    if category == "Physique" and " " not in feat:
+        return f"{feat} build"
+    return feat
+
+
 # ---------------------------------------------------------------------------
 # small helpers
 # ---------------------------------------------------------------------------
@@ -193,6 +205,27 @@ class Rules:
         return self.siz_heights[nearest]
 
     # -- appearance --------------------------------------------------------
+
+    def random_appearance_feature(self):
+        """One describable feature (e.g. 'a broken nose', 'flowing hair').
+
+        Drawn from Face/Hair (the most 'defining' categories for a combatant)
+        and phrased for readability.
+        """
+        cats = [c for c in ("Face", "Hair") if c in self.features] or list(self.features)
+        if not cats:
+            return ""
+        cat = random.choice(cats)
+        pools = self.features[cat]
+        polarity = random.choice([p for p in ("positive", "negative") if pools.get(p)]
+                                 or list(pools))
+        pool = pools.get(polarity, [])
+        if not pool:
+            return ""
+        return _phrase_feature(cat, random.choice(pool))
+
+    def random_eye_colour(self):
+        return random.choice(self.eye_colours) if self.eye_colours else ""
 
     def _app_row(self, app):
         for lo, hi, desc, npos, nneg, special in self.app_table:

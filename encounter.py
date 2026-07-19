@@ -69,6 +69,9 @@ class Combatant:
         self.attacks = copy.deepcopy(template["attacks"])
         self.skills = dict(template.get("skills", {}))
         self.notes = template.get("notes", "")
+        self.armour_desc = template.get("armour_desc", "")
+        self.feature = ""   # a defining physical characteristic (rolled by Encounter)
+        self.eyes = ""
         h, o = template["health"], template["other"]
         jitter = random.randint(-2, 2) if hp_jitter else 0
         self.max_hp = max(1, h["hit_points"] + jitter)
@@ -121,6 +124,12 @@ class Combatant:
     def armor_total(self):
         return self.armor_points + self.shield
 
+    def describe_looks(self):
+        """A short describable look: defining feature + eye colour."""
+        parts = [p for p in (self.feature,
+                             f"{self.eyes} eyes" if self.eyes else "") if p]
+        return ", ".join(parts)
+
     # -- promotion ---------------------------------------------------------
 
     def promote(self, cfg):
@@ -161,11 +170,12 @@ class Combatant:
 # ---------------------------------------------------------------------------
 
 class Encounter:
-    def __init__(self, combat):
-        self.combat = combat
-        self.templates = combat["enemy_templates"]
-        self.themes = combat.get("encounter_themes", {})
-        self.promotion_cfg = combat.get("promotion", {})
+    def __init__(self, rules):
+        self.rules = rules
+        self.combat = rules.combat
+        self.templates = self.combat["enemy_templates"]
+        self.themes = self.combat.get("encounter_themes", {})
+        self.promotion_cfg = self.combat.get("promotion", {})
         self.combatants = []
         self._counts = {}
 
@@ -178,6 +188,9 @@ class Encounter:
         self._counts[type_name] = self._counts.get(type_name, 0) + 1
         label = f"{type_name} {self._counts[type_name]}"
         c = Combatant(type_name, template, label)
+        # Roll a defining physical feature so identical combatants differ.
+        c.feature = self.rules.random_appearance_feature()
+        c.eyes = self.rules.random_eye_colour()
         self.combatants.append(c)
         return c
 
@@ -224,8 +237,12 @@ class CombatLog:
             for c in combatants:
                 eng = (f" — engaged with {c.engaged_with}"
                        if c.engaged_with.strip() else "")
-                out.append(f"- {c.display_name} — HP {c.cur_hp}/{c.max_hp} "
+                out.append(f"- {c.display_name} — Hit Points {c.cur_hp}/{c.max_hp} "
                            f"({c.status}){eng}")
+                arm = c.armour_desc or f"{c.armor_total()} points"
+                looks = c.describe_looks()
+                out.append(f"    - Armour: {arm}"
+                           + (f"; Looks: {looks}" if looks else ""))
             out.append("")
         out += ["## Events", ""]
         out.extend(self.entries or ["(no events logged)"])
@@ -255,7 +272,7 @@ class EncounterTab(ttk.Frame):
         super().__init__(parent)
         self.rules = rules
         self.set_status = set_status
-        self.encounter = Encounter(rules.combat)
+        self.encounter = Encounter(rules)
         self.log = CombatLog()
         self._dirty = False  # unsaved log/notes since the last Save
         self._build_ui()
@@ -418,12 +435,21 @@ class EncounterTab(ttk.Frame):
         detail = f"{stat}   ·   {atks}"
         if c.skills:
             detail += "   ·   Skills: " + ", ".join(f"{k} {v}" for k, v in c.skills.items())
-        detail += f"   ·   Armour {c.armor_total()}, Major Wound {c.major_wound}"
+        detail += f"   ·   Major Wound {c.major_wound}"
         if c.morale_minimum:
             detail += f", Morale {c.morale_minimum}"
         tk.Label(row, text=detail, anchor="w", justify="left", wraplength=740,
                  font=("TkDefaultFont", 8), fg=("#aaa" if down else "#666")
                  ).grid(row=1, column=0, columnspan=10, sticky="w", padx=(6, 0))
+
+        # Armour worn + a defining look, so the GM can describe the combatant.
+        arm = (f"Armour: {c.armour_desc} ({c.armor_total()} points)"
+               if c.armour_desc else f"Armour: {c.armor_total()} points")
+        looks = c.describe_looks()
+        line3 = arm + (f"   ·   Looks: {looks}" if looks else "")
+        tk.Label(row, text=line3, anchor="w", justify="left", wraplength=740,
+                 font=("TkDefaultFont", 8), fg=("#aaa" if down else "#555")
+                 ).grid(row=2, column=0, columnspan=10, sticky="w", padx=(6, 0), pady=(0, 2))
 
     # -- actions -----------------------------------------------------------
 

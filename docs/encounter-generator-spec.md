@@ -249,9 +249,12 @@ Cancel), then clears combatants, the **combat log**, and the **GM notes**.
   Major Wound, Knockdown.
 - **Roll Skill** (per weapon) and **Roll Damage** (per weapon) buttons; result
   shown inline and appended to the log.
-- **Stat detail line** under each row: characteristics (SIZ/DEX/STR/CON/APP),
-  each attack (skill + damage), and the template's skills — so the GM can see a
-  combatant's basic stats at a glance.
+- **Stat detail lines** under each row: characteristics, each attack (skill +
+  damage), skills, Major Wound, Morale; plus a line with the **armour worn**
+  (e.g. "Hauberk, aketon, open helm + kite shield") and a rolled **defining
+  physical feature** + eye colour — so the GM can describe how each combatant is
+  armed and what they look like. The armour and look are also in the saved
+  combatants summary.
 - The **"engaged with"** name is **logged when set** and listed in the saved
   log's combatants summary (see §10), so the pairing is recorded.
 - **Actions menu** per row → **Promote/Demote** (champion/elite, §5.1),
