@@ -30,7 +30,7 @@ scaled to the number of players. Beasts/creatures are a later specification.
 | # | Decision |
 |---|----------|
 | F1 | Tracker does **HP + rolls only** — no initiative/turn order. |
-| F2 | Damage rolls **display only**; the GM **adjusts HP manually** (+/- and direct entry). |
+| F2 | Damage rolls **display only**; the GM applies a **typed HP delta** (`-10` = take 10 damage, `5` = heal 5) so damage is reflected accurately. |
 | F3 | Default **1 enemy per player**, with easy **add/remove** of combatants. |
 | F4 | Combat data lives in a **separate `data/combat.json`**. |
 | F5 | Encounter is **session-only**; a **combat log** is kept and can be exported (clipboard/file). |
@@ -72,8 +72,24 @@ Parsed from the Core Rulebook (Ch.2 & 7) and validated against the app's data.
   **Partial success** = you succeed but roll lower than the winner → you gain
   your shield/parry protection.
 - **Damage application:** winner's weapon damage − defender's Armour Points
-  (+shield when applicable) → off Hit Points. **Major Wound** if a single hit
-  ≥ CON; **Knockdown** if total ≥ SIZ; **Unconscious** below HP/4; dead at 0.
+  (+shield when applicable) → off Hit Points.
+
+### 4.1a Wounds & unconsciousness (Core Ch.11, verified)
+Two independent routes to unconsciousness:
+1. **Current HP below the Unconscious value** (= Total HP / 4) — e.g. from
+   several minor wounds. Falls unconscious.
+2. **Major Wound** — a **single blow ≥ CON** (the Major Wound value). The
+   character **immediately falls unconscious**, *even if HP is still above the
+   Unconscious threshold*. (Also Debilitated + a Characteristic-loss roll — out
+   of scope for the tracker.)
+
+**Mortal Wound** — a single blow ≥ **Total HP** — is lethal (unconscious/dying).
+**Knockdown** (total damage ≥ SIZ) knocks prone — noted, not modelled in v1.
+
+Because HP is applied as a typed delta (F2), the tracker treats **each applied
+damage delta** as one blow: a damage delta ≥ CON triggers a **Major Wound →
+unconscious**; ≥ Total HP triggers a **Mortal Wound → dead**. Healing back above
+the Unconscious value clears a Major-Wound KO.
 
 ### 4.2 Critical hits (Rule: "accurately account for criticals")
 - A **critical hit** rolls the weapon's damage dice **plus the attacker's base
@@ -214,11 +230,19 @@ difficulty/veterancy (optional) · **Generate encounter** · **Add enemy**
 
 **Combatant tracker** (a scrollable list; one row per combatant):
 - `Label` (editable, e.g. "Bandit 2") · **Engaged with** (editable text field).
-- **HP: `cur / max`** with **−/+ buttons and direct entry**.
+- **HP `cur / max`** with a **delta box + Apply** — type `-10` to take 10
+  damage or `5` to heal 5 (Enter or Apply). The applied damage is the single
+  blow for the Major/Mortal Wound checks (§4.1a). A **KO/Revive** toggle knocks
+  a combatant out or brings them back independent of HP.
 - Compact stats: main attack(s) `skill` + `damage`, Armour(+shield),
   Major Wound, Knockdown.
 - **Roll Skill** (per weapon) and **Roll Damage** (per weapon) buttons; result
   shown inline and appended to the log.
+- **Stat detail line** under each row: characteristics (SIZ/DEX/STR/CON/APP),
+  each attack (skill + damage), and the template's skills — so the GM can see a
+  combatant's basic stats at a glance.
+- The **"engaged with"** name is **logged when set** and listed in the saved
+  log's combatants summary (see §10), so the pairing is recorded.
 - **Promote/Demote** button per row → champion/elite (§5.1). Promoted rows are
   **visually prominent** (bold + a ★ and title, e.g. "Bandit 2 — Gang Leader").
 - **Status styling:** `unconscious` and `dead` rows are **greyed out and
@@ -228,12 +252,15 @@ difficulty/veterancy (optional) · **Generate encounter** · **Add enemy**
 **Combat log panel:** read-only text of auto-generated events; **Copy log** and
 **Save log…** (reuse the roster export pattern).
 
-**GM Notes box:** an editable free-text field where the GM records key moments,
-wounds, and events during the encounter (reuses the NPC tab's GM-notes widget).
-These notes are **written into the log file when the log is saved** (§10), so
-they persist alongside the mechanical event log. Consistent with the NPC tab,
-the GM is **prompted before an action that would discard unsaved GM notes**
-(e.g. Generate encounter / Clear).
+**GM Notes box:** an editable free-text field for the GM's **overarching**
+account (reuses the NPC tab's GM-notes widget). Written into the log file when
+the log is saved (§10). Prompted before an action that would discard unsaved
+notes.
+
+**Round note (transient):** a single-line note box + **"Add to log"** button.
+Typing a note and clicking the button **writes it into the log at that point
+and clears the box** — for capturing a specific round/moment inline in the
+event stream. (GM Notes = overarching; round note = inline, chronological.)
 
 ---
 
@@ -265,10 +292,14 @@ Session-only encounter, but a persistent readable log. Log entries include:
 - Damage rolls: "Bandit 2 Spear damage 4D6 = 14 (critical: +4D6)".
 - HP/status changes: "Bandit 2: 24 → 6 (unconscious)", "Sir Kay's foe slain".
 - Promotions: "Bandit 2 promoted to Gang Leader (elite)".
-- **GM notes:** the free-text GM Notes box (§7) — the GM's own record of key
-  moments, wounds, and events. **When the log is saved to file, these notes are
-  written into it** as a `## GM Notes` section, so the recap has both the
-  mechanical event log and the GM's narrative account.
+- **Engaged-with:** logged when set ("Bandit 2 engaged with Sir Kay"), and a
+  **`## Combatants` summary** in the saved log lists each combatant with HP,
+  status, and who they're engaged with.
+- **Round notes:** transient notes added via the "Add to log" button appear
+  inline in the event stream at the moment they're added.
+- **GM notes:** the overarching GM Notes box (§7). **When the log is saved to
+  file, these are written into it** as a `## GM Notes` section, so the recap has
+  the event log, the combatants, and the GM's narrative account.
 - Export: **Copy log** / **Save log…** to Markdown (mirrors roster export).
 
 ---
@@ -307,6 +338,12 @@ Session-only encounter, but a persistent readable log. Log entries include:
       and can be copied/saved.
 - [ ] A GM Notes box lets the GM capture key moments, wounds, and events during
       the encounter; those notes are written into the log file when it is saved.
+- [ ] The "engaged with" name is logged and appears in the saved log's
+      combatants summary.
+- [ ] A single blow ≥ CON (Major Wound) drops a combatant unconscious even above
+      the HP/4 threshold; ≥ total HP is a Mortal Wound (dead).
+- [ ] Each combatant row shows basic characteristics, attacks, and skills.
+- [ ] A transient round-note box writes the note into the log inline and clears.
 
 ---
 

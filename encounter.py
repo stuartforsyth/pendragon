@@ -66,6 +66,7 @@ class Combatant:
         self.base_damage_dice = max(1, round((ch["STR"] + ch["SIZ"]) / 6))
 
         self.attacks = copy.deepcopy(template["attacks"])
+        self.skills = dict(template.get("skills", {}))
         h, o = template["health"], template["other"]
         jitter = random.randint(-2, 2) if hp_jitter else 0
         self.max_hp = max(1, h["hit_points"] + jitter)
@@ -80,15 +81,17 @@ class Combatant:
         self.healing_rate = o.get("healing_rate", 0)
 
         self.elite = False
-        self._base = None  # snapshot for demotion
+        self._base = None          # snapshot for demotion
+        self._out = None           # override: None / "unconscious" / "dead"
+        self._engaged_logged = ""  # last engaged-with value written to the log
 
     # -- status ------------------------------------------------------------
 
     @property
     def status(self):
-        if self.cur_hp <= 0:
+        if self.cur_hp <= 0 or self._out == "dead":
             return "dead"
-        if self.cur_hp < self.unconscious:
+        if self._out == "unconscious" or self.cur_hp < self.unconscious:
             return "unconscious"
         return "active"
 
@@ -198,9 +201,18 @@ class CombatLog:
     def text(self):
         return "\n".join(self.entries)
 
-    def to_markdown(self):
+    def to_markdown(self, combatants=None):
         today = datetime.date.today().isoformat()
         out = [f"# Encounter Log — {today}", ""]
+        if combatants:
+            out += ["## Combatants", ""]
+            for c in combatants:
+                eng = (f" — engaged with {c.engaged_with}"
+                       if c.engaged_with.strip() else "")
+                out.append(f"- {c.display_name} — HP {c.cur_hp}/{c.max_hp} "
+                           f"({c.status}){eng}")
+            out.append("")
+        out += ["## Events", ""]
         out.extend(self.entries or ["(no events logged)"])
         if self.gm_notes.strip():
             out += ["", "## GM Notes", "", self.gm_notes.rstrip()]
@@ -278,6 +290,17 @@ class EncounterTab(ttk.Frame):
         self.log_text = tk.Text(log_frame, height=7, wrap="word", state="disabled",
                                 font=("TkDefaultFont", 9))
         self.log_text.pack(fill="both", expand=True, padx=6, pady=(6, 2))
+
+        # Transient round note: write a one-off line into the log, then clear.
+        noterow = ttk.Frame(log_frame)
+        noterow.pack(fill="x", padx=6, pady=(0, 2))
+        ttk.Label(noterow, text="Round note:").pack(side="left")
+        self.round_note = ttk.Entry(noterow)
+        self.round_note.pack(side="left", fill="x", expand=True, padx=(4, 4))
+        self.round_note.bind("<Return>", lambda e: self.on_add_round_note())
+        ttk.Button(noterow, text="Add to log",
+                   command=self.on_add_round_note).pack(side="left")
+
         logbar = ttk.Frame(log_frame)
         logbar.pack(fill="x", padx=6, pady=(0, 6))
         ttk.Button(logbar, text="Copy log", command=self.on_copy_log).pack(side="left")
@@ -318,47 +341,54 @@ class EncounterTab(ttk.Frame):
                         font=name_font, fg=fg)
         name.grid(row=0, column=0, sticky="w")
 
-        # Engaged-with
+        # Engaged-with (live-synced; logged on focus-out when it changes)
         eng = ttk.Entry(row, width=14)
         eng.insert(0, c.engaged_with)
         eng.grid(row=0, column=1, padx=(4, 6))
         eng.bind("<KeyRelease>", lambda e, cc=c, w=eng: setattr(cc, "engaged_with", w.get()))
+        eng.bind("<FocusOut>", lambda e, cc=c, w=eng: self._engage(cc, w.get()))
 
-        # HP
-        ttk.Label(row, text="HP").grid(row=0, column=2)
-        hp_var = tk.StringVar(value=str(c.cur_hp))
-        hp_entry = ttk.Entry(row, width=4, textvariable=hp_var)
-        hp_entry.grid(row=0, column=3)
-        hp_entry.bind("<Return>", lambda e, cc=c, v=hp_var: self._set_hp(cc, v.get()))
-        hp_entry.bind("<FocusOut>", lambda e, cc=c, v=hp_var: self._set_hp(cc, v.get()))
-        ttk.Label(row, text=f"/{c.max_hp}").grid(row=0, column=4)
-        ttk.Button(row, text="−", width=2,
-                   command=lambda cc=c: self._adjust_hp(cc, -1)).grid(row=0, column=5)
-        ttk.Button(row, text="+", width=2,
-                   command=lambda cc=c: self._adjust_hp(cc, +1)).grid(row=0, column=6)
+        # HP — current/max plus a delta box (type -10 to take 10 damage, 5 to heal)
+        ttk.Label(row, text=f"HP {c.cur_hp}/{c.max_hp}", width=10, anchor="w",
+                  foreground=fg).grid(row=0, column=2, padx=(4, 2))
+        dv = tk.StringVar()
+        de = ttk.Entry(row, width=5, textvariable=dv)
+        de.grid(row=0, column=3)
+        de.bind("<Return>", lambda e, cc=c, v=dv: self._apply_hp(cc, v.get()))
+        ttk.Button(row, text="Apply", width=5,
+                   command=lambda cc=c, v=dv: self._apply_hp(cc, v.get())).grid(row=0, column=4)
 
         # Weapon + roll buttons
         weapons = [a["weapon"] for a in c.attacks]
         wv = tk.StringVar(value=weapons[0] if weapons else "")
         ttk.Combobox(row, textvariable=wv, values=weapons, width=13,
-                     state="readonly").grid(row=0, column=7, padx=(8, 2))
+                     state="readonly").grid(row=0, column=5, padx=(8, 2))
         ttk.Button(row, text="Skill",
-                   command=lambda cc=c, v=wv: self._roll_skill(cc, v.get())).grid(row=0, column=8)
+                   command=lambda cc=c, v=wv: self._roll_skill(cc, v.get())).grid(row=0, column=6)
         ttk.Button(row, text="Dmg",
-                   command=lambda cc=c, v=wv: self._roll_damage(cc, v.get())).grid(row=0, column=9)
-
-        # Armour + thresholds (compact)
-        ttk.Label(row, text=f"Arm {c.armor_total()} · MW {c.major_wound}",
-                  foreground=fg).grid(row=0, column=10, padx=(8, 4))
+                   command=lambda cc=c, v=wv: self._roll_damage(cc, v.get())).grid(row=0, column=7)
 
         # Actions
         ptext = "Demote" if c.elite else "Promote"
         ttk.Button(row, text=ptext, width=7,
-                   command=lambda cc=c: self._toggle_promote(cc)).grid(row=0, column=11)
-        ttk.Button(row, text="Down", width=5,
-                   command=lambda cc=c: self._set_hp(cc, "0")).grid(row=0, column=12, padx=(4, 0))
+                   command=lambda cc=c: self._toggle_promote(cc)).grid(row=0, column=8, padx=(8, 0))
+        ko_text = "Revive" if c.down else "KO"
+        ttk.Button(row, text=ko_text, width=6,
+                   command=lambda cc=c: self._toggle_down(cc)).grid(row=0, column=9, padx=(4, 0))
         ttk.Button(row, text="✕", width=2,
-                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=13, padx=(4, 0))
+                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=10, padx=(4, 0))
+
+        # Stat detail line: characteristics · attacks · skills
+        ch = c.characteristics
+        stat = "  ".join(f"{k} {ch[k]}" for k in ("SIZ", "DEX", "STR", "CON", "APP"))
+        atks = ", ".join(f"{a['weapon']} {a['value']} ({a['damage']})" for a in c.attacks)
+        detail = f"{stat}   ·   {atks}"
+        if c.skills:
+            detail += "   ·   Skills: " + ", ".join(f"{k} {v}" for k, v in c.skills.items())
+        detail += f"   ·   Armour {c.armor_total()}, MW {c.major_wound}"
+        tk.Label(row, text=detail, anchor="w", justify="left",
+                 font=("TkDefaultFont", 8), fg=("#aaa" if down else "#666")
+                 ).grid(row=1, column=0, columnspan=11, sticky="w", padx=(6, 0))
 
     # -- actions -----------------------------------------------------------
 
@@ -372,23 +402,61 @@ class EncounterTab(ttk.Frame):
     def _sync_notes(self):
         self.log.gm_notes = self.notes_text.get("1.0", "end").rstrip("\n")
 
-    def _set_hp(self, c, text):
+    def _apply_hp(self, c, text):
+        """Apply an HP delta: '-10' = take 10 damage, '5' = heal 5."""
+        text = text.strip().lstrip("+")
         try:
-            new = int(text)
+            delta = int(text)
         except (TypeError, ValueError):
             self._refresh_rows()
             return
-        old, prev_status = c.cur_hp, c.status
-        c.cur_hp = min(new, c.max_hp)
-        if c.cur_hp != old:
-            note = ""
-            if c.status != prev_status and c.down:
-                note = f" ({c.status})"
-            self._log(f"{c.display_name}: {old} → {c.cur_hp} HP{note}")
+        if delta == 0:
+            self._refresh_rows()
+            return
+        old = c.cur_hp
+        c.cur_hp = min(old + delta, c.max_hp)
+        msg = ""
+        if delta < 0:  # took damage — the applied amount is the single blow
+            dmg = -delta
+            if dmg >= c.max_hp:
+                c._out = "dead"
+                msg = f"  — Mortal Wound! ({dmg} ≥ total HP {c.max_hp}) — slain"
+            elif dmg >= c.major_wound and c._out is None:
+                c._out = "unconscious"
+                msg = f"  — Major Wound! ({dmg} ≥ CON {c.major_wound}) — unconscious"
+        else:  # healed
+            if c._out == "unconscious" and c.cur_hp >= c.unconscious:
+                c._out = None
+                msg = "  — revived"
+        tag = "" if msg else (f"  [{c.status}]" if c.down else "")
+        self._log(f"{c.display_name}: {old} → {c.cur_hp} HP ({delta:+d}){msg}{tag}")
         self._refresh_rows()
 
-    def _adjust_hp(self, c, delta):
-        self._set_hp(c, str(c.cur_hp + delta))
+    def _engage(self, c, name):
+        name = name.strip()
+        if name == c._engaged_logged:
+            return
+        c.engaged_with = name
+        c._engaged_logged = name
+        if name:
+            self._log(f"{c.display_name} engaged with {name}")
+        else:
+            self._log(f"{c.display_name} no longer engaged")
+
+    def _toggle_down(self, c):
+        if c.status == "active":
+            c._out = "unconscious"
+            self._log(f"{c.display_name} knocked out (unconscious)")
+        else:
+            c._out = None
+            self._log(f"{c.display_name} brought back up")
+        self._refresh_rows()
+
+    def on_add_round_note(self):
+        text = self.round_note.get().strip()
+        if text:
+            self._log(f"— {text}")
+            self.round_note.delete(0, "end")
 
     def _roll_skill(self, c, weapon):
         atk = next((a for a in c.attacks if a["weapon"] == weapon), None)
@@ -453,7 +521,7 @@ class EncounterTab(ttk.Frame):
     def on_copy_log(self):
         self._sync_notes()
         self.clipboard_clear()
-        self.clipboard_append(self.log.to_markdown())
+        self.clipboard_append(self.log.to_markdown(self.encounter.combatants))
         self.update()
         self.set_status("Copied combat log to clipboard.", "#1a5fb4")
 
@@ -467,7 +535,7 @@ class EncounterTab(ttk.Frame):
             return
         try:
             with open(path, "w", encoding="utf-8") as fh:
-                fh.write(self.log.to_markdown())
+                fh.write(self.log.to_markdown(self.encounter.combatants))
         except OSError as exc:
             messagebox.showerror("Save failed", str(exc))
             return
