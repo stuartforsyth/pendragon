@@ -235,6 +235,12 @@ OUTCOME_COLOR = {
     "failure": "#a33", "fumble": "#c00",
 }
 
+# Full characteristic names (spelled out rather than SIZ/DEX/STR/CON/APP).
+CHAR_FULL = {
+    "SIZ": "Size", "DEX": "Dexterity", "STR": "Strength",
+    "CON": "Constitution", "APP": "Appeal",
+}
+
 
 class EncounterTab(ttk.Frame):
     def __init__(self, parent, rules, set_status):
@@ -358,8 +364,8 @@ class EncounterTab(ttk.Frame):
         eng.bind("<KeyRelease>", lambda e, cc=c, w=eng: setattr(cc, "engaged_with", w.get()))
         eng.bind("<FocusOut>", lambda e, cc=c, w=eng: self._engage(cc, w.get()))
 
-        # HP — current/max plus a delta box (type -10 to take 10 damage, 5 to heal)
-        ttk.Label(row, text=f"HP {c.cur_hp}/{c.max_hp}", width=10, anchor="w",
+        # Hit Points — current/max plus a delta box (type -10 for 10 damage, 5 to heal)
+        ttk.Label(row, text=f"Hit Points {c.cur_hp}/{c.max_hp}", width=16, anchor="w",
                   foreground=fg).grid(row=0, column=2, padx=(4, 2))
         dv = tk.StringVar()
         de = ttk.Entry(row, width=5, textvariable=dv)
@@ -388,15 +394,16 @@ class EncounterTab(ttk.Frame):
         ttk.Button(row, text="✕", width=2,
                    command=lambda cc=c: self._remove(cc)).grid(row=0, column=10, padx=(4, 0))
 
-        # Stat detail line: characteristics · attacks · skills
+        # Stat detail line: characteristics · attacks · skills (spelled out)
         ch = c.characteristics
-        stat = "  ".join(f"{k} {ch[k]}" for k in ("SIZ", "DEX", "STR", "CON", "APP"))
+        stat = "  ".join(f"{CHAR_FULL[k]} {ch[k]}"
+                         for k in ("SIZ", "DEX", "STR", "CON", "APP"))
         atks = ", ".join(f"{a['weapon']} {a['value']} ({a['damage']})" for a in c.attacks)
         detail = f"{stat}   ·   {atks}"
         if c.skills:
             detail += "   ·   Skills: " + ", ".join(f"{k} {v}" for k, v in c.skills.items())
-        detail += f"   ·   Armour {c.armor_total()}, MW {c.major_wound}"
-        tk.Label(row, text=detail, anchor="w", justify="left",
+        detail += f"   ·   Armour {c.armor_total()}, Major Wound {c.major_wound}"
+        tk.Label(row, text=detail, anchor="w", justify="left", wraplength=720,
                  font=("TkDefaultFont", 8), fg=("#aaa" if down else "#666")
                  ).grid(row=1, column=0, columnspan=11, sticky="w", padx=(6, 0))
 
@@ -431,16 +438,16 @@ class EncounterTab(ttk.Frame):
             dmg = -delta
             if dmg >= c.max_hp:
                 c._out = "dead"
-                msg = f"  — Mortal Wound! ({dmg} ≥ total HP {c.max_hp}) — slain"
+                msg = f"  — Mortal Wound! ({dmg} ≥ total Hit Points {c.max_hp}) — slain"
             elif dmg >= c.major_wound and c._out is None:
                 c._out = "unconscious"
-                msg = f"  — Major Wound! ({dmg} ≥ CON {c.major_wound}) — unconscious"
+                msg = f"  — Major Wound! ({dmg} ≥ Constitution {c.major_wound}) — unconscious"
         else:  # healed
             if c._out == "unconscious" and c.cur_hp >= c.unconscious:
                 c._out = None
                 msg = "  — revived"
         tag = "" if msg else (f"  [{c.status}]" if c.down else "")
-        self._log(f"{c.log_name}: {old} → {c.cur_hp} HP ({delta:+d}){msg}{tag}")
+        self._log(f"{c.log_name}: {old} → {c.cur_hp} Hit Points ({delta:+d}){msg}{tag}")
         self._refresh_rows()
 
     def _engage(self, c, name):
