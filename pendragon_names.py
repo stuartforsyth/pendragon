@@ -16,13 +16,15 @@ by the Markdown files in "rules/" (see rules.py). Editing those files changes
 what the app produces.
 """
 
+import copy
+import datetime
 import os
 import random
 import re
 import sys
 import tkinter as tk
 from tkinter import font as tkfont
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 import rules as rules_module
 
@@ -405,7 +407,7 @@ def _articled(phrase, category):
     low = phrase.lower()
     if category is None or low.startswith(("a ", "an ", "the ")):
         return phrase
-    if phrase.endswith("s") or "hair" in low:  # plural or uncountable
+    if phrase.endswith(("s", "teeth")) or "hair" in low:  # plural or uncountable
         return phrase
     noun_like = (low.endswith(("figure", "voice")) or category == "Speech"
                  or (category == "Face" and low not in _FACE_ADJECTIVES))
@@ -532,6 +534,19 @@ def format_statblock_markdown(r):
     return "\n".join(lines)
 
 
+def format_roster_markdown(roster):
+    """Render a whole session roster as one Markdown document."""
+    today = datetime.date.today().isoformat()
+    count = len(roster)
+    header = [
+        "# Pendragon NPC Roster",
+        f"*{count} NPC{'s' if count != 1 else ''} — {today}*",
+        "",
+    ]
+    blocks = [format_statblock_markdown(r) for r in roster]
+    return "\n".join(header) + "\n" + "\n\n".join(blocks) + "\n"
+
+
 def build_image_prompt(r):
     """Build a period-accurate image-generation prompt from the NPC."""
     social = f"{r['social_class'].lower()} " if r.get("social_class") else ""
@@ -569,10 +584,11 @@ class App(tk.Tk):
         super().__init__()
         self.generator = generator
         self._current = None  # last generated result dict
+        self.roster = []      # NPCs kept this session
 
         self.title("Pendragon NPC Generator")
-        self.geometry("680x820")
-        self.minsize(640, 700)
+        self.geometry("700x900")
+        self.minsize(660, 760)
 
         self.gender_var = tk.StringVar(value="Male")
         self.culture_var = tk.StringVar(value=self.generator.culture_names()[0])
@@ -669,7 +685,7 @@ class App(tk.Tk):
         self.subtitle.pack(fill="x", padx=10, pady=(0, 6))
 
         self.details = tk.Text(
-            out_frame, height=18, wrap="word", relief="flat",
+            out_frame, height=13, wrap="word", relief="flat",
             background=self.cget("background"), font=("TkDefaultFont", 11),
         )
         self.details.pack(fill="both", expand=True, padx=10, pady=(0, 6))
@@ -678,8 +694,41 @@ class App(tk.Tk):
                                    foreground="#333")
         self.details.configure(state="disabled")
 
+        self._build_roster_ui()
+
         self.status = ttk.Label(self, text="Ready.", foreground="#2a7d2a")
         self.status.pack(fill="x", padx=10, pady=(0, 6))
+
+    def _build_roster_ui(self):
+        frame = ttk.LabelFrame(self, text="Session roster")
+        frame.pack(fill="both", padx=10, pady=(0, 6))
+
+        top = ttk.Frame(frame)
+        top.pack(fill="both", expand=True, padx=6, pady=(6, 2))
+        self.roster_list = tk.Listbox(top, height=5, activestyle="dotbox")
+        self.roster_list.pack(side="left", fill="both", expand=True)
+        scroll = ttk.Scrollbar(top, orient="vertical",
+                               command=self.roster_list.yview)
+        scroll.pack(side="right", fill="y")
+        self.roster_list.config(yscrollcommand=scroll.set)
+
+        bar = ttk.Frame(frame)
+        bar.pack(fill="x", padx=6, pady=(0, 6))
+        # "Add current" is enabled once something is generated; the rest depend
+        # on the roster being non-empty.
+        self.add_btn = ttk.Button(bar, text="Add current", state="disabled",
+                                  command=self.on_add_to_roster)
+        self.add_btn.pack(side="left")
+        self.roster_buttons = []
+        for text, cmd in (
+            ("Remove", self.on_remove_from_roster),
+            ("Clear", self.on_clear_roster),
+            ("Copy roster", self.on_copy_roster),
+            ("Save roster…", self.on_save_roster),
+        ):
+            b = ttk.Button(bar, text=text, command=cmd, state="disabled")
+            b.pack(side="left", padx=(6, 0))
+            self.roster_buttons.append(b)
 
     # -- actions -----------------------------------------------------------
 
@@ -709,6 +758,7 @@ class App(tk.Tk):
         self._refresh_display()
         for b in self.copy_buttons:
             b.config(state="normal")
+        self.add_btn.config(state="normal")
         self.reroll_menu.config(state="readonly")
         self.reroll_btn.config(state="normal")
         self.status.config(
@@ -814,6 +864,69 @@ class App(tk.Tk):
         if self._current:
             self._to_clipboard(build_image_prompt(self._current),
                                "Copied image prompt to clipboard.")
+
+    # -- roster ------------------------------------------------------------
+
+    def _refresh_roster(self):
+        self.roster_list.delete(0, "end")
+        for r in self.roster:
+            self.roster_list.insert("end", f"{r['full']}  ·  {subtitle_str(r)}")
+        state = "normal" if self.roster else "disabled"
+        for b in self.roster_buttons:
+            b.config(state=state)
+
+    def on_add_to_roster(self):
+        if not self._current:
+            return
+        self.roster.append(copy.deepcopy(self._current))  # snapshot, not a live ref
+        self._refresh_roster()
+        self.roster_list.see("end")
+        self.status.config(
+            text=f"Added '{self._current['full']}' to roster ({len(self.roster)} total).",
+            foreground="#2a7d2a")
+
+    def on_remove_from_roster(self):
+        sel = self.roster_list.curselection()
+        if not sel:
+            self.status.config(text="Select a roster entry to remove.",
+                               foreground="#a33")
+            return
+        removed = self.roster.pop(sel[0])
+        self._refresh_roster()
+        self.status.config(text=f"Removed '{removed['full']}' from roster.",
+                           foreground="#1a5fb4")
+
+    def on_clear_roster(self):
+        if self.roster and messagebox.askyesno(
+                "Clear roster", f"Remove all {len(self.roster)} NPCs from the roster?"):
+            self.roster.clear()
+            self._refresh_roster()
+            self.status.config(text="Roster cleared.", foreground="#1a5fb4")
+
+    def on_copy_roster(self):
+        if self.roster:
+            self._to_clipboard(
+                format_roster_markdown(self.roster),
+                f"Copied roster ({len(self.roster)} NPCs) to clipboard.")
+
+    def on_save_roster(self):
+        if not self.roster:
+            return
+        default = f"pendragon-npcs-{datetime.date.today().isoformat()}.md"
+        path = filedialog.asksaveasfilename(
+            title="Save roster", defaultextension=".md", initialfile=default,
+            filetypes=[("Markdown", "*.md"), ("Text", "*.txt"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(format_roster_markdown(self.roster))
+        except OSError as exc:
+            messagebox.showerror("Save failed", str(exc))
+            return
+        self.status.config(text=f"Saved {len(self.roster)} NPCs to {path}",
+                           foreground="#2a7d2a")
 
 
 # ---------------------------------------------------------------------------

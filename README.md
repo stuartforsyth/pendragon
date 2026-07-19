@@ -35,6 +35,8 @@ notes or Discord.
   - **Manner** — a plain-language roleplay hint.
 - **Click the name** to copy just the name to the clipboard.
 - **Copy Statblock** to copy the entire NPC as text for your GM notes/Discord.
+- **Session roster** — keep a list of NPCs generated this session, then export
+  the whole roster to the clipboard or **save it to a Markdown file**.
 - **Pronunciation hints** appear only when a name contains a tricky cluster
   (e.g. Cymric `ll`/`dd`/`w`, Irish `ch`, Roman hard `c`).
 
