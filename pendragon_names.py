@@ -223,14 +223,27 @@ class Generator:
         r["height"] = self.rules.height_for(stats["SIZ"])
         r["appearance"] = self.rules.roll_appearance(stats["APP"])
 
-    def _fill_class(self, r, requested=None):
+    def _resolve_class(self, gender, requested):
+        """Reconcile gender and a requested class before anything else.
+
+        A specific single-gender class dictates the gender (a Lady is female);
+        otherwise a class valid for the gender is rolled. Returns (gender, cls).
+        """
+        classes = self.rules.social_classes
+        if requested and requested in classes:  # a specific class was chosen
+            cls = requested
+            if not self.rules.class_allows(cls, gender):
+                gender = classes[cls]["genders"][0]  # e.g. Lady -> Female
+        else:  # "Random" / None -> a class valid for this gender
+            cls = self.rules.roll_class(gender)
+        return gender, cls
+
+    def _fill_class(self, r, cls=None):
         """(Re)roll the social class and its skills/Glory in place."""
         if not (self.rules and self.rules.social_classes):
             return
-        if requested and requested in self.rules.social_classes:
-            cls = requested
-        else:  # "Random", None, or unknown -> weighted random
-            cls = self.rules.roll_class()
+        if cls is None:  # reroll: pick a class valid for the current gender
+            cls = self.rules.roll_class(r["gender"])
         r["social_class"] = cls
         r["attire"] = self.rules.social_classes[cls].get("attire", "")
         self._fill_skills(r)
@@ -242,6 +255,10 @@ class Generator:
             r["glory"] = rolled["glory"]
 
     def generate(self, culture, gender, social_class=None):
+        cls = None
+        if self.rules and self.rules.social_classes:
+            gender, cls = self._resolve_class(gender, social_class)
+
         result = {"culture": culture, "gender": gender}
         self._fill_name(result)
 
@@ -249,7 +266,8 @@ class Generator:
             result["naming_note"] = self.rules.naming_notes.get(culture, "")
             if self.rules.manner:
                 result["manner"] = random.choice(self.rules.manner)
-            self._fill_class(result, social_class)
+            if self.rules.social_classes:
+                self._fill_class(result, cls)
             religion = self.rules.religion_for(culture)
             result["religion"] = religion
             self._fill_characteristics(result)
@@ -607,6 +625,8 @@ class App(tk.Tk):
         buttons = ttk.Frame(self)
         buttons.pack(anchor="w", fill="x", padx=10, pady=(2, 4))
         ttk.Button(buttons, text="Generate", command=self.on_generate).pack(side="left")
+        ttk.Button(buttons, text="Randomise", command=self.on_randomise).pack(
+            side="left", padx=(8, 0))
 
         # Copy buttons (disabled until something is generated).
         self.copy_buttons = []
@@ -663,6 +683,16 @@ class App(tk.Tk):
 
     # -- actions -----------------------------------------------------------
 
+    def on_randomise(self):
+        """One-click: randomise gender, class, and culture, then generate."""
+        gender = random.choice(("Male", "Female"))
+        self.gender_var.set(gender)
+        self.culture_var.set(random.choice(self.generator.culture_names()))
+        rules = self.generator.rules
+        if rules and rules.social_classes:
+            self.class_var.set(rules.roll_class(gender))  # valid for the gender
+        self.on_generate()
+
     def on_generate(self):
         culture = self.culture_var.get()
         gender = self.gender_var.get()
@@ -674,6 +704,8 @@ class App(tk.Tk):
             return
 
         self._current = result
+        # A single-gender class (Lady) may have overridden the choice; reflect it.
+        self.gender_var.set(result["gender"])
         self._refresh_display()
         for b in self.copy_buttons:
             b.config(state="normal")

@@ -93,9 +93,20 @@ class Rules:
     def class_names(self):
         return list(self.social_classes)
 
-    def roll_class(self):
-        """Pick a random social class, weighted by class_weights."""
-        classes = self.class_names()
+    def class_allows(self, social_class, gender):
+        """Is this class valid for the given gender? (empty/absent = any)."""
+        allowed = self.social_classes.get(social_class, {}).get("genders")
+        return not allowed or gender in allowed
+
+    def classes_for(self, gender):
+        """Class names valid for a gender (all if gender is None)."""
+        if gender is None:
+            return self.class_names()
+        return [c for c in self.class_names() if self.class_allows(c, gender)]
+
+    def roll_class(self, gender=None):
+        """Pick a random social class valid for gender, weighted by class_weights."""
+        classes = self.classes_for(gender)
         if not classes:
             return None
         weights = [self.class_weights.get(c, 1) for c in classes]

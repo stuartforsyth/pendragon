@@ -12,7 +12,11 @@ notes or Discord.
 
 - **Gender**, **Class**, and **Culture** radio buttons — cultures are read live
   from `Names by Culture.md`; Class can be a specific rank or **Random**.
+  Period gender rules apply: a woman may hold any class, but **Lady** is
+  female-only (choosing Male + Lady yields a female Lady).
 - **Generate** a random name with a culture-appropriate surname or byname.
+- **Randomise** — one click picks a random gender, class, and culture (valid
+  combinations only) and generates a complete NPC.
 - **A read-aloud description** — a short "You see a…" paragraph assembled from
   all the details (build, looks, class attire, eyes, distinctive features,
   manner) for the moment the party meets the NPC.

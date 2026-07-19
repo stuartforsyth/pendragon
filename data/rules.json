@@ -612,7 +612,11 @@
           9
         ]
       },
-      "attire": "a rough wool tunic and cloak, no armour"
+      "attire": "a rough wool tunic and cloak, no armour",
+      "genders": [
+        "Male",
+        "Female"
+      ]
     },
     "Squire": {
       "description": "A young warrior in training, serving a knight.",
@@ -646,7 +650,11 @@
           10
         ]
       },
-      "attire": "a padded gambeson and cloak"
+      "attire": "a padded gambeson and cloak",
+      "genders": [
+        "Male",
+        "Female"
+      ]
     },
     "Knight": {
       "description": "A mounted warrior of the gentry; the standard Pendragon PC.",
@@ -680,7 +688,11 @@
           12
         ]
       },
-      "attire": "a mail hauberk and cloak, carrying a round shield"
+      "attire": "a mail hauberk and cloak, carrying a round shield",
+      "genders": [
+        "Male",
+        "Female"
+      ]
     },
     "Lady": {
       "description": "A noblewoman; mistress of the courtly and domestic arts.",
@@ -718,7 +730,10 @@
           15
         ]
       },
-      "attire": "a fine embroidered gown and veil"
+      "attire": "a fine embroidered gown and veil",
+      "genders": [
+        "Female"
+      ]
     },
     "Noble": {
       "description": "A lord or great magnate; a leader in war and court.",
@@ -756,7 +771,11 @@
           16
         ]
       },
-      "attire": "rich mail and a fur-trimmed cloak"
+      "attire": "rich mail and a fur-trimmed cloak",
+      "genders": [
+        "Male",
+        "Female"
+      ]
     },
     "Clergy": {
       "description": "A priest, monk, or cleric; learned and pious.",
@@ -790,7 +809,11 @@
           14
         ]
       },
-      "attire": "plain monastic robes"
+      "attire": "plain monastic robes",
+      "genders": [
+        "Male",
+        "Female"
+      ]
     }
   },
   "class_weights": {
