@@ -103,6 +103,13 @@ class Combatant:
     def display_name(self):
         return f"{self.label} — {self.promotion_title}" if self.elite else self.label
 
+    @property
+    def log_name(self):
+        """Name used in the log, noting who they're engaged with for readability."""
+        if self.engaged_with.strip():
+            return f"{self.display_name} ({self.engaged_with.strip()})"
+        return self.display_name
+
     def armor_total(self):
         return self.armor_points + self.shield
 
@@ -236,6 +243,7 @@ class EncounterTab(ttk.Frame):
         self.set_status = set_status
         self.encounter = Encounter(rules.combat)
         self.log = CombatLog()
+        self._dirty = False  # unsaved log/notes since the last Save
         self._build_ui()
 
     # -- layout ------------------------------------------------------------
@@ -312,6 +320,8 @@ class EncounterTab(ttk.Frame):
         self.notes_text = tk.Text(notes_frame, height=7, wrap="word",
                                   font=("TkDefaultFont", 10))
         self.notes_text.pack(fill="both", expand=True, padx=6, pady=6)
+        self.notes_text.bind("<KeyRelease>",
+                             lambda e: setattr(self, "_dirty", True))
 
         self._refresh_rows()
 
@@ -394,6 +404,7 @@ class EncounterTab(ttk.Frame):
 
     def _log(self, line):
         self.log.add(line)
+        self._dirty = True
         self.log_text.configure(state="normal")
         self.log_text.insert("end", self.log.entries[-1] + "\n")
         self.log_text.see("end")
@@ -429,7 +440,7 @@ class EncounterTab(ttk.Frame):
                 c._out = None
                 msg = "  — revived"
         tag = "" if msg else (f"  [{c.status}]" if c.down else "")
-        self._log(f"{c.display_name}: {old} → {c.cur_hp} HP ({delta:+d}){msg}{tag}")
+        self._log(f"{c.log_name}: {old} → {c.cur_hp} HP ({delta:+d}){msg}{tag}")
         self._refresh_rows()
 
     def _engage(self, c, name):
@@ -446,10 +457,10 @@ class EncounterTab(ttk.Frame):
     def _toggle_down(self, c):
         if c.status == "active":
             c._out = "unconscious"
-            self._log(f"{c.display_name} knocked out (unconscious)")
+            self._log(f"{c.log_name} knocked out (unconscious)")
         else:
             c._out = None
-            self._log(f"{c.display_name} brought back up")
+            self._log(f"{c.log_name} brought back up")
         self._refresh_rows()
 
     def on_add_round_note(self):
@@ -463,7 +474,7 @@ class EncounterTab(ttk.Frame):
         if not atk:
             return
         roll, outcome = resolve_skill(atk["value"])
-        self._log(f"{c.display_name} rolls {weapon} ({atk['value']}): {roll} — {outcome.upper()}")
+        self._log(f"{c.log_name} rolls {weapon} ({atk['value']}): {roll} — {outcome.upper()}")
         self.set_status(f"{c.display_name} {weapon} {atk['value']}: rolled {roll} — {outcome}",
                         OUTCOME_COLOR.get(outcome, "#000"))
 
@@ -476,7 +487,7 @@ class EncounterTab(ttk.Frame):
             f"Was {c.display_name}'s {weapon} attack a critical hit?\n\n"
             "Yes adds the critical bonus dice.")
         total, breakdown = roll_damage(atk["damage"], c.base_damage_dice, crit)
-        self._log(f"{c.display_name} {weapon} damage: {breakdown}")
+        self._log(f"{c.log_name} {weapon} damage: {breakdown}")
         self.set_status(f"{c.display_name} {weapon} damage: {total}", "#1a5fb4")
 
     def _toggle_promote(self, c):
@@ -511,12 +522,28 @@ class EncounterTab(ttk.Frame):
             self._refresh_rows()
 
     def on_clear(self):
-        if self.encounter.combatants and not messagebox.askyesno(
-                "Clear encounter", "Remove all combatants?"):
-            return
+        """Start a new session: clears combatants, the log, and GM notes."""
+        self._sync_notes()
+        if self._dirty and (self.log.entries or self.log.gm_notes.strip()):
+            ans = messagebox.askyesnocancel(
+                "Start a new encounter",
+                "Save the current combat log and GM notes before clearing?\n\n"
+                "Yes = save first\nNo = discard\nCancel = go back")
+            if ans is None:
+                return
+            if ans and not self.on_save_log():
+                return  # save cancelled -> keep everything
         self.encounter.clear()
+        self.log.clear()
+        self.log.gm_notes = ""
+        self._dirty = False
+        self.log_text.configure(state="normal")
+        self.log_text.delete("1.0", "end")
+        self.log_text.configure(state="disabled")
+        self.notes_text.delete("1.0", "end")
+        self.round_note.delete(0, "end")
         self._refresh_rows()
-        self.set_status("Encounter cleared.", "#1a5fb4")
+        self.set_status("Cleared — ready for a new encounter.", "#1a5fb4")
 
     def on_copy_log(self):
         self._sync_notes()
@@ -526,17 +553,20 @@ class EncounterTab(ttk.Frame):
         self.set_status("Copied combat log to clipboard.", "#1a5fb4")
 
     def on_save_log(self):
+        """Save the log to a file. Returns True on success, False if cancelled."""
         self._sync_notes()
         default = f"pendragon-encounter-{datetime.date.today().isoformat()}.md"
         path = filedialog.asksaveasfilename(
             title="Save combat log", defaultextension=".md", initialfile=default,
             filetypes=[("Markdown", "*.md"), ("Text", "*.txt"), ("All files", "*.*")])
         if not path:
-            return
+            return False
         try:
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(self.log.to_markdown(self.encounter.combatants))
         except OSError as exc:
             messagebox.showerror("Save failed", str(exc))
-            return
+            return False
+        self._dirty = False
         self.set_status(f"Saved combat log to {path}", "#2a7d2a")
+        return True

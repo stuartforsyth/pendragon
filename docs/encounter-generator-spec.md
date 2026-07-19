@@ -226,7 +226,9 @@ Promotion is logged (§10).
 
 **Setup row:** number of players (spinbox) · encounter theme (dropdown) ·
 difficulty/veterancy (optional) · **Generate encounter** · **Add enemy**
-(type dropdown + button) · **Clear**.
+(type dropdown + button) · **Clear**. **Clear** starts a new session: it
+**prompts to save** if the log/notes are unsaved (Yes = save / No = discard /
+Cancel), then clears combatants, the **combat log**, and the **GM notes**.
 
 **Combatant tracker** (a scrollable list; one row per combatant):
 - `Label` (editable, e.g. "Bandit 2") · **Engaged with** (editable text field).
@@ -288,7 +290,8 @@ event stream. (GM Notes = overarching; round note = inline, chronological.)
 Session-only encounter, but a persistent readable log. Log entries include:
 - Encounter generated (theme, party size, roster of combatants).
 - "Bandit 2 engaged with Sir Kay" (from the engaged-with field).
-- Skill rolls: "Bandit 2 rolls Spear (8): 5 — success" / "…: 8 — CRITICAL".
+- Skill rolls: "Bandit 2 (Sir Kay) rolls Spear (8): 5 — success" — combat-action
+  lines name the engaged combatant (`(Sir Kay)`) for readability.
 - Damage rolls: "Bandit 2 Spear damage 4D6 = 14 (critical: +4D6)".
 - HP/status changes: "Bandit 2: 24 → 6 (unconscious)", "Sir Kay's foe slain".
 - Promotions: "Bandit 2 promoted to Gang Leader (elite)".
@@ -344,6 +347,9 @@ Session-only encounter, but a persistent readable log. Log entries include:
       the HP/4 threshold; ≥ total HP is a Mortal Wound (dead).
 - [ ] Each combatant row shows basic characteristics, attacks, and skills.
 - [ ] A transient round-note box writes the note into the log inline and clears.
+- [ ] Combat-action log lines name the engaged combatant, e.g. "Bandit 1 (Jason)".
+- [ ] Clear prompts to save unsaved log/notes, then clears combatants, the log,
+      and the GM notes to start a new session.
 
 ---
 
