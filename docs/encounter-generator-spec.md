@@ -245,16 +245,25 @@ Cancel), then clears combatants, the **combat log**, and the **GM notes**.
   damage or `5` to heal 5 (Enter or Apply). The applied damage is the single
   blow for the Major/Mortal Wound checks (§4.1a). A **KO/Revive** toggle knocks
   a combatant out or brings them back independent of HP.
-- Compact stats: main attack(s) `skill` + `damage`, Armour(+shield),
-  Major Wound, Knockdown.
-- **Roll Skill** (per weapon) and **Roll Damage** (per weapon) buttons; result
-  shown inline and appended to the log.
-- **Stat detail lines** under each row: characteristics, each attack (skill +
-  damage), skills, Major Wound, Morale; plus a line with the **armour worn**
-  (e.g. "Hauberk, aketon, open helm + kite shield") and a rolled **defining
-  physical feature** + eye colour — so the GM can describe how each combatant is
-  armed and what they look like. The armour and look are also in the saved
-  combatants summary.
+- **Clickable stats — every stat number is a roll link.** The stat/attack/skill
+  text under each row is **interactive**: clicking a number rolls it and logs
+  the result (see §8). This **replaces** the old weapon dropdown + "Roll Skill"
+  + "Roll Damage" buttons — you click the specific stat you want to roll.
+  - **Characteristics** — click e.g. `Size 15` → roll d20 against Size, log it.
+  - **Attack skill value** — click e.g. `Sword 17` → roll that attack's skill.
+  - **Attack damage** — click e.g. `5D6` (next to Sword) → prompt "critical?"
+    then roll damage (adding the crit bonus dice) and log it.
+  - **Skills** — click e.g. `Horsemanship 17` → roll and log pass/fail.
+  - Roll links carry the combatant's engaged-with name in the log for
+    readability (e.g. "Bandit 1 (Jason) rolls Sword (17): 10 — SUCCESS").
+  - Roll links are visually distinct (e.g. underlined/coloured, hand cursor).
+- **Legibility:** the attributes and skills text is shown at a **readable size**
+  (larger than the previous tiny detail font), since it is now the primary way
+  to interact with a combatant.
+- **Descriptor line** under each row: the **armour worn** (e.g. "Hauberk,
+  aketon, open helm + kite shield") and a rolled **defining physical feature** +
+  eye colour — so the GM can describe how each combatant is armed and looks.
+  Armour and look are also in the saved combatants summary.
 - The **"engaged with"** name is **logged when set** and listed in the saved
   log's combatants summary (see §10), so the pairing is recorded.
 - **Actions menu** per row → **Promote/Demote** (champion/elite, §5.1),
@@ -280,15 +289,28 @@ event stream. (GM Notes = overarching; round note = inline, chronological.)
 
 ---
 
-## 8. Rolling behaviour
+## 8. Rolling behaviour (click-to-roll)
 
-- **Roll Skill(weapon):** `d20` vs `skill_value` → success / **critical**
-  (== value) / failure / **fumble** (nat 20, unless value ≥ 20). Report outcome;
-  log it.
-- **Roll Damage(weapon):** roll the weapon's damage dice. A **"critical" toggle**
-  (or the last skill roll being a crit) adds the crit bonus dice (§4.2). Show
-  the total and its breakdown; log it. **No auto-subtraction** (F2).
-- Reuse the dice helpers; add `roll_expr`.
+Rolling is driven by **clicking the stat numbers** in a combatant's row — there
+are no separate weapon/skill/damage controls.
+
+- **Stat & skill rolls** — clicking a **characteristic**, an **attack's skill
+  value**, or a **skill** rolls `d20` against that value:
+  - **success** = roll ≤ value, **critical** = roll == value, **failure** =
+    roll > value, **fumble** = natural 20 (unless value ≥ 20).
+  - Logged as e.g. `Sword (17): 10 — SUCCESS` / `Horsemanship (17): 3 — SUCCESS`,
+    prefixed with the combatant (and engaged name).
+  - *Rulebook note:* characteristic rolls have **no critical/fumble
+    distinction** (per Core Ch.2) — report them as success/failure only.
+- **Damage rolls** — clicking an **attack's damage** (e.g. `5D6`) prompts
+  "**Was this a critical hit?**"; on Yes it adds the attacker's base Damage dice
+  again (§4.2). Shows the total and breakdown and logs it. **No auto-subtraction
+  of HP** (F2 — the GM applies damage via the HP delta box).
+- Reuse the dice helpers (`roll_expr`) and the resolution logic.
+
+**Implementation note (not design):** clickable numbers can be per-token
+`Label`s with `<Button-1>` bindings, or a `Text` widget with tags — whichever
+keeps the row layout manageable.
 
 ---
 
@@ -336,6 +358,11 @@ Session-only encounter, but a persistent readable log. Log entries include:
 5. **"Leader" unified with promotion.** The earlier idea of a theme "leader"
    template is replaced by generating the leader as an **auto-promoted**
    combatant of the leader type (§5.1) — one mechanism, not two.
+6. **Click-to-roll replaces the roll controls.** The earlier per-row weapon
+   dropdown + "Roll Skill" + "Roll Damage" buttons are **removed**; rolling is
+   now driven by clicking the stat numbers directly (§7, §8). The attribute/
+   skill text also grows to a readable size, as it is now the primary
+   interaction surface.
 
 ---
 
@@ -345,8 +372,13 @@ Session-only encounter, but a persistent readable log. Log entries include:
 - [ ] Enemy skill levels differ by template tier (bandit ≪ knight).
 - [ ] Each combatant shows cur/max HP; GM can adjust HP up/down manually.
 - [ ] Each combatant has an editable "engaged with" field.
-- [ ] Roll a combatant's weapon skill (d20) with correct success/critical/fumble.
-- [ ] Roll a combatant's weapon damage, correctly adding critical bonus dice.
+- [ ] Clicking a characteristic / attack skill / skill number rolls d20 with
+      correct success/critical/fumble and logs it (characteristics: pass/fail
+      only, no crit/fumble).
+- [ ] Clicking an attack's damage number prompts for a critical, then rolls the
+      damage (adding the crit bonus dice) and logs it.
+- [ ] The click-to-roll numbers replace the weapon dropdown and Roll Skill /
+      Roll Damage buttons; the attribute/skill text is a readable size.
 - [ ] Any combatant can be promoted to a champion/elite (Gang Leader, Elite
       Commander…): HP, skills, damage, armour and Glory all increase, and it is
       visually prominent and reversible.
