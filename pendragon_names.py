@@ -122,68 +122,15 @@ def parse_names_file(path):
 # ---------------------------------------------------------------------------
 # Culture-specific naming rules
 # ---------------------------------------------------------------------------
-
-ROMAN_NOMEN = ["Aurelius", "Flavius", "Valerius", "Claudius", "Fabius", "Julius", "Junius"]
+#
+# Naming/flavour data (Roman nomen & honorifics, bynames, pronunciation hints,
+# naming notes, manner) now lives in data/rules.json and is read via the Rules
+# object. Only the feminisation logic stays in code.
 
 
 def _feminise_roman(name):
     """Turn a Roman male name into its feminine 'ia' form (Arcavius -> Arcavia)."""
     return re.sub(r"(ius|us|is|os|a)$", "", name) + "ia"
-
-
-ROMAN_HONORIFICS = [
-    "Magnus", "Maximus", "Rufus", "Eboricus", "Augustus",
-    "Cicero", "Scaevola", "Numidicus",
-]
-
-BYNAMES = [
-    "the Fair", "the Just", "the Tall", "the Old", "the Lame",
-    "the Reckless", "the Learned", "the Honey-Tongued", "the Fat",
-    "Swarthy-Cheeked", "Blue-Toothed", "the Far-Wanderer",
-    "Battle-Blessed", "Head-Splitter", "of the Long Hunt",
-    "of the Dales",
-]
-
-PRONUNCIATION = {
-    "Cymri": [
-        ("ll", "ll = the 'Welsh' aspirated L: tongue to roof of mouth, blow air out the sides"),
-        ("dd", "dd = 'th' as in 'the'"),
-        ("ff", "ff = 'f'"),
-        ("w", "w = 'oo'"),
-        ("c", "c = hard 'k'"),
-        ("f", "f = 'v' (single f)"),
-    ],
-    "Irish": [
-        ("ch", "ch = Scottish 'loch'"),
-        ("dh", "d = 'j' as in 'joy'"),
-        ("bh", "bh = 'v'"),
-        ("s", "s before e/i = 'sh' as in 'short'"),
-        ("t", "t = 'ch' as in 'church'"),
-        ("c", "c = hard 'k' as in 'cow'"),
-    ],
-    "Roman": [
-        ("c", "All C's are hard, like 'K'"),
-    ],
-    "Pict": [
-        ("ch", "ch = Scottish 'loch'"),
-    ],
-}
-
-NAMING_NOTE = {
-    "Cymri": "Patronymic: 'ap' = son of, 'ferch' = daughter of.",
-    "Pict": "Patronymic: 'mab' = son of, 'ferch' = daughter of.",
-    "Irish": "Clan loyalty: 'Mc' = son of, 'O' = descendant of.",
-    "Roman": "Roman form: praenomen + nomen (family) + optional honorific.",
-}
-
-# A plain-language roleplay hint; complements the mechanical Traits/Passions.
-MANNER = [
-    "cheerful and talkative", "wary of strangers", "proud and easily slighted",
-    "pious and softly spoken", "boastful after a cup of ale",
-    "shrewd and calculating", "quick to laugh", "sullen and taciturn",
-    "courteous and formal", "restless and impatient",
-    "generous to a fault", "quietly watchful",
-]
 
 
 # ---------------------------------------------------------------------------
@@ -230,60 +177,102 @@ class Generator:
             return ""
 
         if culture == "Roman":
-            nomen = random.choice(ROMAN_NOMEN)
+            if not (self.rules and self.rules.roman_nomen):
+                return ""  # no nomen data without rules
+            nomen = random.choice(self.rules.roman_nomen)
             if gender == "Female":  # Julius -> Julia, etc.
                 nomen = _feminise_roman(nomen)
             parts = [nomen]
-            if random.random() < 0.5:
-                parts.append(random.choice(ROMAN_HONORIFICS))
+            if self.rules.roman_honorifics and random.random() < 0.5:
+                parts.append(random.choice(self.rules.roman_honorifics))
             return " ".join(parts)
 
-        if random.random() < 0.7:
-            return random.choice(BYNAMES)
+        if self.rules and self.rules.bynames and random.random() < 0.7:
+            return random.choice(self.rules.bynames)
         return ""
 
     def _pronunciation(self, culture, name):
+        if not self.rules:
+            return []
         hints, seen = [], set()
-        for cluster, note in PRONUNCIATION.get(culture, []):
+        for cluster, note in self.rules.pronunciation.get(culture, []):
             if cluster in name.lower() and note not in seen:
                 hints.append(note)
                 seen.add(note)
         return hints
 
-    def generate(self, culture, gender):
+    def _fill_name(self, r):
+        """(Re)roll the name fields of a result dict in place."""
+        culture, gender = r["culture"], r["gender"]
         pool = self._name_pool(culture, gender)
         if not pool:
             raise ValueError(f"No {gender} names available for {culture}.")
-
         given = random.choice(pool)
         surname = self._surname(culture, gender)
         full = f"{given} {surname}".strip()
+        r.update(
+            given=given, surname=surname, full=full,
+            pronunciation=self._pronunciation(culture, full),
+        )
 
-        result = {
-            "full": full,
-            "given": given,
-            "surname": surname,
-            "culture": culture,
-            "gender": gender,
-            "manner": random.choice(MANNER),
-            "naming_note": NAMING_NOTE.get(culture, ""),
-            "pronunciation": self._pronunciation(culture, full),
-        }
+    def _fill_characteristics(self, r):
+        """(Re)roll characteristics and everything derived from them."""
+        stats, derived = self.rules.roll_characteristics(r["culture"])
+        r["stats"] = stats
+        r["derived"] = derived
+        r["height"] = self.rules.height_for(stats["SIZ"])
+        r["appearance"] = self.rules.roll_appearance(stats["APP"])
+
+    def generate(self, culture, gender):
+        result = {"culture": culture, "gender": gender}
+        self._fill_name(result)
 
         if self.rules is not None:
+            result["naming_note"] = self.rules.naming_notes.get(culture, "")
+            if self.rules.manner:
+                result["manner"] = random.choice(self.rules.manner)
             religion = self.rules.religion_for(culture)
-            stats, derived = self.rules.roll_characteristics(culture)
-            result.update({
-                "religion": religion,
-                "stats": stats,
-                "derived": derived,
-                "height": self.rules.height_for(stats["SIZ"]),
-                "appearance": self.rules.roll_appearance(stats["APP"]),
-                "traits": self.rules.roll_traits(religion),
-                "passions": self.rules.roll_passions(religion),
-            })
+            result["religion"] = religion
+            self._fill_characteristics(result)
+            result["traits"] = self.rules.roll_traits(religion)
+            result["passions"] = self.rules.roll_passions(religion)
+            result["directed"] = self.rules.roll_directed_trait()
 
         return result
+
+    # Fields the GUI can reroll individually, mapped to how to reroll them.
+    def reroll_fields(self):
+        if self.rules is None:
+            return ["Name"]
+        return [
+            "Name", "Religion", "Characteristics", "Appearance",
+            "Personality Traits", "Passions", "Directed Trait", "Manner",
+        ]
+
+    def reroll_field(self, r, field):
+        """Reroll a single component of an existing result in place."""
+        if field == "Name":
+            self._fill_name(r)
+            return
+        if self.rules is None:
+            return
+        if field == "Manner":
+            if self.rules.manner:
+                r["manner"] = random.choice(self.rules.manner)
+        elif field == "Religion":
+            r["religion"] = self.rules.religion_for(r["culture"])
+            r["traits"] = self.rules.roll_traits(r["religion"])
+            r["passions"] = self.rules.roll_passions(r["religion"])
+        elif field == "Characteristics":
+            self._fill_characteristics(r)
+        elif field == "Appearance":
+            r["appearance"] = self.rules.roll_appearance(r["stats"]["APP"])
+        elif field == "Personality Traits":
+            r["traits"] = self.rules.roll_traits(r["religion"])
+        elif field == "Passions":
+            r["passions"] = self.rules.roll_passions(r["religion"])
+        elif field == "Directed Trait":
+            r["directed"] = self.rules.roll_directed_trait()
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +309,8 @@ def format_statblock(r):
         lines.append("Personality Traits: " + _traits_str(r["traits"]))
     if r.get("passions"):
         lines.append("Passions: " + _passions_str(r["passions"]))
+    if r.get("directed"):
+        lines.append(f"{r['directed']['kind']}: {r['directed']['text']}")
 
     if r.get("stats"):
         st = r["stats"]
@@ -339,6 +330,77 @@ def format_statblock(r):
     return "\n".join(lines)
 
 
+def format_statblock_markdown(r):
+    """Render a result dict as a Markdown block for game notes."""
+    lines = [f"## {r['full']}"]
+
+    sub = f"*{r['gender']} · {r['culture']}"
+    if r.get("religion"):
+        sub += f" · {r['religion']}"
+    lines.append(sub + "*")
+    lines.append("")
+
+    def bullet(label, value):
+        lines.append(f"- **{label}:** {value}")
+
+    if r.get("appearance"):
+        a = r["appearance"]
+        height = f", ~{r['height']} tall" if r.get("height") else ""
+        bullet("Appearance", f"{a['descriptor']}{height}; {a['eyes']} eyes")
+        if a["features"]:
+            bullet("Distinctive Features", "; ".join(a["features"]))
+    if r.get("manner"):
+        bullet("Manner", r["manner"])
+    if r.get("traits"):
+        bullet("Personality Traits", _traits_str(r["traits"]))
+    if r.get("passions"):
+        bullet("Passions", _passions_str(r["passions"]))
+    if r.get("directed"):
+        bullet(r["directed"]["kind"], r["directed"]["text"])
+    if r.get("stats"):
+        st = r["stats"]
+        bullet("Characteristics",
+               "  ".join(f"{k} {st[k]}" for k in ("SIZ", "DEX", "STR", "CON", "APP")))
+        d = r["derived"]
+        bullet("Derived",
+               f"HP {d['Hit Points']} · Move {d['Move']} · Damage {d['Damage']} · "
+               f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
+               f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}")
+    if r.get("naming_note"):
+        bullet("Naming", r["naming_note"])
+    if r.get("pronunciation"):
+        bullet("Pronunciation", "; ".join(r["pronunciation"]))
+
+    return "\n".join(lines)
+
+
+def build_image_prompt(r):
+    """Build a period-accurate image-generation prompt from the NPC."""
+    subject = f"{r['gender'].lower()} {r['culture']}"
+    parts = [f"character portrait of a {subject} person"]
+
+    a = r.get("appearance")
+    if a:
+        if a.get("features"):
+            parts.append(", ".join(a["features"]))
+        parts.append(f"{a['eyes']} eyes")
+        parts.append(f"{a['descriptor'].lower()}-looking")
+    if r.get("height"):
+        parts.append(f"about {r['height']} tall")
+
+    style = (
+        "sub-Roman Britain, 5th-6th century, Dark Ages, "
+        "mail hauberk or wool tunic and cloak, no plate armour, "
+        "historically grounded, muted natural colours, overcast light, "
+        "painterly, detailed face, head and shoulders"
+    )
+    negative = (
+        "Negative prompt: plate armour, full helm, gothic castle, renaissance, "
+        "modern clothing, anime, cartoon, text, watermark, deformed"
+    )
+    return ", ".join(p for p in parts if p) + ". " + style + "\n" + negative
+
+
 # ---------------------------------------------------------------------------
 # GUI
 # ---------------------------------------------------------------------------
@@ -350,8 +412,8 @@ class App(tk.Tk):
         self._current = None  # last generated result dict
 
         self.title("Pendragon NPC Generator")
-        self.geometry("660x760")
-        self.minsize(600, 640)
+        self.geometry("680x820")
+        self.minsize(640, 700)
 
         self.gender_var = tk.StringVar(value="Male")
         self.culture_var = tk.StringVar(value=self.generator.culture_names()[0])
@@ -389,13 +451,34 @@ class App(tk.Tk):
             ).grid(row=i // cols, column=i % cols, sticky="w", padx=6, pady=2)
 
         buttons = ttk.Frame(self)
-        buttons.pack(anchor="w", padx=10, pady=(2, 8))
+        buttons.pack(anchor="w", fill="x", padx=10, pady=(2, 4))
         ttk.Button(buttons, text="Generate", command=self.on_generate).pack(side="left")
-        self.copy_btn = ttk.Button(
-            buttons, text="Copy Statblock", command=self.on_copy_statblock,
-            state="disabled",
+
+        # Copy buttons (disabled until something is generated).
+        self.copy_buttons = []
+        for text, cmd in (
+            ("Copy Statblock", self.on_copy_statblock),
+            ("Copy Markdown", self.on_copy_markdown),
+            ("Copy Image Prompt", self.on_copy_image_prompt),
+        ):
+            b = ttk.Button(buttons, text=text, command=cmd, state="disabled")
+            b.pack(side="left", padx=(8, 0))
+            self.copy_buttons.append(b)
+
+        # Reroll a single field.
+        reroll = ttk.Frame(self)
+        reroll.pack(anchor="w", padx=10, pady=(0, 8))
+        ttk.Label(reroll, text="Reroll:").pack(side="left")
+        self.reroll_var = tk.StringVar(value=self.generator.reroll_fields()[0])
+        self.reroll_menu = ttk.Combobox(
+            reroll, textvariable=self.reroll_var, state="disabled",
+            values=self.generator.reroll_fields(), width=18,
         )
-        self.copy_btn.pack(side="left", padx=(8, 0))
+        self.reroll_menu.pack(side="left", padx=(6, 0))
+        self.reroll_btn = ttk.Button(
+            reroll, text="Reroll field", command=self.on_reroll, state="disabled",
+        )
+        self.reroll_btn.pack(side="left", padx=(6, 0))
 
         out_frame = ttk.LabelFrame(self, text="Result  (click the name to copy just the name)")
         out_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
@@ -434,18 +517,36 @@ class App(tk.Tk):
             return
 
         self._current = result
-        self.name_label.config(text=result["full"])
-        sub = f"{result['gender']} · {result['culture']}"
-        if result.get("religion"):
-            sub += f" · {result['religion']}"
-        self.subtitle.config(text=sub)
-
-        self._render_details(result)
-        self.copy_btn.config(state="normal")
+        self._refresh_display()
+        for b in self.copy_buttons:
+            b.config(state="normal")
+        self.reroll_menu.config(state="readonly")
+        self.reroll_btn.config(state="normal")
         self.status.config(
-            text="Generated. Click the name to copy it, or Copy Statblock for the lot.",
+            text="Generated. Click the name to copy it, or use the Copy buttons.",
             foreground="#2a7d2a",
         )
+
+    def _refresh_display(self):
+        r = self._current
+        self.name_label.config(text=r["full"])
+        sub = f"{r['gender']} · {r['culture']}"
+        if r.get("religion"):
+            sub += f" · {r['religion']}"
+        self.subtitle.config(text=sub)
+        self._render_details(r)
+
+    def on_reroll(self):
+        if not self._current:
+            return
+        field = self.reroll_var.get()
+        try:
+            self.generator.reroll_field(self._current, field)
+        except ValueError as exc:
+            messagebox.showwarning("Cannot reroll", str(exc))
+            return
+        self._refresh_display()
+        self.status.config(text=f"Rerolled {field}.", foreground="#2a7d2a")
 
     def _render_details(self, r):
         self.details.configure(state="normal")
@@ -470,6 +571,8 @@ class App(tk.Tk):
             row("Personality Traits", _traits_str(r["traits"]))
         if r.get("passions"):
             row("Passions", _passions_str(r["passions"]))
+        if r.get("directed"):
+            row(r["directed"]["kind"], r["directed"]["text"])
 
         if r.get("stats"):
             self.details.insert("end", "\n")
@@ -509,6 +612,16 @@ class App(tk.Tk):
             self._to_clipboard(format_statblock(self._current),
                                "Copied full statblock to clipboard.")
 
+    def on_copy_markdown(self):
+        if self._current:
+            self._to_clipboard(format_statblock_markdown(self._current),
+                               "Copied Markdown statblock to clipboard.")
+
+    def on_copy_image_prompt(self):
+        if self._current:
+            self._to_clipboard(build_image_prompt(self._current),
+                               "Copied image prompt to clipboard.")
+
 
 # ---------------------------------------------------------------------------
 
@@ -532,10 +645,17 @@ def main():
         print("Error: no cultures parsed from the data file.", file=sys.stderr)
         return 1
 
-    rules = rules_module.load_rules(os.path.join(here, "rules"))
+    try:
+        rules = rules_module.load_rules(os.path.join(here, "data"))
+    except rules_module.RulesError as exc:
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Invalid rules data", str(exc))
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
     if rules is None:
-        print("Warning: rules/ files not found or unparsable; "
-              "running in name-only mode.", file=sys.stderr)
+        print("Warning: data/rules.json not found; running in name-only mode.",
+              file=sys.stderr)
 
     generator = Generator(cultures, rules)
     App(generator).mainloop()

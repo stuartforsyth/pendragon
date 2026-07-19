@@ -1,0 +1,582 @@
+{
+  "schema_version": 1,
+  "_note": "Source of truth for the generator. See rules/*.md for human docs.",
+  "trait_pairs": [
+    [
+      "Chaste",
+      "Lustful"
+    ],
+    [
+      "Energetic",
+      "Lazy"
+    ],
+    [
+      "Forgiving",
+      "Vengeful"
+    ],
+    [
+      "Generous",
+      "Selfish"
+    ],
+    [
+      "Honest",
+      "Deceitful"
+    ],
+    [
+      "Just",
+      "Arbitrary"
+    ],
+    [
+      "Merciful",
+      "Cruel"
+    ],
+    [
+      "Modest",
+      "Proud"
+    ],
+    [
+      "Prudent",
+      "Reckless"
+    ],
+    [
+      "Spiritual",
+      "Worldly"
+    ],
+    [
+      "Temperate",
+      "Indulgent"
+    ],
+    [
+      "Trusting",
+      "Suspicious"
+    ],
+    [
+      "Valorous",
+      "Cowardly"
+    ]
+  ],
+  "religions": {
+    "British Christian": {
+      "favoured": [
+        "Chaste",
+        "Forgiving",
+        "Merciful",
+        "Modest",
+        "Spiritual",
+        "Temperate"
+      ],
+      "benefit": "+4 Hit Points",
+      "deity": "God"
+    },
+    "Roman Christian": {
+      "favoured": [
+        "Chaste",
+        "Forgiving",
+        "Merciful",
+        "Modest",
+        "Spiritual",
+        "Temperate"
+      ],
+      "benefit": "",
+      "deity": "God"
+    },
+    "Pagan": {
+      "favoured": [
+        "Lustful",
+        "Energetic",
+        "Generous",
+        "Honest",
+        "Proud",
+        "Spiritual"
+      ],
+      "benefit": "+2 Healing Rate",
+      "deity": "the Gods"
+    },
+    "Wodinic": {
+      "favoured": [
+        "Generous",
+        "Indulgent",
+        "Proud",
+        "Reckless",
+        "Valorous",
+        "Worldly"
+      ],
+      "benefit": "+1D6 Damage",
+      "deity": "Wodin"
+    }
+  },
+  "culture_religion": {
+    "Cymri": [
+      "British Christian",
+      "Pagan"
+    ],
+    "Roman": [
+      "Roman Christian"
+    ],
+    "Aquitanian": [
+      "Roman Christian"
+    ],
+    "Frankish": [
+      "Roman Christian"
+    ],
+    "Irish": [
+      "Pagan",
+      "British Christian"
+    ],
+    "Pict": [
+      "Pagan"
+    ],
+    "Saxon": [
+      "Wodinic"
+    ]
+  },
+  "passions": {
+    "starting_values": {
+      "Honor": 15,
+      "Homage (Lord)": 15,
+      "Love (Family)": 10,
+      "Station": 10,
+      "Hospitality": 10,
+      "Devotion (Deity)": 5,
+      "Hate (Saxons)": 5
+    },
+    "courts": {
+      "Fidelitas": [
+        "Homage (Lord)",
+        "Fealty",
+        "Loyalty (Group)"
+      ],
+      "Fervor": [
+        "Love (Family)",
+        "Love (Person or Group)",
+        "Hate (Person or Group)"
+      ],
+      "Adoratio": [
+        "Devotion (Deity)",
+        "Adoration (Beloved)"
+      ],
+      "Civilitas": [
+        "Hospitality",
+        "Station",
+        "Chivalry",
+        "Romance"
+      ]
+    },
+    "targets": [
+      "Saxons",
+      "the King",
+      "their lord",
+      "a lost love",
+      "their kin",
+      "a rival house",
+      "the Picts",
+      "a fallen comrade",
+      "a hated neighbour"
+    ]
+  },
+  "characteristics": {
+    "roll_dice": [
+      2,
+      6
+    ],
+    "roll_bonus": 5,
+    "cultural_modifiers": {
+      "Cymri": {
+        "CON": 3
+      }
+    },
+    "siz_heights": {
+      "8": "4'11\"",
+      "10": "5'5\"",
+      "12": "5'8\"",
+      "14": "5'11\"",
+      "16": "6'3\"",
+      "18": "6'6\""
+    }
+  },
+  "appearance": {
+    "app_table": [
+      [
+        0,
+        5,
+        "Infirm",
+        0,
+        0,
+        "At death's door"
+      ],
+      [
+        6,
+        7,
+        "Unseemly",
+        0,
+        3,
+        null
+      ],
+      [
+        8,
+        9,
+        "Ill-favored",
+        0,
+        2,
+        null
+      ],
+      [
+        10,
+        12,
+        "Plain",
+        1,
+        1,
+        null
+      ],
+      [
+        13,
+        15,
+        "Fair",
+        2,
+        0,
+        null
+      ],
+      [
+        16,
+        18,
+        "Elegant",
+        3,
+        0,
+        null
+      ],
+      [
+        19,
+        99,
+        "Surpassing",
+        4,
+        0,
+        null
+      ]
+    ],
+    "features": {
+      "Physique": {
+        "positive": [
+          "barrel-chested",
+          "big-shouldered",
+          "brawny",
+          "bull-necked",
+          "buxom",
+          "coltish",
+          "curvy",
+          "full figure",
+          "hourglass figure",
+          "husky",
+          "muscular",
+          "petite",
+          "smells like flowers",
+          "solid",
+          "strapping",
+          "statuesque",
+          "taut",
+          "willowy"
+        ],
+        "negative": [
+          "a wisp of a thing",
+          "flabby",
+          "gangly",
+          "gawky",
+          "hunched",
+          "lanky",
+          "overweight",
+          "paunchy",
+          "pigeon-chested",
+          "rotund",
+          "round-shouldered",
+          "skinny",
+          "smells like feet",
+          "squat",
+          "stooped",
+          "sunken-chested"
+        ]
+      },
+      "Limbs": {
+        "positive": [
+          "big biceps",
+          "delicate-fingered",
+          "graceful arms",
+          "manicured",
+          "right-handed",
+          "strong hands and forearms"
+        ],
+        "negative": [
+          "bow-legged",
+          "knock-kneed",
+          "left-handed",
+          "tiny or misshapen hands",
+          "pigeon-toed",
+          "spindly",
+          "withered"
+        ]
+      },
+      "Hair": {
+        "positive": [
+          "chestnut brown",
+          "curly",
+          "glossy black",
+          "flowing",
+          "golden blonde",
+          "handsome grey",
+          "natural",
+          "shining silver",
+          "straight",
+          "thick",
+          "wavy"
+        ],
+        "negative": [
+          "bald",
+          "mangy",
+          "patchy",
+          "prematurely grey or white",
+          "red hair of any shade",
+          "thinning"
+        ]
+      },
+      "Face": {
+        "positive": [
+          "big mustache",
+          "black eyes",
+          "blue eyes",
+          "bright-eyed",
+          "broad nose",
+          "button nose",
+          "clean-shaven",
+          "dazzlingly white smile",
+          "gray eyes",
+          "luxurious combed beard",
+          "Roman nose",
+          "smooth complexion",
+          "straight teeth"
+        ],
+        "negative": [
+          "big ears",
+          "crooked or missing teeth",
+          "crumby mustache",
+          "droopy eyelids",
+          "eyes of different colors",
+          "freckles",
+          "green eyes",
+          "malformed nose",
+          "pockmarks",
+          "rough",
+          "scars",
+          "scraggly beard",
+          "unibrow"
+        ]
+      },
+      "Speech": {
+        "positive": [
+          "charming accent",
+          "clear",
+          "deep",
+          "dulcet",
+          "lilting",
+          "resonant"
+        ],
+        "negative": [
+          "bellowing",
+          "nasal",
+          "lisp",
+          "mumbly",
+          "scratchy",
+          "sharp",
+          "shrill",
+          "squeaky",
+          "stutter",
+          "thick and unpleasant accent"
+        ]
+      }
+    },
+    "eye_colours": [
+      "blue",
+      "grey",
+      "black",
+      "brown",
+      "hazel",
+      "green",
+      "pale blue"
+    ]
+  },
+  "directed_traits": {
+    "obsessions": [
+      [
+        "Avarice",
+        "Selfish"
+      ],
+      [
+        "Fear",
+        "Cowardly"
+      ],
+      [
+        "Jealousy",
+        "Suspicious"
+      ]
+    ],
+    "obsession_objects": {
+      "Avarice": [
+        "a famous sword",
+        "a jewelled reliquary",
+        "a coveted manor",
+        "a hoard of Saxon gold",
+        "a rival's warhorse",
+        "a holy relic"
+      ],
+      "Fear": [
+        "Saxons",
+        "deep water",
+        "wolves",
+        "fire",
+        "a giant of a knight",
+        "the old gods"
+      ],
+      "Jealousy": [
+        "a favoured rival",
+        "a charming newcomer",
+        "a spurned suitor",
+        "an envied sibling"
+      ]
+    },
+    "common": [
+      "Love",
+      "Hate",
+      "Loyalty"
+    ],
+    "fallback": [
+      "Vengeful",
+      "Suspicious",
+      "Loyal",
+      "Love",
+      "Hate",
+      "Mistrust"
+    ]
+  },
+  "naming": {
+    "roman_nomen": [
+      "Aurelius",
+      "Flavius",
+      "Valerius",
+      "Claudius",
+      "Fabius",
+      "Julius",
+      "Junius"
+    ],
+    "roman_honorifics": [
+      "Magnus",
+      "Maximus",
+      "Rufus",
+      "Eboricus",
+      "Augustus",
+      "Cicero",
+      "Scaevola",
+      "Numidicus"
+    ],
+    "bynames": [
+      "the Fair",
+      "the Just",
+      "the Tall",
+      "the Old",
+      "the Lame",
+      "the Reckless",
+      "the Learned",
+      "the Honey-Tongued",
+      "the Fat",
+      "Swarthy-Cheeked",
+      "Blue-Toothed",
+      "the Far-Wanderer",
+      "Battle-Blessed",
+      "Head-Splitter",
+      "of the Long Hunt",
+      "of the Dales"
+    ],
+    "notes": {
+      "Cymri": "Patronymic: 'ap' = son of, 'ferch' = daughter of.",
+      "Pict": "Patronymic: 'mab' = son of, 'ferch' = daughter of.",
+      "Irish": "Clan loyalty: 'Mc' = son of, 'O' = descendant of.",
+      "Roman": "Roman form: praenomen + nomen (family) + optional honorific."
+    },
+    "pronunciation": {
+      "Cymri": [
+        [
+          "ll",
+          "ll = the 'Welsh' aspirated L: tongue to roof of mouth, blow air out the sides"
+        ],
+        [
+          "dd",
+          "dd = 'th' as in 'the'"
+        ],
+        [
+          "ff",
+          "ff = 'f'"
+        ],
+        [
+          "w",
+          "w = 'oo'"
+        ],
+        [
+          "c",
+          "c = hard 'k'"
+        ],
+        [
+          "f",
+          "f = 'v' (single f)"
+        ]
+      ],
+      "Irish": [
+        [
+          "ch",
+          "ch = Scottish 'loch'"
+        ],
+        [
+          "dh",
+          "d = 'j' as in 'joy'"
+        ],
+        [
+          "bh",
+          "bh = 'v'"
+        ],
+        [
+          "s",
+          "s before e/i = 'sh' as in 'short'"
+        ],
+        [
+          "t",
+          "t = 'ch' as in 'church'"
+        ],
+        [
+          "c",
+          "c = hard 'k' as in 'cow'"
+        ]
+      ],
+      "Roman": [
+        [
+          "c",
+          "All C's are hard, like 'K'"
+        ]
+      ],
+      "Pict": [
+        [
+          "ch",
+          "ch = Scottish 'loch'"
+        ]
+      ]
+    }
+  },
+  "manner": [
+    "cheerful and talkative",
+    "wary of strangers",
+    "proud and easily slighted",
+    "pious and softly spoken",
+    "boastful after a cup of ale",
+    "shrewd and calculating",
+    "quick to laugh",
+    "sullen and taciturn",
+    "courteous and formal",
+    "restless and impatient",
+    "generous to a fault",
+    "quietly watchful"
+  ]
+}

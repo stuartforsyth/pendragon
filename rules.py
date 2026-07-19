@@ -2,39 +2,28 @@
 """
 Rules data + NPC mechanics for the Pendragon name generator.
 
-This module reads the Markdown reference files in ``rules/`` (extracted from the
-Pendragon 5e Core Rulebook and Gamemaster's Handbook) and turns them into data
-the GUI can use to roll up Personality Traits, Passions, Religion,
-Characteristics, and Distinctive Features (appearance).
+The source of truth is ``data/rules.json`` — a single structured file holding
+every table the generator needs (Traits, Passions, Religion, Characteristics,
+Distinctive Features, Directed Traits, and naming data). Adding new sourcebook
+material is just a matter of adding keys to that file; the human-readable
+``rules/*.md`` documents are reference only and are no longer parsed.
 
-Editing the Markdown files changes what the generator produces; nothing here is
-hard-coded from the rulebooks beyond the fixed derived-statistic formulas.
+This module loads and validates the JSON, then exposes a ``Rules`` object whose
+methods roll up the mechanical parts of an NPC.
 """
 
+import json
 import math
 import os
 import random
-import re
 
-WORDNUM = {"one": 1, "two": 2, "three": 3, "four": 4}
+CHAR_ORDER = ("SIZ", "DEX", "STR", "CON", "APP")
 
-# Which deity a Devotion Passion names, per religion.
-DEITY = {
-    "British Christian": "God",
-    "Roman Christian": "God",
-    "Pagan": "the Gods",
-    "Wodinic": "Wodin",
-}
-
-# Eye colours drawn from the Face Distinctive Features list.
-EYE_COLOURS = ["blue", "grey", "black", "brown", "hazel", "green", "pale blue"]
-
-# Concrete objects used to fill in generic Passion templates like
-# "Hate (Person or Group)".
-PASSION_TARGETS = [
-    "Saxons", "the King", "their lord", "a lost love", "their kin",
-    "a rival house", "the Picts", "a fallen comrade", "a hated neighbour",
-]
+# Top-level keys every valid data file must provide.
+REQUIRED_KEYS = (
+    "trait_pairs", "religions", "culture_religion", "passions",
+    "characteristics", "appearance", "directed_traits", "naming", "manner",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -54,174 +43,46 @@ def _clamp(v, lo=1, hi=20):
     return max(lo, min(hi, v))
 
 
-def _split_list(text):
-    return [x.strip() for x in text.split(",") if x.strip()]
-
-
-def _table_rows(lines):
-    """Yield column lists for each Markdown table row (skipping separators)."""
-    for line in lines:
-        s = line.strip()
-        if s.startswith("|") and "---" not in s:
-            yield [c.strip() for c in s.strip("|").split("|")]
-
-
-def _simplify_religion(name):
-    """'Wodinic / Wotanic (Saxon Heathenry)' -> 'Wodinic'."""
-    name = name.split("(")[0].split("/")[0]
-    return name.strip()
-
-
-# ---------------------------------------------------------------------------
-# parsers (one per reference file)
-# ---------------------------------------------------------------------------
-
-def _parse_trait_pairs(lines):
-    pairs = []
-    for cols in _table_rows(lines):
-        if len(cols) == 2:
-            left, right = cols
-            if re.fullmatch(r"[A-Za-z]+", left) and re.fullmatch(r"[A-Za-z]+", right):
-                pairs.append((left, right))
-    return pairs
-
-
-def _parse_religions(lines):
-    religions = {}
-    culture_map = {}
-    current = None
-    for line in lines:
-        s = line.strip()
-        if s.startswith("### "):
-            current = _simplify_religion(s[4:])
-            religions[current] = {"favoured": [], "benefit": "", "full": s[4:].strip()}
-        elif current and s.startswith("- **Favoured Traits:**"):
-            body = s.split("**Favoured Traits:**", 1)[1]
-            religions[current]["favoured"] = _split_list(body)
-        elif current and "benefit:**" in s:
-            religions[current]["benefit"] = s.split("benefit:**", 1)[1].strip()
-        elif s.startswith("|") and "---" not in s:
-            cols = [c.strip() for c in s.strip("|").split("|")]
-            if len(cols) == 2 and re.match(r"^[A-Za-z]", cols[0]) and "Culture" not in cols[0]:
-                opts = [_simplify_religion(x) for x in re.split(r"\bor\b", cols[1])]
-                culture_map[cols[0]] = [o for o in opts if o]
-    return religions, culture_map
-
-
-def _parse_passion_starts(lines):
-    starts = {}
-    for cols in _table_rows(lines):
-        if len(cols) == 2 and re.fullmatch(r"\d+", cols[1]):
-            name = re.sub(r"\s*[—-].*$", "", cols[0]).strip()
-            starts[name] = int(cols[1])
-    return starts
-
-
-def _parse_courts(lines):
-    courts = {}
-    current = None
-    for line in lines:
-        s = line.strip()
-        if s.startswith("### "):
-            current = s[4:].split("(")[0].strip()
-            courts[current] = []
-        elif current and s.startswith("- **"):
-            m = re.match(r"- \*\*(.+?)\*\*", s)
-            if m:
-                courts[current].append(m.group(1).strip())
-    return courts
-
-
-def _parse_app_table(lines):
-    """Return list of (lo, hi, descriptor, n_positive, n_negative, special)."""
-    rows = []
-    for cols in _table_rows(lines):
-        if len(cols) >= 3 and re.search(r"\d", cols[0]) and "APP" not in cols[0]:
-            lo, hi = _parse_range(cols[0])
-            npos, nneg, special = _parse_counts(cols[2])
-            rows.append((lo, hi, cols[1], npos, nneg, special))
-    return rows
-
-
-def _parse_range(text):
-    text = text.replace("–", "-").replace("—", "-")
-    nums = re.findall(r"\d+", text)
-    if "less" in text and nums:
-        return 0, int(nums[0])
-    if "+" in text and nums:
-        return int(nums[0]), 99
-    if len(nums) >= 2:
-        return int(nums[0]), int(nums[1])
-    if nums:
-        return int(nums[0]), int(nums[0])
-    return 0, 99
-
-
-def _parse_counts(desc):
-    pos = neg = 0
-    for m in re.finditer(r"(one|two|three|four)\s+(positive|negative)", desc.lower()):
-        if m.group(2) == "positive":
-            pos += WORDNUM[m.group(1)]
-        else:
-            neg += WORDNUM[m.group(1)]
-    special = desc if (pos == 0 and neg == 0) else None
-    return pos, neg, special
-
-
-def _parse_features(lines):
-    """Parse the Physique/Limbs/Hair/Face/Speech word lists (they wrap lines)."""
-    features = {}
-    cat = mode = None
-    buf = []
-
-    def flush():
-        if cat and mode and buf:
-            features.setdefault(cat, {"positive": [], "negative": []})
-            features[cat][mode].extend(_split_list(" ".join(buf)))
-
-    for line in lines:
-        s = line.strip()
-        if s.startswith("### "):
-            flush(); buf, mode = [], None
-            cat = s[4:].strip()
-        elif s.startswith("**Positive:**"):
-            flush(); buf, mode = [s[len("**Positive:**"):].strip()], "positive"
-        elif s.startswith("**Negative:**"):
-            flush(); buf, mode = [s[len("**Negative:**"):].strip()], "negative"
-        elif s.startswith("#") or s.startswith("|") or s == "" or s.startswith("**"):
-            flush(); buf, mode = [], None
-            if s.startswith("## "):
-                cat = None
-        elif mode:
-            buf.append(s)
-    flush()
-    return features
-
-
-def _parse_siz_table(lines):
-    """Return {SIZ: height_string} from the SIZ -> height/weight table."""
-    heights = {}
-    for cols in _table_rows(lines):
-        if len(cols) >= 3 and re.fullmatch(r"\d+", cols[0]):
-            heights[int(cols[0])] = cols[2]
-    return heights
-
-
 # ---------------------------------------------------------------------------
 # Rules container + generation
 # ---------------------------------------------------------------------------
 
 class Rules:
-    def __init__(self, trait_pairs, religions, culture_religion, passion_starts,
-                 courts, app_table, features, siz_heights):
-        self.trait_pairs = trait_pairs
-        self.religions = religions
-        self.culture_religion = culture_religion
-        self.passion_starts = passion_starts
-        self.courts = courts
-        self.app_table = app_table
-        self.features = features
-        self.siz_heights = siz_heights
+    def __init__(self, data):
+        self.data = data
+
+        self.trait_pairs = [tuple(p) for p in data["trait_pairs"]]
+        self.religions = data["religions"]
+        self.culture_religion = data["culture_religion"]
+
+        passions = data["passions"]
+        self.passion_starts = passions["starting_values"]
+        self.courts = passions["courts"]
+        self.passion_targets = passions["targets"]
+
+        self.char_cfg = data["characteristics"]
+        self.siz_heights = {int(k): v for k, v in
+                            self.char_cfg["siz_heights"].items()}
+
+        appearance = data["appearance"]
+        self.app_table = [tuple(row) for row in appearance["app_table"]]
+        self.features = appearance["features"]
+        self.eye_colours = appearance["eye_colours"]
+
+        directed = data["directed_traits"]
+        self.obsessions = [tuple(o) for o in directed["obsessions"]]
+        self.obsession_objects = directed["obsession_objects"]
+        self.directed_common = directed["common"]
+        self.directed_fallback = directed["fallback"]
+
+        naming = data["naming"]
+        self.roman_nomen = naming["roman_nomen"]
+        self.roman_honorifics = naming["roman_honorifics"]
+        self.bynames = naming["bynames"]
+        self.naming_notes = naming["notes"]
+        self.pronunciation = naming["pronunciation"]
+
+        self.manner = data["manner"]
 
     # -- religion ----------------------------------------------------------
 
@@ -231,13 +92,19 @@ class Rules:
             return random.choice(opts)
         return random.choice(list(self.religions)) if self.religions else "Pagan"
 
+    def deity_for(self, religion):
+        return self.religions.get(religion, {}).get("deity", "their god")
+
     # -- characteristics ---------------------------------------------------
 
     def roll_characteristics(self, culture):
-        stats = {s: _roll(2, 6) + 5 for s in ("SIZ", "DEX", "STR", "CON", "APP")}
-        if culture == "Cymri":  # documented cultural modifier
-            stats["CON"] += 3
-        siz, dex, str_, con, app = (stats[k] for k in ("SIZ", "DEX", "STR", "CON", "APP"))
+        n, sides = self.char_cfg["roll_dice"]
+        bonus = self.char_cfg["roll_bonus"]
+        stats = {s: _roll(n, sides) + bonus for s in CHAR_ORDER}
+        for stat, mod in self.char_cfg["cultural_modifiers"].get(culture, {}).items():
+            stats[stat] = stats.get(stat, 0) + mod
+
+        siz, dex, str_, con = stats["SIZ"], stats["DEX"], stats["STR"], stats["CON"]
         hp = con + siz
         derived = {
             "Hit Points": hp,
@@ -273,7 +140,8 @@ class Rules:
         chosen, used_cat = [], set()
         for cat, feat in buckets:  # prefer distinct categories first
             if cat not in used_cat:
-                chosen.append(feat); used_cat.add(cat)
+                chosen.append(feat)
+                used_cat.add(cat)
             if len(chosen) >= n:
                 return chosen
         for cat, feat in buckets:
@@ -292,7 +160,7 @@ class Rules:
         return {
             "descriptor": desc,
             "features": features,
-            "eyes": random.choice(EYE_COLOURS),
+            "eyes": random.choice(self.eye_colours),
         }
 
     # -- traits ------------------------------------------------------------
@@ -332,15 +200,16 @@ class Rules:
                 for p in self.courts.get(court, []) if p not in skip]
         random.shuffle(pool or ["Loyalty (Group)"])
         for template in (pool or ["Loyalty (Group)"]):
-            name = re.sub(r"\((Person or Group|Group)\)",
-                          f"({random.choice(PASSION_TARGETS)})", template)
+            name = template.replace("(Person or Group)",
+                                    f"({random.choice(self.passion_targets)})")
+            name = name.replace("(Group)", f"({random.choice(self.passion_targets)})")
             if name not in exclude:
                 return name, random.randint(13, 18)
-        return f"Hate ({random.choice(PASSION_TARGETS)})", random.randint(13, 18)
+        return f"Hate ({random.choice(self.passion_targets)})", random.randint(13, 18)
 
     def roll_passions(self, religion):
         s = self.passion_starts
-        deity = DEITY.get(religion, "their god")
+        deity = self.deity_for(religion)
         passions = [
             ("Honor", _clamp(s.get("Honor", 15) + random.randint(-2, 3))),
             ("Homage (Lord)", _clamp(s.get("Homage (Lord)", 15) + random.randint(-3, 2))),
@@ -351,62 +220,82 @@ class Rules:
         passions.append((name, _clamp(val)))
         return passions
 
+    # -- directed traits ---------------------------------------------------
+
+    def roll_directed_trait(self):
+        """Return a dict {'kind', 'text'} for a grudge/fear/obsession, or None."""
+        if self.obsessions and random.random() < 0.25:
+            name, _base = random.choice(self.obsessions)
+            objects = self.obsession_objects.get(name, self.passion_targets)
+            return {"kind": "Obsession", "text": f"{name} ({random.choice(objects)})"}
+
+        pool = list(self.directed_common) + list(self.directed_fallback)
+        if not pool:
+            return None
+        trait = random.choice(pool)
+        target = random.choice(self.passion_targets)
+        mod = random.choice([3, 5, 5, 5, 10])
+        return {"kind": "Directed Trait", "text": f"*{trait} ({target}) +{mod}"}
+
 
 # ---------------------------------------------------------------------------
-# loading
+# loading + validation
 # ---------------------------------------------------------------------------
 
-def _read(path):
-    with open(path, encoding="utf-8") as fh:
-        return fh.readlines()
+class RulesError(ValueError):
+    """Raised when the data file exists but is malformed."""
 
 
-def load_rules(rules_dir):
-    """Load and parse all reference files; return a Rules object or None."""
-    files = {
-        "traits": os.path.join(rules_dir, "traits.md"),
-        "religion": os.path.join(rules_dir, "religion.md"),
-        "passions": os.path.join(rules_dir, "passions.md"),
-        "characteristics": os.path.join(rules_dir, "characteristics.md"),
-        "appearance": os.path.join(rules_dir, "appearance.md"),
-    }
-    if not all(os.path.isfile(p) for p in files.values()):
+def _validate(data):
+    missing = [k for k in REQUIRED_KEYS if k not in data]
+    if missing:
+        raise RulesError(f"data/rules.json is missing keys: {', '.join(missing)}")
+    if not data["trait_pairs"]:
+        raise RulesError("data/rules.json has no trait_pairs")
+    if not data["religions"]:
+        raise RulesError("data/rules.json has no religions")
+    if not data["appearance"].get("features"):
+        raise RulesError("data/rules.json has no appearance.features")
+
+
+def load_rules(path):
+    """Load and validate the rules data.
+
+    ``path`` may be the ``data/`` directory or the JSON file itself. Returns a
+    ``Rules`` object, or ``None`` if the file is absent (name-only mode). Raises
+    ``RulesError`` if the file exists but is invalid, so problems fail loudly.
+    """
+    if os.path.isdir(path):
+        path = os.path.join(path, "rules.json")
+    if not os.path.isfile(path):
         return None
 
-    trait_pairs = _parse_trait_pairs(_read(files["traits"]))
-    religions, culture_religion = _parse_religions(_read(files["religion"]))
-    passion_lines = _read(files["passions"])
-    passion_starts = _parse_passion_starts(passion_lines)
-    courts = _parse_courts(passion_lines)
-    appearance_lines = _read(files["appearance"])
-    app_table = _parse_app_table(appearance_lines)
-    features = _parse_features(appearance_lines)
-    siz_heights = _parse_siz_table(_read(files["characteristics"]))
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except json.JSONDecodeError as exc:
+        raise RulesError(f"{path} is not valid JSON: {exc}") from exc
 
-    if not (trait_pairs and religions and app_table and features):
-        return None
-
-    return Rules(trait_pairs, religions, culture_religion, passion_starts,
-                 courts, app_table, features, siz_heights)
+    _validate(data)
+    return Rules(data)
 
 
 if __name__ == "__main__":  # quick self-test
     here = os.path.dirname(os.path.abspath(__file__))
-    rules = load_rules(os.path.join(here, "rules"))
+    rules = load_rules(os.path.join(here, "data"))
     if rules is None:
-        print("Failed to load rules.")
+        print("data/rules.json not found.")
         raise SystemExit(1)
+    print("schema_version:", rules.data.get("schema_version"))
     print("trait pairs:", len(rules.trait_pairs))
     print("religions:", list(rules.religions))
-    print("culture->religion:", rules.culture_religion)
-    print("passion starts:", rules.passion_starts)
     print("feature categories:", {k: (len(v["positive"]), len(v["negative"]))
                                    for k, v in rules.features.items()})
-    print("app rows:", rules.app_table)
     rel = rules.religion_for("Saxon")
     stats, derived = rules.roll_characteristics("Cymri")
-    print("sample religion:", rel)
-    print("stats:", stats, derived)
+    print("religion:", rel, "| stats:", stats)
+    print("derived:", derived)
     print("appearance:", rules.roll_appearance(stats["APP"]))
     print("traits:", rules.roll_traits(rel))
     print("passions:", rules.roll_passions(rel))
+    print("directed:", [rules.roll_directed_trait() for _ in range(3)])

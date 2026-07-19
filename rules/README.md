@@ -1,10 +1,13 @@
-# Pendragon Rules Reference (extracted)
+# Pendragon Rules Reference (human docs)
 
-These Markdown files hold NPC-relevant rules and lore extracted from the
-*King Arthur Pendragon* 5th Edition **Core Rulebook** and **Gamemaster's
-Handbook**. They exist so the generator app (and a GM) can reference the data
-directly **instead of parsing the large PDFs** (which are git-ignored and not
-distributed).
+These Markdown files are **human-readable reference** for the NPC-relevant
+rules and lore. They are documentation only — the app no longer parses them.
+
+> **Source of truth:** the generator loads structured data from
+> [`../data/rules.json`](../data/rules.json). To change what the app produces,
+> edit that file (and keep these docs in sync if you like). This keeps the
+> machine-readable data separate from the prose, so extracting more sourcebook
+> material is just a matter of adding keys to the JSON.
 
 Each file covers one aspect of an NPC:
 

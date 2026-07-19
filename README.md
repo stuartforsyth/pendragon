@@ -1,7 +1,7 @@
 # Pendragon NPC Name Generator
 
 A small Linux GUI tool for quickly generating names and NPC traits for
-*King Arthur Pendragon* (5th Edition). Pick a gender and a culture, press
+*King Arthur Pendragon* (6th Edition). Pick a gender and a culture, press
 **Generate**, and you get a random period-appropriate name plus a short set of
 Arthurian-Britain traits. Click the name to copy it to your clipboard for game
 notes or Discord.
@@ -79,13 +79,18 @@ edit that file — adding a new `**Culture**` heading with `*Male Names:*` /
 Source data: [Names by Culture (Pendragon 5th Edition)](https://scruffygrognard.wordpress.com/2015/05/18/names-by-culture-pendragon-5th-edition/)
 by ScruffyGrognard.
 
-## Rules reference
+## Rules data
 
-The [`rules/`](rules/) folder holds NPC-relevant rules and lore extracted from
-the Pendragon 5e Core Rulebook and Gamemaster's Handbook (Traits, Passions,
-Directed Traits, Religion, Characteristics, and Distinctive Features). Future
-features draw on these Markdown files rather than parsing the copyrighted PDFs,
-which are kept locally and git-ignored. See [rules/README.md](rules/README.md).
+The generator's mechanical data lives in a single structured file,
+[`data/rules.json`](data/rules.json) — Traits, Passions, Directed Traits,
+Religion, Characteristics, Distinctive Features, and naming data. This is the
+**source of truth**: edit it to change what the app produces, and add keys to
+it as you extract more material. A schema check runs at startup, so a malformed
+file fails loudly rather than producing broken NPCs.
+
+The [`rules/`](rules/) folder holds the same material as human-readable
+Markdown documentation (no longer parsed by the app). See
+[rules/README.md](rules/README.md).
 
 ## Possible future additions
 
