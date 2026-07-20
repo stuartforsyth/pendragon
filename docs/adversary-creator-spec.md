@@ -1,6 +1,8 @@
 # Specification — Adversary Creator (new tab)
 
-Status: **SIGNED OFF (design) — implementation not yet started; awaiting "go".**
+Status: **v1 IMPLEMENTED** (`adversary.py` `AdversaryTab` + NPC "Create
+Adversary" bridge). Groundwork steps 1–3 done (persistence, enriched tables,
+unified schema). v1 simplifications noted in §12.
 
 **Locked decisions:**
 - **Persistence (§4):** ship `data/examplecombat.json` (tracked); copy to a
@@ -268,22 +270,36 @@ Unknown categories fall back to the raw stat fields, so data is never lost.
 
 ---
 
-## 9. Acceptance criteria (draft)
-- [ ] Search/filter the adversary library and open any entry.
-- [ ] Create a new generic adversary from scratch; save to the user library.
-- [ ] Create a named adversary; it is distinguished from generics in the list.
-- [ ] Every characteristic/skill/derived value can be typed **or** auto-rolled.
-- [ ] Weapons chosen from the table populate attacks (skill + damage).
-- [ ] Armour chosen from pieces + shield auto-totals armour/shield points and
-      generates the armour description.
-- [ ] Traits and passions can be typed or auto-rolled (religion-aware).
-- [ ] "Create Adversary" on the NPC tab writes the current NPC as a named
-      adversary, reusing its stats/skills/traits/passions.
-- [ ] User adversaries persist across restarts, separate from `combat.json`,
-      and appear in the Encounter tab / Encounter Creator adversary pickers.
-- [ ] Characteristics are spelled out; rollable values are click-to-roll.
-- [ ] The schema carries a `category` and the editor shows human weapon/armour
-      fields, with hooks for beast/fae/monster later.
+## 9. Acceptance criteria
+- [x] Search/filter the adversary library and open any entry.
+- [x] Create a new generic adversary from scratch; save to the working library.
+- [x] Create a named adversary; it is distinguished from generics in the list
+      (★ named / ▸ generic).
+- [x] Characteristics can be typed **or** rolled; derived stats recompute live.
+- [x] Weapons chosen from the table populate attacks (skill + auto damage).
+- [x] Armour chosen from pieces + helmet + shield auto-totals armour/shield
+      points and generates the armour description.
+- [x] Traits and passions can be typed or auto-generated (from a rolled NPC).
+- [x] "Create Adversary" on the NPC tab drafts the current NPC as a named
+      adversary, reusing its stats/skills/traits/passions/attacks.
+- [x] Saved adversaries persist to the working `combat.json` and instantiate
+      correctly in the Encounter tab.
+- [x] The schema carries `kind` + `category`; the editor shows human weapon/
+      armour fields, with category hooks for beast/fae/monster later.
+- [ ] *(v1 gap, §12)* In-editor per-field **click-to-roll** and spelled-out
+      display for skills; the editor uses editable fields + roll buttons for now.
+
+## 12. v1 simplifications (revisit)
+- Skills/traits/passions are edited as plain "Name value" text lines (parsed on
+  save), not click-to-roll rows. Characteristics use editable entries with a
+  "Roll characteristics" button rather than per-field click-to-roll.
+- Auto-generation seeds from a full NPC roll; there is not yet per-field Auto
+  for skills alone.
+- Built-in adversaries are editable in place (the working file supersedes the
+  baseline, matching the single-working-file decision), rather than being
+  locked with a "duplicate to edit" gate.
+- Unit/loot fields (glory/morale/ransom) are carried through if present but not
+  yet surfaced as dedicated editor controls.
 
 ---
 
