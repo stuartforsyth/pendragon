@@ -857,7 +857,8 @@ class App(tk.Tk):
         self.reroll_menu.config(state="readonly")
         self.reroll_btn.config(state="normal")
         self.status.config(
-            text="Generated. Click the name to copy it; click a trait/passion value to roll it.",
+            text="Generated. Click the name to copy it; click any characteristic, skill, "
+                 "damage, trait or passion value to roll it.",
             foreground="#2a7d2a",
         )
 
@@ -894,20 +895,23 @@ class App(tk.Tk):
             self.details.insert("end", f"{label}: ", ("label",))
             self.details.insert("end", f"{value}\n")
 
-        def roll_link(name, value):
-            """Insert a value that rolls d20 against itself when clicked."""
+        def link(text, callback, famous=False):
+            """Insert a click-to-roll link that runs callback() when clicked."""
             self._detail_link_tags.append(tag := f"roll{len(self._detail_link_tags)}")
-            famous = value >= FAMOUS
             self.details.tag_configure(
                 tag, underline=1, foreground=("#8a4b00" if famous else "#1a5fb4"),
                 font=("TkDefaultFont", 11, "bold" if famous else "normal"))
-            self.details.tag_bind(tag, "<Button-1>",
-                                  lambda e, n=name, v=value: self._roll_personality(n, v))
+            self.details.tag_bind(tag, "<Button-1>", lambda e, cb=callback: cb())
             self.details.tag_bind(tag, "<Enter>",
                                   lambda e: self.details.configure(cursor="hand2"))
             self.details.tag_bind(tag, "<Leave>",
                                   lambda e: self.details.configure(cursor=""))
-            self.details.insert("end", str(value), (tag,))
+            self.details.insert("end", str(text), (tag,))
+
+        def roll_link(name, value):
+            """A value that rolls d20 against itself (traits/passions/skills)."""
+            link(value, lambda n=name, v=value: self._roll_personality(n, v),
+                 famous=value >= FAMOUS)
 
         # Read-aloud description paragraph, above everything else.
         self.details.insert("end", build_description(r) + "\n\n", ("desc",))
@@ -947,15 +951,34 @@ class App(tk.Tk):
         if r.get("stats"):
             self.details.insert("end", "\n")
             st = r["stats"]
-            row("Characteristics",
-                "  ".join(f"{k} {st[k]}" for k in ("SIZ", "DEX", "STR", "CON", "APP")))
+            # Characteristics: spelled out (no SIZ/DEX acronyms) and click-to-roll
+            # (pass/fail only — characteristics have no critical/fumble).
+            self.details.insert("end", "Characteristics: ", ("label",))
+            for i, k in enumerate(("SIZ", "DEX", "STR", "CON", "APP")):
+                if i:
+                    self.details.insert("end", "  ")
+                full = encounter_module.CHAR_FULL[k]
+                self.details.insert("end", f"{full} ")
+                link(st[k], lambda n=full, v=st[k]: self._roll_characteristic(n, v))
+            self.details.insert("end", "\n")
+            # Derived: only Damage is a roll; the rest are thresholds/values.
             d = r["derived"]
-            row("Derived",
-                f"HP {d['Hit Points']} · Move {d['Move']} · Damage {d['Damage']} · "
-                f"Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
-                f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}")
+            self.details.insert("end", "Derived: ", ("label",))
+            self.details.insert("end", f"HP {d['Hit Points']} · Move {d['Move']} · Damage ")
+            link(d["Damage"],
+                 lambda expr=d["Damage"]: self._roll_damage_expr("Damage", expr))
+            self.details.insert(
+                "end", f" · Healing {d['Healing Rate']} · Major Wound {d['Major Wound']} · "
+                f"Knockdown {d['Knockdown']} · Unconscious {d['Unconscious']}\n")
         if r.get("skills"):
-            row("Skills", _skills_str(r["skills"]))
+            self.details.insert("end", "Skills: ", ("label",))
+            for i, (name, value) in enumerate(
+                    sorted(r["skills"].items(), key=lambda kv: (-kv[1], kv[0]))):
+                if i:
+                    self.details.insert("end", ", ")
+                self.details.insert("end", f"{name} ")
+                roll_link(name, value)
+            self.details.insert("end", "\n")
         if r.get("glory") is not None:
             row("Glory", r["glory"])
 
@@ -970,18 +993,42 @@ class App(tk.Tk):
 
         self.details.configure(state="disabled")
 
-    def _roll_personality(self, name, value):
-        """Click-to-roll a trait/passion: d20 vs the value, written into GM Notes."""
-        roll, outcome = encounter_module.resolve_skill(value)
+    def _log_roll(self, line, status, color):
+        """Append a click-to-roll result to GM Notes and flash it in the status bar."""
         stamp = datetime.datetime.now().strftime("%H:%M")
-        line = f"[{stamp}] {name} ({value}): rolled {roll} — {outcome.upper()}"
+        entry = f"[{stamp}] {line}"
         existing = self.notes_text.get("1.0", "end").strip()
         self.notes_text.insert("end" if existing else "1.0",
-                               ("\n" + line) if existing else line)
+                               ("\n" + entry) if existing else entry)
         self.notes_text.see("end")
         self._sync_notes_from_widget()  # keep the current NPC dict / roster in sync
-        self._set_status(f"{name} ({value}): rolled {roll} — {outcome}",
-                         encounter_module.OUTCOME_COLOR.get(outcome, "#000"))
+        self._set_status(status, color)
+
+    def _roll_personality(self, name, value):
+        """Trait/passion/skill: d20 vs value with success/critical/fumble."""
+        roll, outcome = encounter_module.resolve_skill(value)
+        self._log_roll(f"{name} ({value}): rolled {roll} — {outcome.upper()}",
+                       f"{name} ({value}): rolled {roll} — {outcome}",
+                       encounter_module.OUTCOME_COLOR.get(outcome, "#000"))
+
+    def _roll_characteristic(self, name, value):
+        """Characteristic: d20 pass/fail only — no critical/fumble (Core Ch.2)."""
+        roll = random.randint(1, 20)
+        outcome = "success" if roll <= value else "failure"
+        self._log_roll(f"{name} ({value}): rolled {roll} — {outcome.upper()}",
+                       f"{name} ({value}): rolled {roll} — {outcome}",
+                       encounter_module.OUTCOME_COLOR.get(outcome, "#000"))
+
+    def _roll_damage_expr(self, label, expr):
+        """Damage: roll the dice expression; a critical adds the base dice again."""
+        m = re.match(r"\s*(\d+)\s*[dD]", str(expr))
+        base_dice = int(m.group(1)) if m else 1
+        crit = messagebox.askyesno(
+            "Critical hit?",
+            f"Was this {label} roll a critical hit?\n\n"
+            "Yes adds the base damage dice again.")
+        total, breakdown = encounter_module.roll_damage(expr, base_dice, crit)
+        self._log_roll(f"{label} {breakdown}", f"{label}: {total}", "#1a5fb4")
 
     def _to_clipboard(self, text, message):
         self.clipboard_clear()
