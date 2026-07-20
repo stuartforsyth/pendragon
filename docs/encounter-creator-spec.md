@@ -1,6 +1,7 @@
 # Specification — Encounter Creator (new tab)
 
-Status: **SIGNED OFF (design) — built after the Adversary Creator; awaiting "go".**
+Status: **v1 IMPLEMENTED** (`encounter_creator.py` `EncounterCreatorTab` +
+`encounter.generate_from_definition` / `resolve_roster` + Send-to-tracker).
 
 **Locked decisions (shared with the Adversary Creator spec):** unify the data
 model (`encounter_themes → encounters`, back-compat adapter); persistence via
@@ -153,18 +154,21 @@ use them travel together and are safe across `git pull`.
 
 ---
 
-## 8. Acceptance criteria (draft)
-- [ ] Search/filter encounter definitions and open any for editing.
-- [ ] Create a new definition from known adversaries; save to the user library.
-- [ ] Edit an existing definition's roster, counts, scaling, and leader.
-- [ ] Add/remove/reorder roster lines; each line picks an adversary and a count
-      (fixed or ×players) and can be marked as a promoted leader.
-- [ ] Live preview shows exactly what will spawn for N players, matching the
-      tracker's generation.
-- [ ] "Send to tracker" generates the live encounter and switches tabs.
-- [ ] User definitions persist across restarts and appear in the Encounter
-      tab's theme picker.
-- [ ] Non-human adversaries (once they exist) can be added with no UI change.
+## 8. Acceptance criteria
+- [x] Search/filter encounter definitions and open any for editing.
+- [x] Create a new definition from known adversaries; save to the working library.
+- [x] Edit an existing definition's roster, counts, scaling, and leader.
+- [x] Add/remove roster lines; each line picks an adversary and a count (fixed or
+      ×players) and can be marked promoted; plus an optional auto-promoted leader.
+- [x] Live preview shows exactly what will spawn for N players, matching the
+      tracker's generation (shared `resolve_roster`).
+- [x] "Send to tracker" generates the live encounter and switches tabs.
+- [x] Saved definitions persist to the working `combat.json` and appear in the
+      Encounter tab's theme picker (after `refresh_themes`).
+- [x] Non-human adversaries (once they exist) can be added with no UI change
+      (roster references the adversary library).
+- [ ] *(v1 gap)* Roster line **reorder** and the advisory difficulty band (§6)
+      are not yet implemented; counts are int or ×players (no dice ranges).
 
 ---
 
