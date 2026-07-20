@@ -623,16 +623,23 @@ class AdversaryTab(ttk.Frame):
         self._traits_snapshot = _text_to_map(self.traits_text.get("1.0", "end"))
 
     def _normalise_traits(self, *_):
-        """After a manual edit: clamp each value to 0..20 and keep every listed
-        pair summing to 20 (the side the user just changed stays authoritative)."""
-        m = _text_to_map(self.traits_text.get("1.0", "end"))
-        if not m:
+        """After a manual edit, keep every listed pair summing to 20 without
+        disturbing a score the user did not touch:
+
+        - A pre-existing score is never changed just because its partner was
+          added or given an out-of-range value; instead the added/invalid side
+          is recalculated (= 20 - the kept side).
+        - A valid edit (0..20) to an existing score wins, and its partner
+          follows.
+        """
+        raw = _text_to_map(self.traits_text.get("1.0", "end"))
+        if not raw:
             self._traits_snapshot = {}
             return
-        order = list(m)
+        order = list(raw)
         snap = getattr(self, "_traits_snapshot", {})
-        for n in order:
-            m[n] = max(0, min(20, m[n]))
+        m = {n: max(0, min(20, raw[n])) for n in order}
+        in_range = lambda x: 0 <= raw[x] <= 20
         handled = set()
         for n in order:
             if n in handled:
@@ -640,11 +647,22 @@ class AdversaryTab(ttk.Frame):
             p = self._partner_of(n)
             if not p or p not in m:
                 continue
-            n_changed, p_changed = snap.get(n) != m[n], snap.get(p) != m[p]
-            if p_changed and not n_changed:
-                auth, other = p, n
-            else:  # n changed / both / neither -> earlier-listed is authoritative
-                auth, other = (n, p) if order.index(n) < order.index(p) else (p, n)
+            if (n in snap) != (p in snap):
+                # One side was just added -> keep the side that already existed.
+                auth = n if n in snap else p
+            elif n in snap and p in snap:
+                # Both existed -> a valid edit wins; an out-of-range edit yields
+                # to the untouched partner instead of zeroing it.
+                n_ch, p_ch = snap[n] != raw[n], snap[p] != raw[p]
+                if n_ch and not p_ch:
+                    auth = n if in_range(n) else p
+                elif p_ch and not n_ch:
+                    auth = p if in_range(p) else n
+                else:
+                    auth = n if order.index(n) < order.index(p) else p
+            else:  # both newly added -> earlier-listed wins
+                auth = n if order.index(n) < order.index(p) else p
+            other = p if auth == n else n
             m[other] = max(0, min(20, 20 - m[auth]))
             handled.update((n, p))
         new = "\n".join(f"{k} {m[k]}" for k in order)
