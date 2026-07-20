@@ -286,6 +286,8 @@ class EncounterTab(ttk.Frame):
         # Stats are now the primary interaction surface (click-to-roll), so show
         # them at a readable size rather than the old tiny detail font.
         self.stat_font = tkfont.Font(family="TkDefaultFont", size=10)
+        # The description/armour/looks flavour line, bumped up from the old 8pt.
+        self.flavour_font = tkfont.Font(family="TkDefaultFont", size=10, slant="italic")
         self.frame_bg = ttk.Style().lookup("TFrame", "background") or self.cget("background")
         self._link_seq = 0
 
@@ -310,6 +312,22 @@ class EncounterTab(ttk.Frame):
         ttk.Combobox(addrow, textvariable=self.add_var, width=20, state="readonly",
                      values=list(self.encounter.templates)).pack(side="left", padx=(4, 6))
         ttk.Button(addrow, text="Add", command=self.on_add).pack(side="left")
+
+        # How-to block: explain the per-row textboxes and click-to-roll, since the
+        # tracker's controls aren't otherwise self-evident.
+        howto = ttk.LabelFrame(self, text="How to use the tracker")
+        howto.pack(fill="x", padx=10, pady=(0, 6))
+        ttk.Label(
+            howto, justify="left", foreground="#444", font=("TkDefaultFont", 9),
+            text=(
+                "• engages — type who this enemy is fighting (e.g. a knight's name); it is logged.\n"
+                "• HP change — type the total damage as a negative to subtract it, or healing as a\n"
+                "   positive to add it, then press Apply or Enter. Example: an enemy on 28/28 takes\n"
+                "   8 damage → type -8, Apply → 20/28. A single hit ≥ Constitution is a Major Wound.\n"
+                "• Click any underlined stat number to roll it (characteristic, attack skill, damage, "
+                "skill)."
+            ),
+        ).pack(anchor="w", padx=8, pady=4)
 
         # Scrollable combatant tracker.
         tracker = ttk.LabelFrame(self, text="Combatants")
@@ -387,22 +405,28 @@ class EncounterTab(ttk.Frame):
                         font=name_font, fg=fg)
         name.grid(row=0, column=0, sticky="w")
 
-        # Engaged-with (live-synced; logged on focus-out when it changes)
+        # "<name> engages [who] " — an inline label makes the textbox self-explaining.
+        tk.Label(row, text="engages", font=self.norm_font, fg=fg).grid(
+            row=0, column=1, padx=(2, 2))
         eng = ttk.Entry(row, width=14)
         eng.insert(0, c.engaged_with)
-        eng.grid(row=0, column=1, padx=(4, 6))
+        eng.grid(row=0, column=2, padx=(0, 10))
         eng.bind("<KeyRelease>", lambda e, cc=c, w=eng: setattr(cc, "engaged_with", w.get()))
         eng.bind("<FocusOut>", lambda e, cc=c, w=eng: self._engage(cc, w.get()))
 
-        # Hit Points — current/max plus a delta box (type -10 for 10 damage, 5 to heal)
-        ttk.Label(row, text=f"Hit Points {c.cur_hp}/{c.max_hp}", width=16, anchor="w",
-                  foreground=fg).grid(row=0, column=2, padx=(4, 2))
+        # Hit Points current/max + an "HP change" delta box (type the total damage
+        # as a negative, or healing as a positive, then Apply).
+        ttk.Label(row, text=f"Hit Points {c.cur_hp}/{c.max_hp}", width=15, anchor="w",
+                  foreground=fg).grid(row=0, column=3, padx=(0, 4))
+        tk.Label(row, text="HP change", font=self.norm_font, fg=fg).grid(
+            row=0, column=4, padx=(0, 2))
         dv = tk.StringVar()
         de = ttk.Entry(row, width=5, textvariable=dv)
-        de.grid(row=0, column=3)
+        de.grid(row=0, column=5)
         de.bind("<Return>", lambda e, cc=c, v=dv: self._apply_hp(cc, v.get()))
         ttk.Button(row, text="Apply", width=5,
-                   command=lambda cc=c, v=dv: self._apply_hp(cc, v.get())).grid(row=0, column=4)
+                   command=lambda cc=c, v=dv: self._apply_hp(cc, v.get())).grid(
+                       row=0, column=6, padx=(2, 0))
 
         # Actions menu (promote/demote, knock out/revive, ransom, morale)
         mb = ttk.Menubutton(row, text="Actions ▾", width=9)
@@ -418,29 +442,32 @@ class EncounterTab(ttk.Frame):
             menu.add_command(label="Morale check",
                              command=lambda cc=c: self._morale_check(cc))
         mb["menu"] = menu
-        mb.grid(row=0, column=5, padx=(8, 0))
+        mb.grid(row=0, column=7, padx=(8, 0))
         ttk.Button(row, text="✕", width=2,
-                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=6, padx=(4, 0))
+                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=8, padx=(4, 0))
 
         # Clickable stat line: every number is a roll link (§7, §8). Characteristics,
         # attack skill values, attack damage and skills are all clickable tokens.
         self._build_stat_line(row, c, down)
 
-        # Armour worn + a defining look, so the GM can describe the combatant.
+        # Flavour line: the template's description, the armour worn, and a defining
+        # look — so the GM can vividly describe the combatant. Readable size (§7).
         arm = (f"Armour: {c.armour_desc} ({c.armor_total()} points)"
                if c.armour_desc else f"Armour: {c.armor_total()} points")
         looks = c.describe_looks()
-        line3 = arm + (f"   ·   Looks: {looks}" if looks else "")
-        tk.Label(row, text=line3, anchor="w", justify="left", wraplength=740,
-                 font=("TkDefaultFont", 8), fg=("#aaa" if down else "#555")
-                 ).grid(row=2, column=0, columnspan=7, sticky="w", padx=(6, 0), pady=(0, 2))
+        bits = [b for b in (c.description, arm,
+                            f"Looks: {looks}" if looks else "") if b]
+        tk.Label(row, text="   ·   ".join(bits), anchor="w", justify="left",
+                 wraplength=740, font=self.flavour_font,
+                 fg=("#aaa" if down else "#555")
+                 ).grid(row=2, column=0, columnspan=9, sticky="w", padx=(6, 0), pady=(0, 2))
 
     def _build_stat_line(self, row, c, down):
         """A read-only Text widget whose numbers are click-to-roll links."""
         txt = tk.Text(row, wrap="word", height=1, borderwidth=0, cursor="",
                       highlightthickness=0, background=self.frame_bg,
                       font=self.stat_font, spacing1=1, spacing3=1)
-        txt.grid(row=1, column=0, columnspan=7, sticky="ew", padx=(6, 0))
+        txt.grid(row=1, column=0, columnspan=9, sticky="ew", padx=(6, 0))
         plain_fg = "#aaa" if down else "#333"
         txt.tag_configure("plain", foreground=plain_fg)
 
