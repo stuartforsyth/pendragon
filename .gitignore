@@ -13,3 +13,6 @@ pendragon-encounter-*.md
 
 # Working combat data (created from data/examplecombat.json on first edit; user content)
 data/combat.json
+
+# Temporary files
+tmp/
