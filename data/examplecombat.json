@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "_note": "Combat rules + human-foe bestiary for the Encounter Generator. Parsed from the Pendragon Core Rulebook (Ch.2 & 7), Gamemaster's Handbook ('Foes'), and the Battle Cards (unit conrois with per-player scaling, morale, and ransom). See docs/encounter-generator-spec.md.",
   "resolution": {
     "die": "1d20",
@@ -32,69 +32,416 @@
     "veteran": "Experienced, well-equipped warriors; skills ~15.",
     "elite": "Knights and champions; skills ~15-20."
   },
+  "weapon_note": "Damage is relative to the wielder's Weapon Damage: base 'character'/'brawling' = the adversary's Weapon Damage dice, then apply damage_mod and cap at damage_max. 'fixed' uses damage_dice; 'horse' uses the mount's charge damage. A critical adds the base Weapon Damage dice again (see critical_hit).",
   "weapons": {
     "Arming Sword": {
-      "skill": "Sword"
+      "skill": "Sword",
+      "use": "both",
+      "damage_base": "character",
+      "advantage": "Parry +3; breaks other weapon types on a tie; does not break on a fumble",
+      "disadvantage": "None"
     },
     "Sword": {
-      "skill": "Sword"
-    },
-    "Spear": {
-      "skill": "Spear",
-      "reach": true
-    },
-    "Lance": {
-      "skill": "Charge",
-      "mounted": true,
-      "reach": true
-    },
-    "Dagger": {
-      "skill": "Brawling"
-    },
-    "Seax": {
-      "skill": "Brawling"
+      "skill": "Sword",
+      "use": "both",
+      "damage_base": "character",
+      "advantage": "Parry +3; breaks other weapon types on a tie; does not break on a fumble",
+      "disadvantage": "None"
     },
     "Axe": {
-      "skill": "Hafted"
+      "skill": "Hafted",
+      "use": "both",
+      "damage_base": "character",
+      "advantage": "Strikes through shields: a blocking shield stops only 1D6 (1 = shield breaks)",
+      "disadvantage": "Broken on a fumble or by a sword on a tie"
+    },
+    "Battle Axe": {
+      "skill": "Hafted",
+      "use": "both",
+      "damage_base": "character",
+      "advantage": "Strikes through shields: a blocking shield stops only 1D6 (1 = shield breaks)",
+      "disadvantage": "Broken on a fumble or by a sword on a tie"
     },
     "Mace": {
-      "skill": "Hafted"
+      "skill": "Hafted",
+      "use": "both",
+      "damage_base": "character",
+      "vs_mail": "+1D6",
+      "advantage": "+1D6 vs. mail armour",
+      "disadvantage": "Broken on a fumble or by a sword on a tie"
+    },
+    "Cudgel": {
+      "skill": "Hafted",
+      "use": "both",
+      "damage_base": "brawling",
+      "damage_mod": "+1D6",
+      "advantage": "None",
+      "disadvantage": "Broken on a fumble or by a sword on a tie"
+    },
+    "Francisca": {
+      "skill": "Hafted",
+      "use": "foot",
+      "damage_base": "brawling",
+      "damage_mod": "+2D6",
+      "thrown": {
+        "skill": "Thrown Weapon",
+        "damage_base": "character",
+        "damage_mod": "-1D6",
+        "range": "Short",
+        "note": "Regular Damage vs. opponents with shields (bypasses the shield)"
+      },
+      "advantage": "Ignores shields when thrown (see thrown)",
+      "disadvantage": "Broken on a fumble or by a sword on a tie"
     },
     "Great Axe": {
       "skill": "Two-Handed Hafted",
-      "hands": 2
+      "use": "foot",
+      "hands": 2,
+      "damage_base": "character",
+      "damage_mod": "+2D6",
+      "advantage": "Strikes through shields: a blocking shield stops only 1D6 (1 = shield breaks)",
+      "disadvantage": "No shield; broken on a fumble or by a sword on a tie"
+    },
+    "Great Mace": {
+      "skill": "Two-Handed Hafted",
+      "use": "foot",
+      "hands": 2,
+      "damage_base": "character",
+      "damage_mod": "+2D6",
+      "vs_mail": "+3D6 (total, replaces +2D6)",
+      "advantage": "+3D6 total vs. mail armour",
+      "disadvantage": "No shield; broken on a fumble or by a sword on a tie"
+    },
+    "Maul": {
+      "skill": "Two-Handed Hafted",
+      "use": "foot",
+      "hands": 2,
+      "damage_base": "character",
+      "damage_mod": "+2D6",
+      "advantage": "None",
+      "disadvantage": "No shield; broken on a fumble or by a sword on a tie"
     },
     "Club": {
       "skill": "Two-Handed Hafted",
-      "hands": 2
+      "use": "foot",
+      "hands": 2,
+      "damage_base": "brawling",
+      "damage_mod": "+2D6",
+      "advantage": "None",
+      "disadvantage": "No shield; broken on a fumble or by a sword on a tie"
+    },
+    "Quarterstaff": {
+      "skill": "Two-Handed Hafted",
+      "use": "foot",
+      "hands": 2,
+      "damage_base": "brawling",
+      "damage_mod": "+1D6",
+      "advantage": "Parry +4 (Two-Handed Hafted); may also be used with Spear or Sword skill",
+      "disadvantage": "No shield when two-handed; broken on a fumble or by a sword on a tie"
+    },
+    "Spear": {
+      "skill": "Spear",
+      "use": "both",
+      "reach": true,
+      "damage_base": "character",
+      "two_handed": {
+        "damage_mod": "+2D6",
+        "no_shield": true
+      },
+      "thrown": {
+        "skill": "Thrown Weapon",
+        "damage_base": "character",
+        "damage_mod": "-1D6",
+        "damage_max": "4D6",
+        "range": "Short"
+      },
+      "advantage": "Long weapon",
+      "disadvantage": "No shield when used two-handed; broken on a fumble or by a sword on a tie"
+    },
+    "Javelin": {
+      "skill": "Spear",
+      "use": "both",
+      "damage_base": "brawling",
+      "damage_mod": "+1D6",
+      "thrown": {
+        "skill": "Thrown Weapon",
+        "damage_base": "character",
+        "damage_mod": "-1D6",
+        "damage_max": "3D6",
+        "range": "Medium"
+      },
+      "advantage": "None",
+      "disadvantage": "Broken on a fumble or by a sword on a tie"
+    },
+    "Lance": {
+      "skill": "Charge",
+      "use": "mounted",
+      "reach": true,
+      "damage_base": "horse",
+      "advantage": "Long weapon",
+      "disadvantage": "None"
+    },
+    "Dagger": {
+      "skill": "Brawling",
+      "use": "both",
+      "damage_base": "brawling",
+      "damage_mod": "+2D6",
+      "thrown": {
+        "skill": "Thrown Weapon",
+        "damage_base": "brawling",
+        "range": "Short"
+      },
+      "advantage": "None",
+      "disadvantage": "None"
+    },
+    "Seax": {
+      "skill": "Brawling",
+      "use": "foot",
+      "damage_base": "brawling",
+      "damage_mod": "+2D6",
+      "advantage": "Parry +1",
+      "disadvantage": "Broken by a sword on a tie or on a fumble"
     },
     "Self Bow": {
       "skill": "Bow",
-      "ranged": true
+      "use": "both",
+      "ranged": true,
+      "range": "Medium",
+      "damage_base": "character",
+      "damage_mod": "-1D6",
+      "damage_max": "3D6",
+      "advantage": "None",
+      "disadvantage": "None"
     },
     "Longbow": {
       "skill": "Bow",
-      "ranged": true
+      "use": "foot",
+      "ranged": true,
+      "range": "Long",
+      "damage_base": "character",
+      "damage_mod": "-1D6",
+      "damage_max": "4D6",
+      "advantage": "None",
+      "disadvantage": "Bow Skill and STR each 12+ to draw fully; otherwise treat as a self bow"
+    },
+    "Warbow": {
+      "skill": "Bow",
+      "use": "foot",
+      "ranged": true,
+      "range": "Long",
+      "damage_base": "character",
+      "damage_mod": "-1D6",
+      "damage_max": "5D6",
+      "advantage": "None",
+      "disadvantage": "Requires special training; otherwise treat as a longbow"
     },
     "Light Crossbow": {
       "skill": "Crossbow",
-      "ranged": true
-    },
-    "Javelin": {
-      "skill": "Thrown Weapon",
-      "ranged": true
+      "use": "both",
+      "ranged": true,
+      "range": "Medium",
+      "damage_base": "fixed",
+      "damage_dice": "1D6+10",
+      "advantage": "None",
+      "disadvantage": "Must be on foot to load"
     }
   },
   "shields": {
-    "Kite": 6,
-    "Round": 6,
-    "Targe": 4
+    "Buckler": {
+      "protection": 4,
+      "size": "Small",
+      "missile_penalty": 0,
+      "notes": "No protection from missiles or charges; +1D6 Barehand Attack damage"
+    },
+    "Kite": {
+      "protection": 6,
+      "size": "Large",
+      "missile_penalty": -10,
+      "notes": "-2 to Weapon Skills when mounted, except Charge"
+    },
+    "Round": {
+      "protection": 6,
+      "size": "Large",
+      "missile_penalty": -10,
+      "notes": "-2 to Weapon Skills when mounted"
+    },
+    "Scutum": {
+      "protection": 6,
+      "size": "Large",
+      "missile_penalty": -10,
+      "notes": "-2 to Weapon Skills when mounted"
+    },
+    "Simple": {
+      "protection": 6,
+      "size": "Medium",
+      "missile_penalty": -5,
+      "notes": "Broken by an opponent's critical success"
+    },
+    "Targe": {
+      "protection": 4,
+      "size": "Small",
+      "missile_penalty": 0,
+      "notes": "Keeps the hand free; no protection from missiles or charges"
+    }
   },
   "armour_pieces": {
-    "Gambeson": 4
+    "Aketon": {
+      "protection": 2,
+      "type": "Textile",
+      "slot": "body"
+    },
+    "Gambeson": {
+      "protection": 4,
+      "type": "Textile",
+      "slot": "body"
+    },
+    "Haubergeon": {
+      "protection": 4,
+      "type": "Mail",
+      "slot": "body",
+      "padding": "Aketon"
+    },
+    "Hauberk": {
+      "protection": 6,
+      "type": "Mail",
+      "slot": "body",
+      "padding": "Aketon"
+    },
+    "Advanced Hauberk": {
+      "protection": 7,
+      "type": "Mail",
+      "slot": "body",
+      "padding": "Aketon"
+    },
+    "Coat of Plates": {
+      "protection": 6,
+      "type": "Plate",
+      "slot": "body",
+      "padding": "Aketon",
+      "notes": "Worn over a hauberk adds only +1; negates weapon bonuses vs Mail; -5 Move on foot"
+    }
   },
-  "armour_note": "Templates store a precomputed total 'armor_points'; the book's '+N' is the shield, stored separately as 'shield'. Full piece-by-piece armour values (Table 9.x) to transcribe if needed.",
-  "enemy_templates": {
+  "helmets": {
+    "Kettle Helm": {
+      "protection": 1,
+      "type": "Helm",
+      "slot": "head"
+    },
+    "Open Helm": {
+      "protection": 1,
+      "type": "Helm",
+      "slot": "head"
+    },
+    "Nasal Helm": {
+      "protection": 2,
+      "type": "Helm",
+      "slot": "head"
+    },
+    "Advanced Nasal Helm": {
+      "protection": 3,
+      "type": "Helm",
+      "slot": "head",
+      "notes": "Counts as enclosed: -5 Awareness (sight/sound)"
+    }
+  },
+  "armour_suits": {
+    "Squire": {
+      "pieces": [
+        "Gambeson",
+        "Open Helm"
+      ],
+      "shield": "Round",
+      "total": 5,
+      "typical": "Squire"
+    },
+    "Poor Knight": {
+      "pieces": [
+        "Hauberk",
+        "Open Helm",
+        "Aketon"
+      ],
+      "shield": "Kite",
+      "total": 9,
+      "typical": "Poor knights"
+    },
+    "Knight": {
+      "pieces": [
+        "Hauberk",
+        "Nasal Helm",
+        "Aketon"
+      ],
+      "shield": "Kite",
+      "total": 10,
+      "typical": "Knights"
+    },
+    "Armoured Guardsman": {
+      "pieces": [
+        "Haubergeon",
+        "Open Helm",
+        "Aketon"
+      ],
+      "shield": "Kite",
+      "total": 7,
+      "typical": "Armoured guardsmen & squires"
+    },
+    "Rich Knight": {
+      "pieces": [
+        "Advanced Hauberk",
+        "Advanced Nasal Helm",
+        "Aketon"
+      ],
+      "shield": "Kite",
+      "total": 12,
+      "typical": "Rich knights"
+    },
+    "Very Rich Knight": {
+      "pieces": [
+        "Coat of Plates",
+        "Advanced Hauberk",
+        "Advanced Nasal Helm",
+        "Aketon"
+      ],
+      "shield": "Kite",
+      "total": 13,
+      "typical": "Very rich knights (515+)"
+    },
+    "Foot Soldier": {
+      "pieces": [
+        "Gambeson",
+        "Kettle Helm"
+      ],
+      "shield": "Kite",
+      "total": 5,
+      "typical": "Foot soldiers"
+    },
+    "Saxon Footman": {
+      "pieces": [
+        "Haubergeon",
+        "Open Helm"
+      ],
+      "shield": "Round",
+      "total": 5,
+      "typical": "Saxon footmen"
+    },
+    "Roman Foot Soldier": {
+      "pieces": [
+        "Haubergeon",
+        "Advanced Nasal Helm",
+        "Aketon"
+      ],
+      "shield": "Scutum",
+      "total": 9,
+      "typical": "Roman foot soldiers"
+    },
+    "Unarmoured": {
+      "pieces": [],
+      "shield": null,
+      "total": 0,
+      "typical": "Irish footmen / Picts"
+    }
+  },
+  "armour_note": "Body armour (armour_pieces) + helmet (helmets) sum to the Armor Protection value; the shield (shields) is tracked separately because some hits bypass it. armour_suits are Table 9.1 presets (total is body+helm, shield listed alongside). Coat of Plates worn over a hauberk adds only +1.",
+  "adversaries": {
     "Bandit": {
       "description": "Curs and dogs, the lot of them",
       "tier": "rabble",
@@ -151,7 +498,9 @@
         "Awareness": 18,
         "Hunting": 16
       },
-      "promotion_title": "Gang Leader"
+      "promotion_title": "Gang Leader",
+      "kind": "generic",
+      "category": "human"
     },
     "Bowman": {
       "description": "A peasant archer, a castle defender",
@@ -198,7 +547,9 @@
         "Awareness": 12,
         "Hunting": 8
       },
-      "promotion_title": "Master Archer"
+      "promotion_title": "Master Archer",
+      "kind": "generic",
+      "category": "human"
     },
     "Crossbowman": {
       "description": "Oftentimes a mercenary from the Continent",
@@ -244,7 +595,9 @@
       "skills": {
         "Awareness": 10
       },
-      "promotion_title": "Master Arbalist"
+      "promotion_title": "Master Arbalist",
+      "kind": "generic",
+      "category": "human"
     },
     "Spearman": {
       "description": "Member of a lord's retinue, guard of the hearth",
@@ -299,7 +652,9 @@
       "skills": {
         "Awareness": 12
       },
-      "promotion_title": "Sergeant-at-Arms"
+      "promotion_title": "Sergeant-at-Arms",
+      "kind": "generic",
+      "category": "human"
     },
     "Veteran Spearman": {
       "description": "An experienced guardsman or grizzled mercenary footman",
@@ -354,7 +709,9 @@
       "skills": {
         "Awareness": 14
       },
-      "promotion_title": "Captain of the Guard"
+      "promotion_title": "Captain of the Guard",
+      "kind": "generic",
+      "category": "human"
     },
     "Hill Man": {
       "description": "Typical member of a tribal war band",
@@ -408,7 +765,9 @@
         "Awareness": 13,
         "Hunting": 10
       },
-      "promotion_title": "War Chief"
+      "promotion_title": "War Chief",
+      "kind": "generic",
+      "category": "human"
     },
     "Mounted Sergeant": {
       "description": "Mounted guardsman or mercenary esquire",
@@ -465,7 +824,9 @@
         "Battle": 10,
         "Horsemanship": 15
       },
-      "promotion_title": "Captain"
+      "promotion_title": "Captain",
+      "kind": "generic",
+      "category": "human"
     },
     "Average Knight": {
       "description": "A typical household or mercenary knight",
@@ -527,7 +888,9 @@
         "Hunting": 10,
         "Recognize": 9
       },
-      "promotion_title": "Elite Commander"
+      "promotion_title": "Elite Commander",
+      "kind": "generic",
+      "category": "human"
     },
     "Veteran Knight": {
       "description": "A household or mercenary knight of many years' service, with the scars to show",
@@ -595,7 +958,9 @@
         "Hunting": 11,
         "Recognize": 10
       },
-      "promotion_title": "Banneret"
+      "promotion_title": "Banneret",
+      "kind": "generic",
+      "category": "human"
     },
     "Saxon Ceorl": {
       "description": "The local Saxon levy",
@@ -651,7 +1016,9 @@
         "Awareness": 12,
         "Boating": 12
       },
-      "promotion_title": "Ceorl Headman"
+      "promotion_title": "Ceorl Headman",
+      "kind": "generic",
+      "category": "human"
     },
     "Rich Ceorl": {
       "description": "Better-equipped than their fellows",
@@ -713,7 +1080,9 @@
         "Awareness": 15,
         "Boating": 12
       },
-      "promotion_title": "Village Champion"
+      "promotion_title": "Village Champion",
+      "kind": "generic",
+      "category": "human"
     },
     "Heorthgeneat": {
       "description": "Saxon foot soldier; a full-time warrior of a lord's hall",
@@ -775,7 +1144,9 @@
         "Awareness": 15,
         "Boating": 15
       },
-      "promotion_title": "Hearth-Captain"
+      "promotion_title": "Hearth-Captain",
+      "kind": "generic",
+      "category": "human"
     },
     "Saxon Knight": {
       "description": "A pale imitation of the Cymric knight",
@@ -832,7 +1203,9 @@
         "Battle": 12,
         "Horsemanship": 12
       },
-      "promotion_title": "Thegn"
+      "promotion_title": "Thegn",
+      "kind": "generic",
+      "category": "human"
     },
     "Aetheling": {
       "description": "A chieftain who commands many loyal huscarls",
@@ -896,7 +1269,9 @@
         "Awareness": 15,
         "Recognize": 10
       },
-      "promotion_title": "Warlord"
+      "promotion_title": "Warlord",
+      "kind": "generic",
+      "category": "human"
     },
     "Knights of Gorre": {
       "description": "Stern archaic-looking knights of Gorre; may counter-charge",
@@ -973,7 +1348,9 @@
       },
       "skills": {
         "Horsemanship": 17
-      }
+      },
+      "kind": "generic",
+      "category": "human"
     },
     "Knights of Lothian": {
       "description": "An extra-large conroi from King Lot's Lothian; they strike harder; may counter-charge",
@@ -1044,7 +1421,9 @@
       },
       "skills": {
         "Horsemanship": 17
-      }
+      },
+      "kind": "generic",
+      "category": "human"
     },
     "Knights of Malahaut": {
       "description": "Knights dressed like Roman cavalry, with large oval shields; may counter-charge",
@@ -1115,7 +1494,9 @@
       },
       "skills": {
         "Horsemanship": 15
-      }
+      },
+      "kind": "generic",
+      "category": "human"
     },
     "Knights of Cornwall": {
       "description": "A conroi of poor but motivated knights from Cornwall; may counter-charge",
@@ -1192,7 +1573,9 @@
       },
       "skills": {
         "Horsemanship": 15
-      }
+      },
+      "kind": "generic",
+      "category": "human"
     },
     "Northern Prickers": {
       "description": "Rough men on hill ponies from the Roman Wall; armed with lances; may counter-charge",
@@ -1241,7 +1624,9 @@
       "promotion_title": "Pricker Headman",
       "skills": {
         "Horsemanship": 16
-      }
+      },
+      "kind": "generic",
+      "category": "human"
     },
     "Pictish Pikemen": {
       "description": "Painted, unarmoured mountain men with long spears; flee if a third are slain",
@@ -1281,7 +1666,9 @@
       "ransom": null,
       "notes": "Painted, unarmoured mountain men with long spears; flee if a third are slain.",
       "per_player": 2.0,
-      "promotion_title": "Pict War-leader"
+      "promotion_title": "Pict War-leader",
+      "kind": "generic",
+      "category": "human"
     },
     "Pictish Javeliniers": {
       "description": "Skirmishers who hurl javelins then melt away; always attempt to Evade in melee",
@@ -1327,7 +1714,9 @@
       "ransom": null,
       "notes": "Skirmishers who hurl javelins then melt away; always attempt to Evade in melee.",
       "per_player": 3.0,
-      "promotion_title": "Pict War-leader"
+      "promotion_title": "Pict War-leader",
+      "kind": "generic",
+      "category": "human"
     },
     "Pictish Knifemen": {
       "description": "Grubby little men with wicked daggers; target horses first; flee at one-third down",
@@ -1367,7 +1756,9 @@
       "ransom": null,
       "notes": "Grubby little men with wicked daggers; target horses first; flee at one-third down.",
       "per_player": 3.0,
-      "promotion_title": "Pict War-leader"
+      "promotion_title": "Pict War-leader",
+      "kind": "generic",
+      "category": "human"
     },
     "Saxon Warriors": {
       "description": "Seasoned armoured Saxons; form a shield wall vs a charge; fight until three-quarters are down",
@@ -1428,7 +1819,9 @@
       "promotion_title": "Saxon Thegn",
       "traits": {
         "Valorous": 13
-      }
+      },
+      "kind": "generic",
+      "category": "human"
     },
     "Irish Kerns": {
       "description": "Poorly-armed mercenaries from Ireland; make up in numbers what they lack in skill; target horses; flee once more than half are down",
@@ -1486,7 +1879,9 @@
       "ransom": null,
       "notes": "Poorly-armed mercenaries from Ireland; make up in numbers what they lack in skill; target horses; flee once more than half are down.",
       "per_player": 4.0,
-      "promotion_title": "Kern Captain"
+      "promotion_title": "Kern Captain",
+      "kind": "generic",
+      "category": "human"
     },
     "Cambrian Archers": {
       "description": "Hill archers wielding the dreaded longbow; loose arrows before contact; may flee if a third are injured",
@@ -1532,7 +1927,9 @@
       "ransom": null,
       "notes": "Hill archers wielding the dreaded longbow; loose arrows before contact; may flee if a third are injured.",
       "per_player": 3.0,
-      "promotion_title": "Master Archer"
+      "promotion_title": "Master Archer",
+      "kind": "generic",
+      "category": "human"
     },
     "Breton Mercenary Knights": {
       "description": "A conroi of mercenary knights from Little Britain; may counter-charge",
@@ -1609,10 +2006,12 @@
       },
       "skills": {
         "Horsemanship": 16
-      }
+      },
+      "kind": "generic",
+      "category": "human"
     }
   },
-  "encounter_themes": {
+  "encounters": {
     "Bandit ambush": {
       "core": [
         "Bandit"
