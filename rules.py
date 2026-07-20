@@ -227,6 +227,28 @@ class Rules:
     def random_eye_colour(self):
         return random.choice(self.eye_colours) if self.eye_colours else ""
 
+    def random_standout_features(self, n=2):
+        """A few distinctive physical features so combatants don't all read alike.
+
+        Draws across *every* category (Physique, Limbs, Hair, Face, Speech) —
+        preferring distinct categories — rather than just Face/Hair, so you get
+        build/limbs/voice variety too. Eye-colour descriptors are skipped because
+        eye colour is rolled separately (avoids 'blue eyes, blue eyes').
+        """
+        buckets = [(cat, feat) for cat, pols in self.features.items()
+                   for items in pols.values() for feat in items
+                   if "eyes" not in feat.lower()]
+        random.shuffle(buckets)
+        chosen, used_cat = [], set()
+        for cat, feat in buckets:
+            if cat in used_cat:
+                continue
+            used_cat.add(cat)
+            chosen.append(_phrase_feature(cat, feat))
+            if len(chosen) >= n:
+                break
+        return chosen
+
     def _app_row(self, app):
         for lo, hi, desc, npos, nneg, special in self.app_table:
             if lo <= app <= hi:

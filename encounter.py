@@ -198,8 +198,9 @@ class Encounter:
         self._counts[type_name] = self._counts.get(type_name, 0) + 1
         label = f"{type_name} {self._counts[type_name]}"
         c = Combatant(type_name, template, label)
-        # Roll a defining physical feature so identical combatants differ.
-        c.feature = self.rules.random_appearance_feature()
+        # Roll one or two standout physical features (mostly two) so otherwise
+        # identical combatants each read distinctly.
+        c.feature = ", ".join(self.rules.random_standout_features(random.choice([1, 2, 2])))
         c.eyes = self.rules.random_eye_colour()
         self.combatants.append(c)
         return c
