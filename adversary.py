@@ -12,11 +12,12 @@ stats, skills, traits and passions, and `rules.save_combat` for persistence.
 """
 
 import copy
+import random
 import re
 import tkinter as tk
 from tkinter import font as tkfont, messagebox, ttk
 
-from rules import save_combat
+from rules import roll_expr, save_combat
 from encounter import CHAR_FULL
 
 CHAR_ORDER = ("SIZ", "DEX", "STR", "CON", "APP")
@@ -385,12 +386,24 @@ class AdversaryTab(ttk.Frame):
         self.armour_lbl = ttk.Label(arf, text="")
         self.armour_lbl.pack(anchor="w", padx=6, pady=(0, 4))
 
-        # Skills / traits / passions
-        for attr, title in (("skills_text", "Skills  (one 'Name value' per line)"),
-                            ("traits_text", "Traits  (one 'Name value' per line)"),
-                            ("passions_text", "Passions  (one 'Name value' per line)")):
-            sf = self._section(title)
+        # Skills / traits / passions — a pick-and-add dropdown (autorolled value,
+        # editable in the text; skipped if already listed) over an editable list.
+        pickers = [
+            ("skills_text", "Skills", self._skill_vocab(), self._roll_skill_value),
+            ("traits_text", "Traits", self._trait_vocab(), self._roll_trait_value),
+            ("passions_text", "Passions", self._passion_vocab(), self._roll_passion_value),
+        ]
+        for attr, title, vocab, rollfn in pickers:
+            sf = self._section(f"{title}  (one 'Name value' per line)")
             t = tk.Text(sf, height=4, width=48, wrap="word", font=("TkDefaultFont", 10))
+            prow = ttk.Frame(sf)
+            prow.pack(fill="x", padx=6, pady=(4, 0))
+            var = tk.StringVar()
+            ttk.Combobox(prow, textvariable=var, width=22, state="readonly",
+                         values=vocab).pack(side="left")
+            ttk.Button(prow, text="Add",
+                       command=lambda tw=t, vv=var, rf=rollfn: self._append_stat(tw, vv.get(), rf)
+                       ).pack(side="left", padx=(6, 0))
             t.pack(fill="x", padx=6, pady=4)
             setattr(self, attr, t)
 
@@ -509,6 +522,51 @@ class AdversaryTab(ttk.Frame):
     def _set_text(widget, m):
         widget.delete("1.0", "end")
         widget.insert("1.0", _map_to_text(m))
+
+    # -- pick-and-add vocabularies + autoroll ------------------------------
+
+    def _skill_vocab(self):
+        names = set()
+        for info in self.rules.social_classes.values():
+            names |= set(info.get("skills", {}))
+        names |= {w.get("skill") for w in self.combat.get("weapons", {}).values()
+                  if w.get("skill")}
+        return sorted(names)
+
+    def _trait_vocab(self):
+        return sorted({t for pair in self.rules.trait_pairs for t in pair})
+
+    def _passion_vocab(self):
+        return sorted(self.rules.passion_starts)
+
+    @staticmethod
+    def _roll_skill_value(_name):
+        return roll_expr("2D6+5")            # a competent 7–17
+
+    @staticmethod
+    def _roll_trait_value(_name):
+        return max(1, min(19, roll_expr("2D6+3")))   # rulebook base, 1–19
+
+    def _roll_passion_value(self, name):
+        base = self.rules.passion_starts.get(name)
+        if base is not None:
+            return max(1, min(25, base + random.randint(-2, 3)))
+        return max(1, min(20, roll_expr("2D6+8")))
+
+    def _append_stat(self, text_widget, name, roll_fn):
+        """Add 'name value' (autorolled) to the list, unless already present."""
+        name = name.strip()
+        if not name:
+            return
+        if name in _text_to_map(text_widget.get("1.0", "end")):
+            self.set_status(f"{name} is already listed.", "#a33")
+            return
+        current = text_widget.get("1.0", "end").rstrip("\n")
+        line = f"{name} {roll_fn(name)}"
+        text_widget.delete("1.0", "end")
+        text_widget.insert("1.0", (current + "\n" if current else "") + line)
+        text_widget.see("end")
+        self.set_status(f"Added {line}.", "#2a7d2a")
 
     def _char_ints(self):
         out = {}
