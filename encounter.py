@@ -379,17 +379,22 @@ class EncounterTab(ttk.Frame):
         # tracker's controls aren't otherwise self-evident.
         howto = ttk.LabelFrame(self, text="How to use the tracker")
         howto.pack(fill="x", padx=10, pady=(0, 6))
-        ttk.Label(
+        howto_lbl = ttk.Label(
             howto, justify="left", foreground="#444", font=("TkDefaultFont", 9),
             text=(
                 "• engages — type who this enemy is fighting (e.g. a knight's name); it is logged.\n"
-                "• HP change — type the total damage as a negative to subtract it, or healing as a\n"
-                "   positive to add it, then press Apply or Enter. Example: an enemy on 28/28 takes\n"
-                "   8 damage → type -8, Apply → 20/28. A single hit ≥ Constitution is a Major Wound.\n"
+                "• HP change — type the total damage as a negative to subtract it, or healing as a "
+                "positive to add it, then press Apply or Enter. Example: an enemy on 28/28 takes "
+                "8 damage → type -8, Apply → 20/28. A single hit ≥ Constitution is a Major Wound.\n"
                 "• Click any underlined stat number to roll it (characteristic, attack skill, damage, "
                 "skill)."
             ),
-        ).pack(anchor="w", padx=8, pady=4)
+        )
+        howto_lbl.pack(anchor="w", fill="x", padx=8, pady=4)
+        # Wrap the help text to the panel width so long bullets fill the row rather
+        # than leaving a wide blank gap on the right.
+        howto.bind("<Configure>",
+                   lambda e, lbl=howto_lbl: lbl.configure(wraplength=max(300, e.width - 24)))
 
         # Scrollable combatant tracker.
         tracker = ttk.LabelFrame(self, text="Combatants")
@@ -397,10 +402,15 @@ class EncounterTab(ttk.Frame):
         canvas = tk.Canvas(tracker, highlightthickness=0)
         vs = ttk.Scrollbar(tracker, orient="vertical", command=canvas.yview)
         self.rows_frame = ttk.Frame(canvas)
+        self.rows_frame.columnconfigure(0, weight=1)  # rows fill the tracker width
         self.rows_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=self.rows_frame, anchor="nw")
+        rows_window = canvas.create_window((0, 0), window=self.rows_frame, anchor="nw")
+        # Keep the rows as wide as the viewport so long stat lines wrap to the next
+        # line instead of being clipped past the right edge.
+        canvas.bind("<Configure>",
+                    lambda e: canvas.itemconfigure(rows_window, width=e.width))
         canvas.configure(yscrollcommand=vs.set)
         canvas.pack(side="left", fill="both", expand=True)
         vs.pack(side="right", fill="y")
@@ -457,6 +467,9 @@ class EncounterTab(ttk.Frame):
     def _build_row(self, i, c):
         row = ttk.Frame(self.rows_frame)
         row.grid(row=i, column=0, sticky="ew", padx=2, pady=1)
+        # A weighted trailing column soaks up spare width so the stat and flavour
+        # lines (which span it) stretch to the full width instead of being clipped.
+        row.columnconfigure(9, weight=1)
 
         down = c.down
         name_font = self.down_font if down else (self.elite_font if c.elite else self.norm_font)
@@ -518,17 +531,23 @@ class EncounterTab(ttk.Frame):
         looks = c.describe_looks()
         bits = [b for b in (c.description, arm,
                             f"Looks: {looks}" if looks else "") if b]
-        tk.Label(row, text="   ·   ".join(bits), anchor="w", justify="left",
-                 wraplength=740, font=self.flavour_font,
-                 fg=("#aaa" if down else "#555")
-                 ).grid(row=2, column=0, columnspan=9, sticky="w", padx=(6, 0), pady=(0, 2))
+        flavour = tk.Label(row, text="   ·   ".join(bits), anchor="w", justify="left",
+                           wraplength=740, font=self.flavour_font,
+                           fg=("#aaa" if down else "#555"))
+        flavour.grid(row=2, column=0, columnspan=10, sticky="w", padx=(6, 0), pady=(0, 2))
+        # Wrap flavour text to the current row width so it uses the space and never clips.
+        row.bind("<Configure>",
+                 lambda e, lbl=flavour: lbl.configure(wraplength=max(300, e.width - 12)))
 
     def _build_stat_line(self, row, c, down):
         """A read-only Text widget whose numbers are click-to-roll links."""
-        txt = tk.Text(row, wrap="word", height=1, borderwidth=0, cursor="",
+        # width=1 stops the Text's 80-char default from forcing the whole row
+        # wider than the viewport (which clipped the trailing skills); sticky="ew"
+        # then stretches it to the real width and wrap="word" flows onto more lines.
+        txt = tk.Text(row, wrap="word", height=1, width=1, borderwidth=0, cursor="",
                       highlightthickness=0, background=self.frame_bg,
                       font=self.stat_font, spacing1=1, spacing3=1)
-        txt.grid(row=1, column=0, columnspan=9, sticky="ew", padx=(6, 0))
+        txt.grid(row=1, column=0, columnspan=10, sticky="ew", padx=(6, 0))
         plain_fg = "#aaa" if down else "#333"
         txt.tag_configure("plain", foreground=plain_fg)
 
