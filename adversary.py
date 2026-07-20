@@ -79,6 +79,44 @@ def describe_armour(pieces, helmet, shield):
     return desc
 
 
+def _match_shield(text, shield_names):
+    t = text.strip().lower().replace("shield", "").strip()
+    return shield_names.get(t, "")
+
+
+def parse_armour_desc(desc, combat):
+    """Derive (pieces, helmet, shield) from a free-text armour_desc.
+
+    Legacy adversaries store armour only as text (e.g. "Haubergeon, aketon,
+    open helm + kite shield") plus precomputed points; the editor needs the
+    structured selection so the checkboxes/dropdowns reflect it.
+    """
+    pieces, helmet, shield = [], "", ""
+    if not desc or desc.strip().lower() == "none":
+        return pieces, helmet, shield
+    desc = re.split(r"[;(]", desc)[0]  # drop trailing notes / parentheticals
+    piece_names = {n.lower(): n for n in combat.get("armour_pieces", {})}
+    helmet_names = {n.lower(): n for n in combat.get("helmets", {})}
+    shield_names = {n.lower(): n for n in combat.get("shields", {})}
+    body = desc
+    if "+" in desc:
+        body, shield_part = desc.split("+", 1)
+        shield = _match_shield(shield_part, shield_names)
+    for tok in re.split(r",|\band\b", body):
+        t = tok.strip().lower()
+        if not t:
+            continue
+        if t in piece_names:
+            pieces.append(piece_names[t])
+        elif t in helmet_names:
+            helmet = helmet_names[t]
+        else:
+            s = _match_shield(t, shield_names)  # e.g. "Targe shield" in the body
+            if s:
+                shield = s
+    return pieces, helmet, shield
+
+
 def blank_adversary(kind="generic", category="human"):
     return {
         "kind": kind, "category": category, "source": "user",
@@ -448,12 +486,18 @@ class AdversaryTab(ttk.Frame):
         self.attack_rows = []
         for atk in adv.get("attacks", []):
             self._add_attack_row(atk)
-        # armour
-        arm = adv.get("armour", {})
+        # armour — use the structured block if present, else parse the legacy
+        # free-text armour_desc so built-in adversaries show their pieces.
+        arm = adv.get("armour") or {}
+        if arm.get("pieces") or arm.get("helmet") or arm.get("shield"):
+            pieces, helmet, shield = (arm.get("pieces", []), arm.get("helmet", ""),
+                                      arm.get("shield", ""))
+        else:
+            pieces, helmet, shield = parse_armour_desc(adv.get("armour_desc", ""), self.combat)
         for name, var in self.piece_vars.items():
-            var.set(name in arm.get("pieces", []))
-        self.helmet_var.set(arm.get("helmet", ""))
-        self.shield_var.set(arm.get("shield", ""))
+            var.set(name in pieces)
+        self.helmet_var.set(helmet)
+        self.shield_var.set(shield)
         # skills/traits/passions
         self._set_text(self.skills_text, adv.get("skills", {}))
         self._set_text(self.traits_text, adv.get("traits", {}))
