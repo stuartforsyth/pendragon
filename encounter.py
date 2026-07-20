@@ -44,6 +44,35 @@ def roll_damage(damage_expr, base_dice, critical):
     return base, f"{damage_expr} = {base}"
 
 
+def resolve_roster(defn, n_players):
+    """Resolve a new-shape encounter definition's roster to concrete counts.
+
+    Returns a list of ``(adversary, count, promote)``. ``count`` per line is
+    either a fixed integer or ``"per_player"`` (× the party size × the scaling
+    factor). Used by both generation and the Creator's live preview.
+    """
+    scaling = defn.get("scaling", {})
+    per_player = scaling.get("per_player", 1.0)
+    if scaling.get("mode", "per_player") != "per_player":
+        per_player = 1.0  # fixed-count encounter: 'per_player' lines act as ×1
+    out = []
+    for line in defn.get("roster", []):
+        adv = line.get("adversary")
+        if not adv:
+            continue
+        count = line.get("count", 1)
+        if count == "per_player":
+            n = max(1, round(n_players * per_player))
+        else:
+            try:
+                n = max(0, int(count))
+            except (TypeError, ValueError):
+                n = 0
+        if n:
+            out.append((adv, n, bool(line.get("promote"))))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Combatant
 # ---------------------------------------------------------------------------
@@ -213,15 +242,37 @@ class Encounter:
         combatant.promote(self.promotion_cfg)
 
     def generate_from_theme(self, theme_name, n_players):
-        theme = self.themes[theme_name]
+        return self.generate_from_definition(self.themes[theme_name], n_players)
+
+    def generate_from_definition(self, defn, n_players):
+        """Build combatants from an encounter definition.
+
+        Supports the new explicit roster shape (``roster`` + ``scaling`` +
+        optional ``leader`` block) and the legacy pool shape (``core`` pool +
+        ``per_player`` + ``leader`` name).
+        """
         self.clear()
-        core = theme.get("core", list(self.templates))
-        count = max(1, round(n_players * theme.get("per_player", 1.0)))
-        for _ in range(count):
-            self.add_one(random.choice(core))
-        leader = theme.get("leader")
-        if leader and leader in self.templates:
-            self.promote(self.add_one(leader))
+        if "roster" in defn:
+            for adv, count, promote in resolve_roster(defn, n_players):
+                if adv not in self.templates:
+                    continue
+                for _ in range(count):
+                    c = self.add_one(adv)
+                    if promote:
+                        self.promote(c)
+            leader = defn.get("leader")
+            if isinstance(leader, dict) and leader.get("adversary") in self.templates:
+                c = self.add_one(leader["adversary"])
+                if leader.get("promote", True):
+                    self.promote(c)
+        else:  # legacy random-pool theme
+            core = defn.get("core", list(self.templates))
+            count = max(1, round(n_players * defn.get("per_player", 1.0)))
+            for _ in range(count):
+                self.add_one(random.choice(core))
+            leader = defn.get("leader")
+            if leader and leader in self.templates:
+                self.promote(self.add_one(leader))
         return self.combatants
 
 
@@ -309,8 +360,9 @@ class EncounterTab(ttk.Frame):
                     textvariable=self.players_var).pack(side="left", padx=(4, 10))
         ttk.Label(setup, text="Encounter:").pack(side="left")
         self.theme_var = tk.StringVar(value=next(iter(self.encounter.themes), ""))
-        ttk.Combobox(setup, textvariable=self.theme_var, width=20, state="readonly",
-                     values=list(self.encounter.themes)).pack(side="left", padx=(4, 10))
+        self.theme_combo = ttk.Combobox(setup, textvariable=self.theme_var, width=20,
+                                        state="readonly", values=list(self.encounter.themes))
+        self.theme_combo.pack(side="left", padx=(4, 10))
         ttk.Button(setup, text="Generate encounter",
                    command=self.on_generate).pack(side="left")
         ttk.Button(setup, text="Clear", command=self.on_clear).pack(side="left", padx=(6, 0))
@@ -676,6 +728,19 @@ class EncounterTab(ttk.Frame):
         self.encounter.generate_from_theme(theme, self.players_var.get())
         names = ", ".join(c.display_name for c in self.encounter.combatants)
         self._log(f"Generated '{theme}' for {self.players_var.get()} players: {names}")
+        self._refresh_rows()
+        self.set_status(f"Generated {len(self.encounter.combatants)} combatants.", "#2a7d2a")
+
+    def refresh_themes(self):
+        """Pick up encounters created/edited in the Encounter Creator tab."""
+        self.theme_combo["values"] = list(self.encounter.themes)
+
+    def run_definition(self, defn, n_players, name=""):
+        """Generate a live encounter from a definition (Send-to-tracker bridge)."""
+        self.encounter.generate_from_definition(defn, n_players)
+        names = ", ".join(c.display_name for c in self.encounter.combatants)
+        self._log(f"Generated '{name or defn.get('name', 'encounter')}' "
+                  f"for {n_players} players: {names}")
         self._refresh_rows()
         self.set_status(f"Generated {len(self.encounter.combatants)} combatants.", "#2a7d2a")
 

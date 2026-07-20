@@ -29,6 +29,7 @@ from tkinter import filedialog, messagebox, ttk
 
 import adversary as adversary_module
 import encounter as encounter_module
+import encounter_creator as encounter_creator_module
 import rules as rules_module
 
 # ---------------------------------------------------------------------------
@@ -638,15 +639,28 @@ class App(tk.Tk):
         self.notebook.add(gen_tab, text="NPC Generator")
         self._build_generator_tab(gen_tab)
 
-        # Encounter + Adversary Creator tabs (only if combat data is available).
+        # Encounter + creator tabs (only if combat data is available).
         self.adversary_tab = None
+        self.encounter_tab = None
         if self.generator.rules and self.generator.rules.combat:
-            enc_tab = encounter_module.EncounterTab(
+            self.encounter_tab = encounter_module.EncounterTab(
                 self.notebook, self.generator.rules, self._set_status)
-            self.notebook.add(enc_tab, text="Encounter")
+            self.notebook.add(self.encounter_tab, text="Encounter")
             self.adversary_tab = adversary_module.AdversaryTab(
                 self.notebook, self.generator, self._set_status)
             self.notebook.add(self.adversary_tab, text="Adversary Creator")
+            creator = encounter_creator_module.EncounterCreatorTab(
+                self.notebook, self.generator.rules, self._set_status,
+                self._send_encounter_to_tracker)
+            self.notebook.add(creator, text="Encounter Creator")
+
+    def _send_encounter_to_tracker(self, defn, n_players, name):
+        """Generate a live encounter from a definition and switch to the tracker."""
+        if not self.encounter_tab:
+            return
+        self.encounter_tab.refresh_themes()
+        self.encounter_tab.run_definition(defn, n_players, name)
+        self.notebook.select(self.encounter_tab)
 
     def _set_status(self, text, color="#2a7d2a"):
         self.status.config(text=text, foreground=color)
