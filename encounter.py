@@ -741,6 +741,10 @@ class EncounterTab(ttk.Frame):
         names = ", ".join(c.display_name for c in self.encounter.combatants)
         self._log(f"Generated '{name or defn.get('name', 'encounter')}' "
                   f"for {n_players} players: {names}")
+        if defn.get("description", "").strip():
+            self._log(f"  {defn['description'].strip()}")
+        if defn.get("notes", "").strip():
+            self._log(f"  GM notes: {defn['notes'].strip()}")
         self._refresh_rows()
         self.set_status(f"Generated {len(self.encounter.combatants)} combatants.", "#2a7d2a")
 

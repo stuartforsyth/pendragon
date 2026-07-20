@@ -159,6 +159,13 @@ class EncounterCreatorTab(ttk.Frame):
         ttk.Entry(info, textvariable=self.tags_var, width=30).grid(
             row=2, column=1, columnspan=3, sticky="w")
 
+        # GM notes & campaign references — free text stored in the config file
+        # with the encounter (distinct from the short one-line Description above).
+        gm = self._section("GM notes & campaign references  (saved with the encounter)")
+        self.notes_text = tk.Text(gm, height=6, width=48, wrap="word",
+                                  font=("TkDefaultFont", 10))
+        self.notes_text.pack(fill="both", expand=True, padx=6, pady=4)
+
         scl = self._section("Scaling")
         self.mode_var = tk.StringVar(value="per_player")
         ttk.Radiobutton(scl, text="Per player", value="per_player",
@@ -189,11 +196,6 @@ class EncounterCreatorTab(ttk.Frame):
         ttk.Checkbutton(lf, text="promote", variable=self.leader_promote,
                         command=self._update_preview).pack(side="left")
         self.leader_var.trace_add("write", lambda *a: self._update_preview())
-
-        nf = self._section("Notes")
-        self.notes_text = tk.Text(nf, height=3, width=48, wrap="word",
-                                  font=("TkDefaultFont", 10))
-        self.notes_text.pack(fill="x", padx=6, pady=4)
 
         pf = self._section("Preview")
         prow = ttk.Frame(pf)
