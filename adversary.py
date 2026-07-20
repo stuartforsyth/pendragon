@@ -219,6 +219,7 @@ class AdversaryTab(ttk.Frame):
         self.draft_key = None          # library key being edited, or None if new
         self.attack_rows = []
         self.piece_vars = {}
+        self._traits_snapshot = {}     # traits at last focus-in, for pair balancing
         self._build_ui()
         self._refresh_library()
         self._show(self.draft, None)
@@ -394,18 +395,26 @@ class AdversaryTab(ttk.Frame):
             ("passions_text", "Passions", self._passion_vocab(), self._roll_passion_value),
         ]
         for attr, title, vocab, rollfn in pickers:
-            sf = self._section(f"{title}  (one 'Name value' per line)")
+            hint = " — pairs balance to 20" if attr == "traits_text" else ""
+            sf = self._section(f"{title}  (one 'Name value' per line{hint})")
             t = tk.Text(sf, height=4, width=48, wrap="word", font=("TkDefaultFont", 10))
             prow = ttk.Frame(sf)
             prow.pack(fill="x", padx=6, pady=(4, 0))
             var = tk.StringVar()
             ttk.Combobox(prow, textvariable=var, width=22, state="readonly",
                          values=vocab).pack(side="left")
-            ttk.Button(prow, text="Add",
-                       command=lambda tw=t, vv=var, rf=rollfn: self._append_stat(tw, vv.get(), rf)
-                       ).pack(side="left", padx=(6, 0))
+            if attr == "traits_text":
+                cmd = lambda vv=var: self._add_trait(vv.get())
+            else:
+                cmd = lambda tw=t, vv=var, rf=rollfn: self._append_stat(tw, vv.get(), rf)
+            ttk.Button(prow, text="Add", command=cmd).pack(side="left", padx=(6, 0))
             t.pack(fill="x", padx=6, pady=4)
             setattr(self, attr, t)
+
+        # Keep trait pairs consistent after manual edits (snapshot on focus in,
+        # balance on focus out).
+        self.traits_text.bind("<FocusIn>", lambda e: self._snapshot_traits())
+        self.traits_text.bind("<FocusOut>", self._normalise_traits)
 
         # Auto-generate all
         gf = self._section("Auto-generate from an NPC template")
@@ -515,6 +524,7 @@ class AdversaryTab(ttk.Frame):
         self._set_text(self.skills_text, adv.get("skills", {}))
         self._set_text(self.traits_text, adv.get("traits", {}))
         self._set_text(self.passions_text, adv.get("passions", {}))
+        self._snapshot_traits()
         self._recompute_derived()
         self._recompute_armour()
 
@@ -534,7 +544,13 @@ class AdversaryTab(ttk.Frame):
         return sorted(names)
 
     def _trait_vocab(self):
-        return sorted({t for pair in self.rules.trait_pairs for t in pair})
+        # Show each trait with its balancing partner in brackets, e.g.
+        # "Valorous (Cowardly)", so the pairing is easy to remember.
+        opts = []
+        for a, b in self.rules.trait_pairs:
+            opts.append(f"{a} ({b})")
+            opts.append(f"{b} ({a})")
+        return sorted(opts)
 
     def _passion_vocab(self):
         return sorted(self.rules.passion_starts)
@@ -553,6 +569,13 @@ class AdversaryTab(ttk.Frame):
             return max(1, min(25, base + random.randint(-2, 3)))
         return max(1, min(20, roll_expr("2D6+8")))
 
+    @staticmethod
+    def _append_line(widget, line):
+        current = widget.get("1.0", "end").rstrip("\n")
+        widget.delete("1.0", "end")
+        widget.insert("1.0", (current + "\n" if current else "") + line)
+        widget.see("end")
+
     def _append_stat(self, text_widget, name, roll_fn):
         """Add 'name value' (autorolled) to the list, unless already present."""
         name = name.strip()
@@ -561,12 +584,75 @@ class AdversaryTab(ttk.Frame):
         if name in _text_to_map(text_widget.get("1.0", "end")):
             self.set_status(f"{name} is already listed.", "#a33")
             return
-        current = text_widget.get("1.0", "end").rstrip("\n")
         line = f"{name} {roll_fn(name)}"
-        text_widget.delete("1.0", "end")
-        text_widget.insert("1.0", (current + "\n" if current else "") + line)
-        text_widget.see("end")
+        self._append_line(text_widget, line)
         self.set_status(f"Added {line}.", "#2a7d2a")
+
+    # -- trait pairs (balanced, sum to 20) ---------------------------------
+
+    def _partner_of(self, trait):
+        for a, b in self.rules.trait_pairs:
+            if trait == a:
+                return b
+            if trait == b:
+                return a
+        return None
+
+    def _add_trait(self, choice):
+        """Add a trait. If its pair partner is listed, value = 20 - partner;
+        otherwise roll the first of the pair. The dropdown shows 'Trait (Partner)'."""
+        name = choice.split(" (")[0].strip()
+        if not name:
+            return
+        current = _text_to_map(self.traits_text.get("1.0", "end"))
+        if name in current:
+            self.set_status(f"{name} is already listed.", "#a33")
+            return
+        partner = self._partner_of(name)
+        if partner and partner in current:
+            value = max(0, min(20, 20 - current[partner]))
+            note = f"balanced against {partner} {current[partner]}"
+        else:
+            value = self._roll_trait_value(name)
+            note = "rolled"
+        self._append_line(self.traits_text, f"{name} {value}")
+        self._snapshot_traits()
+        self.set_status(f"Added {name} {value} ({note}).", "#2a7d2a")
+
+    def _snapshot_traits(self):
+        self._traits_snapshot = _text_to_map(self.traits_text.get("1.0", "end"))
+
+    def _normalise_traits(self, *_):
+        """After a manual edit: clamp each value to 0..20 and keep every listed
+        pair summing to 20 (the side the user just changed stays authoritative)."""
+        m = _text_to_map(self.traits_text.get("1.0", "end"))
+        if not m:
+            self._traits_snapshot = {}
+            return
+        order = list(m)
+        snap = getattr(self, "_traits_snapshot", {})
+        for n in order:
+            m[n] = max(0, min(20, m[n]))
+        handled = set()
+        for n in order:
+            if n in handled:
+                continue
+            p = self._partner_of(n)
+            if not p or p not in m:
+                continue
+            n_changed, p_changed = snap.get(n) != m[n], snap.get(p) != m[p]
+            if p_changed and not n_changed:
+                auth, other = p, n
+            else:  # n changed / both / neither -> earlier-listed is authoritative
+                auth, other = (n, p) if order.index(n) < order.index(p) else (p, n)
+            m[other] = max(0, min(20, 20 - m[auth]))
+            handled.update((n, p))
+        new = "\n".join(f"{k} {m[k]}" for k in order)
+        if new != self.traits_text.get("1.0", "end").rstrip("\n"):
+            self.traits_text.delete("1.0", "end")
+            self.traits_text.insert("1.0", new)
+            self.set_status("Balanced trait pairs (each sums to 20).", "#1a5fb4")
+        self._traits_snapshot = dict(m)
 
     def _char_ints(self):
         out = {}
@@ -697,6 +783,7 @@ class AdversaryTab(ttk.Frame):
         self._set_text(self.skills_text, src["skills"])
         self._set_text(self.traits_text, src["traits"])
         self._set_text(self.passions_text, src["passions"])
+        self._snapshot_traits()
         if not self.culture_var.get():
             self.culture_var.set(culture)
         if not self.religion_var.get():
