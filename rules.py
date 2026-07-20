@@ -424,16 +424,77 @@ def load_rules(path):
     _validate(data)
     rules = Rules(data)
 
-    # Optional combat data (Encounter Generator); absent = combat features off.
-    combat_path = os.path.join(os.path.dirname(path), "combat.json")
+    # Optional combat data (Encounter/Adversary tabs); absent = combat off.
+    # The tracked baseline is examplecombat.json; the app copies it to a
+    # git-ignored working combat.json on first edit (see the creator specs).
+    # Prefer the working file, fall back to the baseline.
+    data_dir = os.path.dirname(path)
+    combat_path = _combat_path(data_dir)
     if os.path.isfile(combat_path):
         try:
             with open(combat_path, encoding="utf-8") as fh:
                 rules.combat = json.load(fh)
         except json.JSONDecodeError as exc:
             raise RulesError(f"{combat_path} is not valid JSON: {exc}") from exc
+        _unify_combat(rules.combat)
 
     return rules
+
+
+# -- combat data: working/example paths, schema unification, writer -----------
+
+def working_combat_path(data_dir):
+    """The live, git-ignored working file (written by the creators)."""
+    return os.path.join(data_dir, "combat.json")
+
+
+def example_combat_path(data_dir):
+    """The tracked, read-only baseline shipped with the app."""
+    return os.path.join(data_dir, "examplecombat.json")
+
+
+def _combat_path(data_dir):
+    """Prefer the working file; fall back to the shipped baseline."""
+    working = working_combat_path(data_dir)
+    return working if os.path.isfile(working) else example_combat_path(data_dir)
+
+
+def _unify_combat(combat):
+    """Expose one canonical model regardless of legacy/new key names.
+
+    Canonical keys are ``adversaries`` and ``encounters``. Files may still use
+    the legacy ``enemy_templates`` / ``encounter_themes`` names; either way both
+    names end up referring to the *same* dict objects, and every adversary gets
+    default ``kind``/``category`` so generic/named and human/beast are explicit.
+    """
+    adv = combat.get("adversaries")
+    if adv is None:
+        adv = combat.get("enemy_templates", {})
+    for entry in adv.values():
+        entry.setdefault("kind", "generic")
+        entry.setdefault("category", "human")
+    combat["adversaries"] = adv
+    combat["enemy_templates"] = adv          # back-compat alias (same object)
+
+    enc = combat.get("encounters")
+    if enc is None:
+        enc = combat.get("encounter_themes", {})
+    combat["encounters"] = enc
+    combat["encounter_themes"] = enc         # back-compat alias (same object)
+
+
+def save_combat(combat, data_dir):
+    """Write combat data to the working file (never the tracked baseline).
+
+    Drops the back-compat alias keys so the file stays single-sourced under the
+    canonical ``adversaries``/``encounters`` names.
+    """
+    out = {k: v for k, v in combat.items()
+           if k not in ("enemy_templates", "encounter_themes")}
+    path = working_combat_path(data_dir)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(out, fh, ensure_ascii=False, indent=2)
+    return path
 
 
 if __name__ == "__main__":  # quick self-test
