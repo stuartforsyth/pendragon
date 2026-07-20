@@ -1,6 +1,17 @@
 # Specification — Adversary Creator (new tab)
 
-Status: **DRAFT — awaiting sign-off. No code until approved.**
+Status: **SIGNED OFF (design) — implementation not yet started; awaiting "go".**
+
+**Locked decisions:**
+- **Persistence (§4):** ship `data/examplecombat.json` (tracked); copy to a
+  git-ignored `data/combat.json` on first edit; app reads/writes that one file.
+- **Data model (§3):** unify — `enemy_templates → adversaries` (with `kind`
+  generic/named + `category`) and `encounter_themes → encounters`, with
+  load-time aliases so the existing Encounter tab is unaffected.
+- **Weapon/armour data:** enrich the weapon (damage) and armour (points) tables
+  in the baseline **first**, so pickers auto-fill (§10.1).
+- **Build order:** Adversary Creator **before** Encounter Creator; the
+  weapon/armour enrichment is part of its groundwork.
 
 A new tab to **search for, edit, and add adversaries** — the reusable stat
 blocks that encounters are built from. Human adversaries exist today; the
@@ -302,15 +313,15 @@ Unknown categories fall back to the raw stat fields, so data is never lost.
 
 ---
 
-## 11. Open questions for sign-off
+## 11. Sign-off status
 1. **Persistence — DECIDED (§4):** `examplecombat.json` (tracked) copied to a
    git-ignored `combat.json` on first edit; single working file.
-2. **Terminology/migration:** adopt the unified `adversaries` map (with
-   back-compat aliases), or keep `enemy_templates` and add a parallel map?
-3. **Weapon/armour data:** enrich the tables first (§10.1), or ship the editor
-   with free-text damage/points for now and enrich later?
-4. **Build order:** Adversary Creator before Encounter Creator? (recommended.)
-5. **Create Adversary default:** always **named** from an NPC (recommended), or
-   prompt named/generic each time?
-6. **Editor layout:** collapsible sections (recommended for a tall form) vs
-   sub-tabs within the editor pane?
+2. **Terminology/migration — DECIDED:** unify into `adversaries` / `encounters`
+   with back-compat aliases (§3).
+3. **Weapon/armour data — DECIDED:** enrich the tables first (§10.1).
+4. **Build order — DECIDED:** Adversary Creator before Encounter Creator.
+
+Minor UI defaults (assumed unless you say otherwise, not blocking):
+5. **Create Adversary** from an NPC always produces a **named** adversary (with
+   a later "save as generic type" option).
+6. Editor uses **collapsible sections** (§7.2) for the tall form.

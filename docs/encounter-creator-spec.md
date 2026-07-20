@@ -1,6 +1,11 @@
 # Specification — Encounter Creator (new tab)
 
-Status: **DRAFT — awaiting sign-off. No code until approved.**
+Status: **SIGNED OFF (design) — built after the Adversary Creator; awaiting "go".**
+
+**Locked decisions (shared with the Adversary Creator spec):** unify the data
+model (`encounter_themes → encounters`, back-compat adapter); persistence via
+`examplecombat.json` → git-ignored `combat.json`; this tab is built **after**
+the Adversary Creator (it composes adversaries).
 
 A new tab to **create, edit, and manage encounter definitions** — the reusable
 recipes the Encounter tab turns into a live fight. Today these recipes are the
@@ -184,8 +189,8 @@ use them travel together and are safe across `git pull`.
 1. **Merge with the existing Encounter tab?** Keep Creator (definitions) and
    Encounter (run) as **separate tabs** with a "Send to tracker" bridge
    (recommended), or fold definition-editing into the existing tab?
-2. **Schema:** adopt the richer `encounters` map with a back-compat adapter
-   (recommended), or keep `encounter_themes` and extend it in place?
+2. **Schema — DECIDED:** adopt the richer `encounters` map with a back-compat
+   adapter (part of the unify decision).
 3. **Counts:** integer + ×players only to start, or include dice ranges now?
 4. **Difficulty estimate:** include the advisory band (§6) in v1, or defer?
 5. **Persistence — DECIDED:** shares the `examplecombat.json` → git-ignored
