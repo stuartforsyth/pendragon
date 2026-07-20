@@ -611,6 +611,7 @@ class App(tk.Tk):
         self._current = None            # currently displayed result dict
         self._current_in_roster = None  # index if the current NPC is a roster entry
         self.roster = []                # NPCs kept this session
+        self._detail_link_tags = []     # click-to-roll tags in the details Text
 
         self.title("Pendragon NPC Generator")
         self.geometry("780x1000")
@@ -740,8 +741,6 @@ class App(tk.Tk):
         self.details.tag_configure("label", font=("TkDefaultFont", 11, "bold"))
         self.details.tag_configure("desc", font=("TkDefaultFont", 11, "italic"),
                                    foreground="#333")
-        self.details.tag_configure("famous", font=("TkDefaultFont", 11, "bold"),
-                                   foreground="#8a4b00")
         self.details.configure(state="disabled")
 
         # GM notes — free text per NPC, persisted with the roster.
@@ -858,7 +857,7 @@ class App(tk.Tk):
         self.reroll_menu.config(state="readonly")
         self.reroll_btn.config(state="normal")
         self.status.config(
-            text="Generated. Click the name to copy it, or use the Copy buttons.",
+            text="Generated. Click the name to copy it; click a trait/passion value to roll it.",
             foreground="#2a7d2a",
         )
 
@@ -886,9 +885,29 @@ class App(tk.Tk):
         self.details.configure(state="normal")
         self.details.delete("1.0", "end")
 
+        # Drop the click-to-roll tags from the previous render so they don't leak.
+        for tag in self._detail_link_tags:
+            self.details.tag_delete(tag)
+        self._detail_link_tags = []
+
         def row(label, value):
             self.details.insert("end", f"{label}: ", ("label",))
             self.details.insert("end", f"{value}\n")
+
+        def roll_link(name, value):
+            """Insert a value that rolls d20 against itself when clicked."""
+            self._detail_link_tags.append(tag := f"roll{len(self._detail_link_tags)}")
+            famous = value >= FAMOUS
+            self.details.tag_configure(
+                tag, underline=1, foreground=("#8a4b00" if famous else "#1a5fb4"),
+                font=("TkDefaultFont", 11, "bold" if famous else "normal"))
+            self.details.tag_bind(tag, "<Button-1>",
+                                  lambda e, n=name, v=value: self._roll_personality(n, v))
+            self.details.tag_bind(tag, "<Enter>",
+                                  lambda e: self.details.configure(cursor="hand2"))
+            self.details.tag_bind(tag, "<Leave>",
+                                  lambda e: self.details.configure(cursor=""))
+            self.details.insert("end", str(value), (tag,))
 
         # Read-aloud description paragraph, above everything else.
         self.details.insert("end", build_description(r) + "\n\n", ("desc",))
@@ -909,11 +928,19 @@ class App(tk.Tk):
             for i, (left, lval, right, rval) in enumerate(r["traits"]):
                 if i:
                     self.details.insert("end", ", ")
-                tag = ("famous",) if max(lval, rval) >= FAMOUS else ()
-                self.details.insert("end", _trait_entry(left, lval, right, rval), tag)
+                self.details.insert("end", f"{left} ")
+                roll_link(left, lval)
+                self.details.insert("end", f"/{right} ")
+                roll_link(right, rval)
             self.details.insert("end", "\n")
         if r.get("passions"):
-            row("Passions", _passions_str(r["passions"]))
+            self.details.insert("end", "Passions: ", ("label",))
+            for i, (name, value) in enumerate(r["passions"]):
+                if i:
+                    self.details.insert("end", ", ")
+                self.details.insert("end", f"{name} ")
+                roll_link(name, value)
+            self.details.insert("end", "\n")
         if r.get("directed"):
             row(r["directed"]["kind"], r["directed"]["text"])
 
@@ -942,6 +969,19 @@ class App(tk.Tk):
                 self.details.insert("end", f"  • {hint}\n")
 
         self.details.configure(state="disabled")
+
+    def _roll_personality(self, name, value):
+        """Click-to-roll a trait/passion: d20 vs the value, written into GM Notes."""
+        roll, outcome = encounter_module.resolve_skill(value)
+        stamp = datetime.datetime.now().strftime("%H:%M")
+        line = f"[{stamp}] {name} ({value}): rolled {roll} — {outcome.upper()}"
+        existing = self.notes_text.get("1.0", "end").strip()
+        self.notes_text.insert("end" if existing else "1.0",
+                               ("\n" + line) if existing else line)
+        self.notes_text.see("end")
+        self._sync_notes_from_widget()  # keep the current NPC dict / roster in sync
+        self._set_status(f"{name} ({value}): rolled {roll} — {outcome}",
+                         encounter_module.OUTCOME_COLOR.get(outcome, "#000"))
 
     def _to_clipboard(self, text, message):
         self.clipboard_clear()
