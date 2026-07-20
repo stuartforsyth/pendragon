@@ -124,6 +124,16 @@ class Combatant:
     def armor_total(self):
         return self.armor_points + self.shield
 
+    def describe_armour(self):
+        """Armour and shield shown separately, plus the total. A GM needs the
+        armour-only value because some hits bypass the shield."""
+        if self.shield:
+            breakdown = (f"{self.armor_points} armour + {self.shield} shield "
+                         f"= {self.armor_total()} total")
+        else:
+            breakdown = f"{self.armor_points} armour, no shield"
+        return f"{self.armour_desc} — {breakdown}" if self.armour_desc else breakdown
+
     def describe_looks(self):
         """A short describable look: defining feature + eye colour."""
         parts = [p for p in (self.feature,
@@ -239,9 +249,8 @@ class CombatLog:
                        if c.engaged_with.strip() else "")
                 out.append(f"- {c.display_name} — Hit Points {c.cur_hp}/{c.max_hp} "
                            f"({c.status}){eng}")
-                arm = c.armour_desc or f"{c.armor_total()} points"
                 looks = c.describe_looks()
-                out.append(f"    - Armour: {arm}"
+                out.append(f"    - Armour: {c.describe_armour()}"
                            + (f"; Looks: {looks}" if looks else ""))
             out.append("")
         out += ["## Events", ""]
@@ -452,8 +461,7 @@ class EncounterTab(ttk.Frame):
 
         # Flavour line: the template's description, the armour worn, and a defining
         # look — so the GM can vividly describe the combatant. Readable size (§7).
-        arm = (f"Armour: {c.armour_desc} ({c.armor_total()} points)"
-               if c.armour_desc else f"Armour: {c.armor_total()} points")
+        arm = f"Armour: {c.describe_armour()}"
         looks = c.describe_looks()
         bits = [b for b in (c.description, arm,
                             f"Looks: {looks}" if looks else "") if b]
