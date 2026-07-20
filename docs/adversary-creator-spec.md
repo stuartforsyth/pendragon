@@ -115,23 +115,37 @@ Encounter tab breaks.** New writes use the unified map.
 
 ---
 
-## 4. Persistence — a writable user library (NEW infrastructure)
+## 4. Persistence — example baseline + a single working file (AGREED)
 
-`combat.json` is currently **read-only** at runtime. Editing/adding
-adversaries needs a writer. **Proposed:** keep the shipped baseline immutable
-and store user content in a separate file:
+One source of truth at runtime, protected from `git pull`:
 
-- `data/combat.json` — shipped baseline (never written by the app).
-- `data/library.user.json` — user adversaries **and** encounters (see the
-  Encounter Creator spec), same schema, **layered over** the baseline at load:
-  a user key with the same name **overrides** the built-in; new keys **add**.
-- Writer mirrors the roster save (`json.dump(..., indent=2, ensure_ascii=False)`)
-  with a `schema_version` for migration.
-- **Reset/Revert to built-in** is possible because the baseline is untouched.
+- **`data/examplecombat.json`** — tracked, shipped defaults (adversaries,
+  encounters, weapons, armour, …). Read-only; future updates arrive via
+  `git pull`; works on a fresh clone.
+- **`data/combat.json`** — the **live working file**; **git-ignored**. Created
+  by **copying** `examplecombat.json` on the **first edit**. From then on the
+  app reads **and** writes only this file.
+- **Load order:** if `data/combat.json` exists, use it; otherwise fall back to
+  `data/examplecombat.json`.
+- Because `combat.json` is git-ignored, `git pull` can deliver a new
+  `examplecombat.json` **without touching** the user's working file.
 
-Rationale: app updates that ship new `combat.json` never clobber user work;
-user content is portable and diff-friendly; a single library file keeps
-adversaries and their encounters together.
+This gives a **single file to edit** — built-ins and user content are the same
+document, so anything that came from the baseline can be freely changed — while
+keeping user work safe across updates.
+
+**Accepted trade-off:** once `combat.json` exists, new built-in content from a
+later `examplecombat.json` is **not** auto-merged (the working file is
+authoritative). Optional future helpers: **Reset to example** (discard the
+working file, fall back to the baseline) and **Import new examples** (copy in
+only the baseline keys the working file lacks).
+
+**Migration (at implementation time, not now):** `git mv data/combat.json
+data/examplecombat.json`; add `data/combat.json` to `.gitignore`; update
+`rules.load_rules` to prefer the working file and fall back to the example.
+Safe to do because the app has never written `combat.json` — it is still the
+pristine baseline. The writer mirrors the roster save
+(`json.dump(..., indent=2, ensure_ascii=False)`) and stamps `schema_version`.
 
 ---
 
@@ -271,8 +285,9 @@ Unknown categories fall back to the raw stat fields, so data is never lost.
    transcribe **Table 8.1 (weapon damage)** and **Table 9.x (armour points)**
    into `combat.json`. Recommend doing this small data task **before** the
    editor, otherwise users must hand-type damage/points.
-2. **One writable user library** (`data/library.user.json`) layered over the
-   baseline (§4) — protects user work across updates and is shareable.
+2. **Persistence (agreed, §4):** ship `data/examplecombat.json` (tracked) and
+   copy it to a git-ignored `data/combat.json` on first edit — one working file,
+   safe across `git pull`.
 3. **Unify terminology** (`enemy_templates` → `adversaries`, `kind`/`category`)
    with load-time aliases so the current Encounter tab is unaffected.
 4. **Category manifest** now (even if only "human" is populated) so beasts/fae/
@@ -288,8 +303,8 @@ Unknown categories fall back to the raw stat fields, so data is never lost.
 ---
 
 ## 11. Open questions for sign-off
-1. **Persistence:** one `library.user.json` layered over `combat.json` (§4), or
-   write directly into `combat.json`, or per-file exports only?
+1. **Persistence — DECIDED (§4):** `examplecombat.json` (tracked) copied to a
+   git-ignored `combat.json` on first edit; single working file.
 2. **Terminology/migration:** adopt the unified `adversaries` map (with
    back-compat aliases), or keep `enemy_templates` and add a parallel map?
 3. **Weapon/armour data:** enrich the tables first (§10.1), or ship the editor

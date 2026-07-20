@@ -139,12 +139,12 @@ advisory — Pendragon is deadly by design — but it helps a GM tune a fight.
 ---
 
 ## 7. Persistence
-Shares the **writable user library** introduced in the Adversary Creator spec
-(`data/library.user.json`, layered over `data/combat.json`). Encounter
-definitions live under an `encounters` key alongside `adversaries`, so a user's
-custom foes and the encounters that use them travel together and export as one
-file. Built-in definitions remain in `combat.json` and are never overwritten
-(edit = duplicate to user).
+Shares the persistence model agreed in the Adversary Creator spec (§4):
+`data/examplecombat.json` (tracked baseline) is copied to a git-ignored
+`data/combat.json` on first edit, and the app then reads/writes that single
+working file. Encounter definitions live under an `encounters` key **alongside**
+`adversaries` in the same file, so a user's custom foes and the encounters that
+use them travel together and are safe across `git pull`.
 
 ---
 
@@ -188,5 +188,5 @@ file. Built-in definitions remain in `combat.json` and are never overwritten
    (recommended), or keep `encounter_themes` and extend it in place?
 3. **Counts:** integer + ×players only to start, or include dice ranges now?
 4. **Difficulty estimate:** include the advisory band (§6) in v1, or defer?
-5. **Persistence:** confirm the shared `library.user.json` approach from the
-   Adversary Creator spec.
+5. **Persistence — DECIDED:** shares the `examplecombat.json` → git-ignored
+   `combat.json` working-file model (Adversary Creator spec §4).
