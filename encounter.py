@@ -283,6 +283,11 @@ class EncounterTab(ttk.Frame):
         self.norm_font = tkfont.Font(family="TkDefaultFont", size=10)
         self.down_font = tkfont.Font(family="TkDefaultFont", size=10, overstrike=1)
         self.elite_font = tkfont.Font(family="TkDefaultFont", size=10, weight="bold")
+        # Stats are now the primary interaction surface (click-to-roll), so show
+        # them at a readable size rather than the old tiny detail font.
+        self.stat_font = tkfont.Font(family="TkDefaultFont", size=10)
+        self.frame_bg = ttk.Style().lookup("TFrame", "background") or self.cget("background")
+        self._link_seq = 0
 
         setup = ttk.Frame(self)
         setup.pack(fill="x", padx=10, pady=(10, 4))
@@ -399,16 +404,6 @@ class EncounterTab(ttk.Frame):
         ttk.Button(row, text="Apply", width=5,
                    command=lambda cc=c, v=dv: self._apply_hp(cc, v.get())).grid(row=0, column=4)
 
-        # Weapon + roll buttons
-        weapons = [a["weapon"] for a in c.attacks]
-        wv = tk.StringVar(value=weapons[0] if weapons else "")
-        ttk.Combobox(row, textvariable=wv, values=weapons, width=13,
-                     state="readonly").grid(row=0, column=5, padx=(8, 2))
-        ttk.Button(row, text="Skill",
-                   command=lambda cc=c, v=wv: self._roll_skill(cc, v.get())).grid(row=0, column=6)
-        ttk.Button(row, text="Dmg",
-                   command=lambda cc=c, v=wv: self._roll_damage(cc, v.get())).grid(row=0, column=7)
-
         # Actions menu (promote/demote, knock out/revive, ransom, morale)
         mb = ttk.Menubutton(row, text="Actions ▾", width=9)
         menu = tk.Menu(mb, tearoff=0)
@@ -423,24 +418,13 @@ class EncounterTab(ttk.Frame):
             menu.add_command(label="Morale check",
                              command=lambda cc=c: self._morale_check(cc))
         mb["menu"] = menu
-        mb.grid(row=0, column=8, padx=(8, 0))
+        mb.grid(row=0, column=5, padx=(8, 0))
         ttk.Button(row, text="✕", width=2,
-                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=9, padx=(4, 0))
+                   command=lambda cc=c: self._remove(cc)).grid(row=0, column=6, padx=(4, 0))
 
-        # Stat detail line: characteristics · attacks · skills (spelled out)
-        ch = c.characteristics
-        stat = "  ".join(f"{CHAR_FULL[k]} {ch[k]}"
-                         for k in ("SIZ", "DEX", "STR", "CON", "APP"))
-        atks = ", ".join(f"{a['weapon']} {a['value']} ({a['damage']})" for a in c.attacks)
-        detail = f"{stat}   ·   {atks}"
-        if c.skills:
-            detail += "   ·   Skills: " + ", ".join(f"{k} {v}" for k, v in c.skills.items())
-        detail += f"   ·   Major Wound {c.major_wound}"
-        if c.morale_minimum:
-            detail += f", Morale {c.morale_minimum}"
-        tk.Label(row, text=detail, anchor="w", justify="left", wraplength=740,
-                 font=("TkDefaultFont", 8), fg=("#aaa" if down else "#666")
-                 ).grid(row=1, column=0, columnspan=10, sticky="w", padx=(6, 0))
+        # Clickable stat line: every number is a roll link (§7, §8). Characteristics,
+        # attack skill values, attack damage and skills are all clickable tokens.
+        self._build_stat_line(row, c, down)
 
         # Armour worn + a defining look, so the GM can describe the combatant.
         arm = (f"Armour: {c.armour_desc} ({c.armor_total()} points)"
@@ -449,7 +433,71 @@ class EncounterTab(ttk.Frame):
         line3 = arm + (f"   ·   Looks: {looks}" if looks else "")
         tk.Label(row, text=line3, anchor="w", justify="left", wraplength=740,
                  font=("TkDefaultFont", 8), fg=("#aaa" if down else "#555")
-                 ).grid(row=2, column=0, columnspan=10, sticky="w", padx=(6, 0), pady=(0, 2))
+                 ).grid(row=2, column=0, columnspan=7, sticky="w", padx=(6, 0), pady=(0, 2))
+
+    def _build_stat_line(self, row, c, down):
+        """A read-only Text widget whose numbers are click-to-roll links."""
+        txt = tk.Text(row, wrap="word", height=1, borderwidth=0, cursor="",
+                      highlightthickness=0, background=self.frame_bg,
+                      font=self.stat_font, spacing1=1, spacing3=1)
+        txt.grid(row=1, column=0, columnspan=7, sticky="ew", padx=(6, 0))
+        plain_fg = "#aaa" if down else "#333"
+        txt.tag_configure("plain", foreground=plain_fg)
+
+        def plain(text):
+            txt.insert("end", text, "plain")
+
+        def link(text, callback):
+            self._link_seq += 1
+            tag = f"lnk{self._link_seq}"
+            txt.tag_configure(tag, foreground=("#9ab" if down else "#1a5fb4"),
+                              underline=1)
+            txt.tag_bind(tag, "<Button-1>", lambda e, cb=callback: cb())
+            txt.tag_bind(tag, "<Enter>", lambda e: txt.configure(cursor="hand2"))
+            txt.tag_bind(tag, "<Leave>", lambda e: txt.configure(cursor=""))
+            txt.insert("end", text, (tag,))
+
+        ch = c.characteristics
+        for j, k in enumerate(("SIZ", "DEX", "STR", "CON", "APP")):
+            if j:
+                plain("  ")
+            plain(f"{CHAR_FULL[k]} ")
+            link(str(ch[k]), lambda cc=c, kk=k: self._roll_char(cc, kk))
+
+        plain("   ·   ")
+        for j, atk in enumerate(c.attacks):
+            if j:
+                plain(",  ")
+            plain(f"{atk['weapon']} ")
+            link(str(atk["value"]), lambda cc=c, a=atk: self._roll_attack(cc, a))
+            plain(" (")
+            link(atk["damage"], lambda cc=c, a=atk: self._roll_attack_damage(cc, a))
+            plain(")")
+
+        if c.skills:
+            plain("   ·   Skills: ")
+            for j, (name, value) in enumerate(c.skills.items()):
+                if j:
+                    plain(", ")
+                plain(f"{name} ")
+                link(str(value), lambda cc=c, nm=name, v=value: self._roll_named_skill(cc, nm, v))
+
+        plain(f"   ·   Major Wound {c.major_wound}")
+        if c.morale_minimum:
+            plain(f", Morale {c.morale_minimum}")
+
+        txt.configure(state="disabled")
+        txt.bind("<Configure>", lambda e, t=txt: self._fit_text_height(t))
+
+    @staticmethod
+    def _fit_text_height(txt):
+        """Grow/shrink a Text widget to fit its wrapped content."""
+        res = txt.count("1.0", "end-1c", "displaylines")
+        if isinstance(res, tuple):
+            res = res[0] if res else 1
+        n = max(1, int(res or 1))
+        if int(txt["height"]) != n:
+            txt.configure(height=n)
 
     # -- actions -----------------------------------------------------------
 
@@ -538,19 +586,31 @@ class EncounterTab(ttk.Frame):
             self._log(f"— {text}")
             self.round_note.delete(0, "end")
 
-    def _roll_skill(self, c, weapon):
-        atk = next((a for a in c.attacks if a["weapon"] == weapon), None)
-        if not atk:
-            return
+    def _roll_char(self, c, key):
+        """Characteristic roll: pass/fail only (no crit/fumble — Core Ch.2)."""
+        value = c.characteristics[key]
+        roll = random.randint(1, 20)
+        outcome = "success" if roll <= value else "failure"
+        label = CHAR_FULL[key]
+        self._log(f"{c.log_name} rolls {label} ({value}): {roll} — {outcome.upper()}")
+        self.set_status(f"{c.display_name} {label} {value}: rolled {roll} — {outcome}",
+                        OUTCOME_COLOR.get(outcome, "#000"))
+
+    def _roll_named_skill(self, c, name, value):
+        roll, outcome = resolve_skill(value)
+        self._log(f"{c.log_name} rolls {name} ({value}): {roll} — {outcome.upper()}")
+        self.set_status(f"{c.display_name} {name} {value}: rolled {roll} — {outcome}",
+                        OUTCOME_COLOR.get(outcome, "#000"))
+
+    def _roll_attack(self, c, atk):
+        weapon = atk["weapon"]
         roll, outcome = resolve_skill(atk["value"])
         self._log(f"{c.log_name} rolls {weapon} ({atk['value']}): {roll} — {outcome.upper()}")
         self.set_status(f"{c.display_name} {weapon} {atk['value']}: rolled {roll} — {outcome}",
                         OUTCOME_COLOR.get(outcome, "#000"))
 
-    def _roll_damage(self, c, weapon):
-        atk = next((a for a in c.attacks if a["weapon"] == weapon), None)
-        if not atk:
-            return
+    def _roll_attack_damage(self, c, atk):
+        weapon = atk["weapon"]
         crit = messagebox.askyesno(
             "Critical hit?",
             f"Was {c.display_name}'s {weapon} attack a critical hit?\n\n"

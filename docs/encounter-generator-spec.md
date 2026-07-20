@@ -372,12 +372,12 @@ Session-only encounter, but a persistent readable log. Log entries include:
 - [ ] Enemy skill levels differ by template tier (bandit ≪ knight).
 - [ ] Each combatant shows cur/max HP; GM can adjust HP up/down manually.
 - [ ] Each combatant has an editable "engaged with" field.
-- [ ] Clicking a characteristic / attack skill / skill number rolls d20 with
+- [x] Clicking a characteristic / attack skill / skill number rolls d20 with
       correct success/critical/fumble and logs it (characteristics: pass/fail
       only, no crit/fumble).
-- [ ] Clicking an attack's damage number prompts for a critical, then rolls the
+- [x] Clicking an attack's damage number prompts for a critical, then rolls the
       damage (adding the crit bonus dice) and logs it.
-- [ ] The click-to-roll numbers replace the weapon dropdown and Roll Skill /
+- [x] The click-to-roll numbers replace the weapon dropdown and Roll Skill /
       Roll Damage buttons; the attribute/skill text is a readable size.
 - [ ] Any combatant can be promoted to a champion/elite (Gang Leader, Elite
       Commander…): HP, skills, damage, armour and Glory all increase, and it is
