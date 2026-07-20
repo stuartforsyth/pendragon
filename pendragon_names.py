@@ -27,6 +27,7 @@ import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import filedialog, messagebox, ttk
 
+import adversary as adversary_module
 import encounter as encounter_module
 import rules as rules_module
 
@@ -637,11 +638,15 @@ class App(tk.Tk):
         self.notebook.add(gen_tab, text="NPC Generator")
         self._build_generator_tab(gen_tab)
 
-        # Encounter tab (only if combat data is available).
+        # Encounter + Adversary Creator tabs (only if combat data is available).
+        self.adversary_tab = None
         if self.generator.rules and self.generator.rules.combat:
             enc_tab = encounter_module.EncounterTab(
                 self.notebook, self.generator.rules, self._set_status)
             self.notebook.add(enc_tab, text="Encounter")
+            self.adversary_tab = adversary_module.AdversaryTab(
+                self.notebook, self.generator, self._set_status)
+            self.notebook.add(self.adversary_tab, text="Adversary Creator")
 
     def _set_status(self, text, color="#2a7d2a"):
         self.status.config(text=text, foreground=color)
@@ -697,6 +702,12 @@ class App(tk.Tk):
             b = ttk.Button(buttons, text=text, command=cmd, state="disabled")
             b.pack(side="left", padx=(8, 0))
             self.copy_buttons.append(b)
+
+        # Save the current NPC as a named adversary (Adversary Creator bridge).
+        self.create_adv_btn = ttk.Button(buttons, text="Create Adversary",
+                                         command=self.on_create_adversary, state="disabled")
+        self.create_adv_btn.pack(side="left", padx=(8, 0))
+        self.copy_buttons.append(self.create_adv_btn)
 
         # Reroll a single field.
         reroll = ttk.Frame(parent)
@@ -1055,6 +1066,15 @@ class App(tk.Tk):
         if self._current:
             self._to_clipboard(build_image_prompt(self._current),
                                "Copied image prompt to clipboard.")
+
+    def on_create_adversary(self):
+        """Draft the current NPC as a named adversary and open the creator tab."""
+        if not (self._current and self.adversary_tab):
+            return
+        draft = adversary_module.draft_from_npc(
+            self._current, self.generator.rules.combat)
+        self.adversary_tab.open_with_draft(draft)
+        self.notebook.select(self.adversary_tab)
 
     # -- roster ------------------------------------------------------------
 

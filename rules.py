@@ -130,6 +130,7 @@ class Rules:
 
         # Optional: combat data (loaded from data/combat.json by load_rules).
         self.combat = None
+        self.data_dir = ""  # set by load_rules; where combat.json is written
 
     # -- social class + skills ---------------------------------------------
 
@@ -185,9 +186,14 @@ class Rules:
         for stat, mod in self.char_cfg["cultural_modifiers"].get(culture, {}).items():
             stats[stat] = stats.get(stat, 0) + mod
 
+        return stats, self.derive_stats(stats)
+
+    @staticmethod
+    def derive_stats(stats):
+        """The derived stats computed from a set of characteristics (pure)."""
         siz, dex, str_, con = stats["SIZ"], stats["DEX"], stats["STR"], stats["CON"]
         hp = con + siz
-        derived = {
+        return {
             "Hit Points": hp,
             "Move": _rhu((str_ + dex) / 2 + 5),
             "Damage": f"{max(1, _rhu((str_ + siz) / 6))}d6",
@@ -196,7 +202,6 @@ class Rules:
             "Knockdown": siz,
             "Unconscious": _rhu(hp / 4),
         }
-        return stats, derived
 
     def height_for(self, siz):
         if not self.siz_heights:
@@ -423,6 +428,7 @@ def load_rules(path):
 
     _validate(data)
     rules = Rules(data)
+    rules.data_dir = os.path.dirname(path)  # where combat.json is written
 
     # Optional combat data (Encounter/Adversary tabs); absent = combat off.
     # The tracked baseline is examplecombat.json; the app copies it to a
