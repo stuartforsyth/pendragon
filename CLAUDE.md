@@ -20,9 +20,12 @@ or when designing a feature):
 3. **Do not answer Pendragon rules from memory** when the corpus or a PDF can
    settle it — cite the corpus `id`/pages.
 
-When you extract a new rule from the PDFs, capture it into the corpus so the next
-lookup finds it: use the **`extract-rule`** skill (Markdown file + regenerated
-JSON index). See `rules_corpus/README.md` for the format and workflow.
+**Whenever you query a rule from the PDFs, extract the *entire* rule into the
+corpus before moving on** — capture the whole rule (all cases, examples, tables,
+edge conditions), not just the snippet you needed, so the next lookup is answered
+from the corpus and never needs the PDF again. Use the **`extract-rule`** skill
+(Markdown file + regenerated JSON index). See `rules_corpus/README.md` for the
+format and workflow.
 
 Never hand-edit `data/rules_index.jsonl` — regenerate it with
 `python build_rules_index.py` (verify with `--check`).

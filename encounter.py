@@ -26,10 +26,19 @@ def _alpha(names):
 
 
 def resolve_skill(value):
-    """Roll d20 against a skill value. Returns (roll, outcome)."""
+    """Roll d20 against a skill value. Returns (roll, outcome).
+
+    Core Rulebook Ch.2 'The Critical Bonus' (printed pp.30-31): a value over 20
+    is written 20 (+x) where x = value - 20 is a *critical bonus* added to the
+    die roll. A Statistic of 20 or more therefore cannot fail or fumble, and
+    criticals on any natural roll >= 20 - x. So Sword 22 (i.e. 20 (+2))
+    criticals on 18-20 and never fails. At or below 20: a critical is an exact
+    roll, a natural 20 is a fumble, otherwise roll-under succeeds.
+    """
     roll = random.randint(1, 20)
     if value >= 20:
-        return roll, ("critical" if roll == 20 else "success")
+        crit_floor = 20 - (value - 20)   # 20 -> 20; 22 -> 18; 25 -> 15
+        return roll, ("critical" if roll >= crit_floor else "success")
     if roll == 20:
         return roll, "fumble"
     if roll == value:
@@ -37,6 +46,11 @@ def resolve_skill(value):
     if roll < value:
         return roll, "success"
     return roll, "failure"
+
+
+def skill_display(value):
+    """Pendragon notation for a skill/trait value: '20 (+2)' once it exceeds 20."""
+    return f"20 (+{value - 20})" if value > 20 else str(value)
 
 
 CRITICAL_BONUS = "4D6"  # a critical hit adds a flat +4D6 (Core Ch.7, Table 7.1)
@@ -798,15 +812,17 @@ class EncounterTab(ttk.Frame):
 
     def _roll_named_skill(self, c, name, value):
         roll, outcome = resolve_skill(value)
-        self._log(f"{c.log_name} rolls {name} ({value}): {roll} — {outcome.upper()}")
-        self.set_status(f"{c.display_name} {name} {value}: rolled {roll} — {outcome}",
+        shown = skill_display(value)
+        self._log(f"{c.log_name} rolls {name} ({shown}): {roll} — {outcome.upper()}")
+        self.set_status(f"{c.display_name} {name} {shown}: rolled {roll} — {outcome}",
                         OUTCOME_COLOR.get(outcome, "#000"))
 
     def _roll_attack(self, c, atk):
         weapon = atk["weapon"]
         roll, outcome = resolve_skill(atk["value"])
-        self._log(f"{c.log_name} rolls {weapon} ({atk['value']}): {roll} — {outcome.upper()}")
-        self.set_status(f"{c.display_name} {weapon} {atk['value']}: rolled {roll} — {outcome}",
+        shown = skill_display(atk["value"])
+        self._log(f"{c.log_name} rolls {weapon} ({shown}): {roll} — {outcome.upper()}")
+        self.set_status(f"{c.display_name} {weapon} {shown}: rolled {roll} — {outcome}",
                         OUTCOME_COLOR.get(outcome, "#000"))
 
     def _roll_attack_damage(self, c, atk):

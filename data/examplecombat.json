@@ -5,8 +5,8 @@
     "die": "1d20",
     "success": "roll <= skill value",
     "failure": "roll > skill value",
-    "critical": "roll exactly equals the modified skill value (a skill of 20+ criticals on a 20)",
-    "fumble": "natural 20, unless skill >= 20 (then no fumble)",
+    "critical": "roll exactly equals the value (<=20); a value over 20 is 20 (+x) with critical bonus x = value-20 added to the roll, so it criticals on any roll >= 20-x (e.g. Sword 22 criticals on 18-20) and never fails. See rules_corpus core.game-system.critical-bonus",
+    "fumble": "natural 20, unless value >= 20 (then 20 is a critical and no fumble is possible)",
     "opposed": "both roll; the higher SUCCESSFUL roll wins and deals damage; equal successful rolls (or both critical) = tie and both strike; a successful-but-lower roll is a partial success and gains shield/parry protection",
     "damage_application": "winner's weapon damage minus defender Armor Points (+ shield) is applied to Hit Points; a single hit >= CON is a Major Wound; total damage >= SIZ triggers Knockdown; below Hit Points/4 = Unconscious; 0 = dead"
   },

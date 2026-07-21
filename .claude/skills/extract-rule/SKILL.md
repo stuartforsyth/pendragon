@@ -35,10 +35,12 @@ build fails loudly on duplicate `id`s). Tell the user you're updating, not addin
 - If the PDFs are absent, ask the user to paste the rule text; do not invent
   rules from memory.
 
-### 3. Clean & paraphrase
+### 3. Clean & paraphrase — capture the *entire* rule
 De-hyphenate line breaks, fix bullet glyphs (`Ő` → `-`), rejoin wrapped lines.
 **Paraphrase** as a concise play aid — do not copy long verbatim passages (the
-PDFs are copyrighted). Keep tables/dice/thresholds exact.
+PDFs are copyrighted). Keep tables/dice/thresholds exact. Capture the **whole
+rule** — every case, example, table, and edge condition — not just the snippet
+you came for, so the corpus can answer the next lookup without the PDF.
 
 ### 4. Write the Markdown file
 Path: `rules_corpus/<book>/<NN-chaptername>/<slug>.md` (create the chapter dir if

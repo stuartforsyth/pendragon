@@ -1031,10 +1031,14 @@ class App(tk.Tk):
         self._set_status(status, color)
 
     def _roll_personality(self, name, value):
-        """Trait/passion/skill: d20 vs value with success/critical/fumble."""
+        """Trait/passion/skill: d20 vs value with success/critical/fumble.
+
+        A value over 20 uses the critical bonus (Core Ch.2): 20 (+x), never
+        fails, criticals on 20 - x and above. See encounter.resolve_skill."""
         roll, outcome = encounter_module.resolve_skill(value)
-        self._log_roll(f"{name} ({value}): rolled {roll} — {outcome.upper()}",
-                       f"{name} ({value}): rolled {roll} — {outcome}",
+        shown = encounter_module.skill_display(value)
+        self._log_roll(f"{name} ({shown}): rolled {roll} — {outcome.upper()}",
+                       f"{name} ({shown}): rolled {roll} — {outcome}",
                        encounter_module.OUTCOME_COLOR.get(outcome, "#000"))
 
     def _roll_characteristic(self, name, value):
