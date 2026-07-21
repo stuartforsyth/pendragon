@@ -594,17 +594,34 @@ class EncounterTab(ttk.Frame):
             plain(f", Morale {c.morale_minimum}")
 
         txt.configure(state="disabled")
-        txt.bind("<Configure>", lambda e, t=txt: self._fit_text_height(t))
+        txt.bind("<Configure>", lambda e, t=txt: self._fit_text_height(t, e.width))
 
-    @staticmethod
-    def _fit_text_height(txt):
-        """Grow/shrink a Text widget to fit its wrapped content."""
-        res = txt.count("1.0", "end-1c", "displaylines")
-        if isinstance(res, tuple):
-            res = res[0] if res else 1
-        n = max(1, int(res or 1))
-        if int(txt["height"]) != n:
-            txt.configure(height=n)
+    def _fit_text_height(self, txt, width):
+        """Grow/shrink a stat-line Text to fit its wrapped content.
+
+        Wrapped display lines can only be counted once the widget is tall enough
+        to lay them all out — at height=1 the overflow (e.g. the trailing skills)
+        stays hidden, and Tk's ``count -displaylines``/``-ypixels`` under-report
+        it. So briefly give the widget room and walk ``dlineinfo`` (which reports
+        actually-laid-out display lines), then set the real line count.
+
+        Keyed on width: the height changes made here fire their own <Configure>
+        but never change the width, so the guard skips them and avoids a loop.
+        """
+        if getattr(txt, "_fit_width", None) == width:
+            return
+        txt._fit_width = width
+        txt.configure(height=30)          # room to lay out every wrapped line
+        txt.update_idletasks()
+        n = 0
+        idx = "1.0"
+        while txt.dlineinfo(idx) is not None:
+            n += 1
+            nxt = txt.index(f"{idx} + 1 display line")
+            if txt.compare(nxt, "==", idx) or txt.compare(nxt, ">", "end - 1c"):
+                break
+            idx = nxt
+        txt.configure(height=max(1, n))
 
     # -- actions -----------------------------------------------------------
 
