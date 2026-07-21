@@ -1,4 +1,4 @@
-# Pendragon NPC + Encounter app
+# Pendragon
 
 Tkinter, stdlib-only, GM tools for *King Arthur Pendragon* 5th Ed. Four tabs in a
 `ttk.Notebook`: NPC Generator, Encounter (tracker), Adversary Creator, Encounter
