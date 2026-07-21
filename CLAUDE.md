@@ -13,10 +13,13 @@ or when designing a feature):
    (one topic per file, YAML frontmatter). Search it — grep the corpus and/or
    `data/rules_index.jsonl` (the derived full-text index). Computed tables/dice
    the app uses live in `data/*.json` (`combat.json`, `rules.json`).
-2. **Only if the corpus is silent or you're uncertain, consult the PDFs**
-   (`corerulebook.pdf`, `gmhandbook.pdf`, `battlecards.pdf` — git-ignored, local
-   only). Extract with `pdftotext -f <first> -l <last> <pdf> out.txt` (raw mode,
-   NOT `-layout`). **PDF page = printed page + 3** for the core rulebook.
+2. **Only if the corpus is silent or you're uncertain, consult the PDFs** in
+   `rulebooks/` (`corerulebook.pdf`, `gmhandbook.pdf`, `battlecards.pdf`,
+   `pendragon_printable_feast_cards.pdf` — the whole `rulebooks/` folder is
+   git-ignored, local only). Extract with
+   `pdftotext -f <first> -l <last> rulebooks/<pdf> out.txt` (raw mode, NOT
+   `-layout`). **PDF page = printed page + 3** for both the core rulebook and the
+   GM handbook.
 3. **Do not answer Pendragon rules from memory** when the corpus or a PDF can
    settle it — cite the corpus `id`/pages.
 

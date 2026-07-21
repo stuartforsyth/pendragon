@@ -2,9 +2,7 @@ __pycache__/
 *.pyc
 
 # Source rulebooks (copyrighted; used locally to extract reference data)
-corerulebook.pdf
-gmhandbook.pdf
-battlecards.pdf
+rulebooks/
 
 # User-saved output (rosters, encounter logs)
 pendragon-roster-*.json

@@ -25,13 +25,14 @@ exists, **update that file in place** rather than creating a duplicate (the inde
 build fails loudly on duplicate `id`s). Tell the user you're updating, not adding.
 
 ### 2. Find the authoritative text
-- **Corpus first**, then the **PDFs**: `corerulebook.pdf`, `gmhandbook.pdf`,
-  `battlecards.pdf` (git-ignored, local only). Identify the book, chapter, and
-  **printed** page range.
+- **Corpus first**, then the **PDFs** in `rulebooks/`: `corerulebook.pdf`,
+  `gmhandbook.pdf`, `battlecards.pdf`, `pendragon_printable_feast_cards.pdf` (the
+  whole `rulebooks/` folder is git-ignored, local only). Identify the book,
+  chapter, and **printed** page range.
 - Extract with raw mode (NOT `-layout` — raw reads two-column pages in order):
-  `pdftotext -f <first> -l <last> corerulebook.pdf out.txt`.
-  **PDF page = printed page + 3** for the core rulebook, so offset the `-f/-l`
-  range accordingly.
+  `pdftotext -f <first> -l <last> rulebooks/corerulebook.pdf out.txt`.
+  **PDF page = printed page + 3** for the core rulebook and the GM handbook, so
+  offset the `-f/-l` range accordingly.
 - If the PDFs are absent, ask the user to paste the rule text; do not invent
   rules from memory.
 

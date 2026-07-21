@@ -41,7 +41,7 @@ Never hand-edit the JSONL — regenerate it: `python build_rules_index.py`.
 
 ## Extraction workflow
 
-1. `pdftotext -f <first> -l <last> corerulebook.pdf out.txt` (no `-layout`;
+1. `pdftotext -f <first> -l <last> rulebooks/corerulebook.pdf out.txt` (no `-layout`;
    raw mode reads two-column pages in correct order).
 2. Clean per section: de-hyphenate line breaks, fix bullet glyphs (`Ő` → `-`),
    rejoin wrapped lines. (LLM-assisted, chapter by chapter.)
