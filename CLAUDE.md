@@ -2,7 +2,7 @@
 
 Tkinter, stdlib-only, GM tools for *King Arthur Pendragon* 5th Ed. Four tabs in a
 `ttk.Notebook`: NPC Generator, Encounter (tracker), Adversary Creator, Encounter
-Creator. Entry point: `./pendragon_names.py`.
+Creator. Entry point: `./pendragon.py`.
 
 ## Answering rules questions — corpus first, then the PDFs
 

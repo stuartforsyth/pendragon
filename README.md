@@ -81,9 +81,9 @@ An **Encounter** tab for running human combat encounters (driven by
 Run from the project folder so it can find the data file:
 
 ```bash
-./pendragon_names.py
+./pendragon.py
 # or
-python3 pendragon_names.py
+python3 pendragon.py
 ```
 
 1. Select a **Gender** and a **Culture**.
