@@ -1050,12 +1050,14 @@ class App(tk.Tk):
                        encounter_module.OUTCOME_COLOR.get(outcome, "#000"))
 
     def _roll_damage_expr(self, label, expr):
-        """Damage: choose rebated / normal / critical (+4D6), or cancel."""
-        mode = encounter_module.ask_damage_mode(
+        """Damage: choose normal or critical (+4D6), optionally rebated (½), or cancel."""
+        choice = encounter_module.ask_damage_mode(
             self, f"{label} ({expr}) — resolve damage:")
-        if mode is None:
+        if choice is None:
             return
-        total, breakdown = encounter_module.roll_damage(expr, mode)
+        critical, rebated = choice
+        total, breakdown = encounter_module.roll_damage(
+            expr, critical=critical, rebated=rebated)
         self._log_roll(f"{label} {breakdown}", f"{label}: {total}", "#1a5fb4")
 
     def _to_clipboard(self, text, message):

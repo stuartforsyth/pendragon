@@ -56,56 +56,65 @@ def skill_display(value):
 CRITICAL_BONUS = "4D6"  # a critical hit adds a flat +4D6 (Core Ch.7, Table 7.1)
 
 
-def roll_damage(damage_expr, mode="normal"):
-    """Roll weapon damage in one of three modes.
+def roll_damage(damage_expr, critical=False, rebated=False):
+    """Roll weapon damage.
 
-    ``normal``   — the weapon's damage as written.
-    ``rebated``  — blunted/tournament weapon: half damage, rounded up.
-    ``critical`` — a critical hit: the damage roll plus a flat +4D6.
+    ``critical`` — a critical hit: adds a flat +4D6 (Core Ch.7, Table 7.1).
+    ``rebated``  — blunted/tournament weapon: halve the result, rounded up.
 
-    Returns ``(total, breakdown)``.
+    The two combine: a rebated critical adds +4D6 and then halves. Returns
+    ``(total, breakdown)``.
     """
     base = roll_expr(damage_expr)
-    if mode == "rebated":
-        total = (base + 1) // 2
-        return total, f"{damage_expr} = {base}  rebated ½  ->  {total}"
-    if mode == "critical":
+    total = base
+    breakdown = f"{damage_expr} = {base}"
+    if critical:
         bonus = roll_expr(CRITICAL_BONUS)
-        return (base + bonus,
-                f"{damage_expr} = {base}  +critical {CRITICAL_BONUS} = {bonus}"
-                f"  ->  {base + bonus}")
-    return base, f"{damage_expr} = {base}"
+        total += bonus
+        breakdown += f"  +critical {CRITICAL_BONUS} = {bonus}"
+    if rebated:
+        if critical:
+            breakdown += f"  =  {total}"
+        total = (total + 1) // 2
+        breakdown += f"  rebated ½  ->  {total}"
+    elif critical:
+        breakdown += f"  ->  {total}"
+    return total, breakdown
 
 
 def ask_damage_mode(parent, prompt):
     """Modal chooser for a damage roll.
 
-    Returns ``"rebated"``, ``"normal"``, ``"critical"``, or ``None`` (cancel —
-    the caller should roll nothing and log nothing).
+    Returns ``(critical, rebated)`` booleans, or ``None`` (cancel — the caller
+    should roll nothing and log nothing). "Rebated — ½ damage" is a checkbox
+    that applies to whichever roll button is pressed, so a critical can be
+    rebated too.
     """
     dlg = tk.Toplevel(parent)
     dlg.title("Damage roll")
     dlg.transient(parent.winfo_toplevel())
     dlg.resizable(False, False)
-    chosen = {"mode": None}
+    result = {"value": None}
+    rebated = tk.BooleanVar(value=False)
 
-    def choose(mode):
-        chosen["mode"] = mode
+    ttk.Label(dlg, text=prompt, wraplength=340).pack(
+        anchor="w", padx=14, pady=(14, 8))
+    ttk.Checkbutton(dlg, text="Rebated — ½ damage (blunted / tournament weapon)",
+                    variable=rebated).pack(anchor="w", padx=14, pady=(0, 8))
+
+    def choose(critical):
+        result["value"] = (critical, bool(rebated.get()))
         dlg.destroy()
 
-    ttk.Label(dlg, text=prompt, wraplength=320).pack(
-        anchor="w", padx=14, pady=(14, 10))
-    for label, mode in (("Rebated — ½ damage", "rebated"),
-                        ("Normal damage", "normal"),
-                        (f"Critical — +{CRITICAL_BONUS}", "critical"),
-                        ("Cancel (don't roll or log)", None)):
-        ttk.Button(dlg, text=label, width=28,
-                   command=lambda m=mode: choose(m)).pack(
-                       fill="x", padx=14, pady=2)
+    ttk.Button(dlg, text="Normal damage", width=32,
+               command=lambda: choose(False)).pack(fill="x", padx=14, pady=2)
+    ttk.Button(dlg, text=f"Critical — +{CRITICAL_BONUS}", width=32,
+               command=lambda: choose(True)).pack(fill="x", padx=14, pady=2)
+    ttk.Button(dlg, text="Cancel (don't roll or log)", width=32,
+               command=dlg.destroy).pack(fill="x", padx=14, pady=(2, 0))
     tk.Frame(dlg, height=8).pack()
 
-    dlg.bind("<Escape>", lambda e: choose(None))
-    dlg.protocol("WM_DELETE_WINDOW", lambda: choose(None))
+    dlg.bind("<Escape>", lambda e: dlg.destroy())
     dlg.update_idletasks()
     top = parent.winfo_toplevel()
     x = top.winfo_rootx() + (top.winfo_width() - dlg.winfo_width()) // 2
@@ -113,7 +122,7 @@ def ask_damage_mode(parent, prompt):
     dlg.geometry(f"+{max(0, x)}+{max(0, y)}")
     dlg.grab_set()
     parent.wait_window(dlg)
-    return chosen["mode"]
+    return result["value"]
 
 
 def _to_float(v, default):
@@ -846,11 +855,12 @@ class EncounterTab(ttk.Frame):
 
     def _roll_attack_damage(self, c, atk):
         weapon = atk["weapon"]
-        mode = ask_damage_mode(
+        choice = ask_damage_mode(
             self, f"{c.display_name}'s {weapon} ({atk['damage']}) — resolve damage:")
-        if mode is None:
+        if choice is None:
             return
-        total, breakdown = roll_damage(atk["damage"], mode)
+        critical, rebated = choice
+        total, breakdown = roll_damage(atk["damage"], critical=critical, rebated=rebated)
         self._log(f"{c.log_name} {weapon} damage: {breakdown}")
         self.set_status(f"{c.display_name} {weapon} damage: {total}", "#1a5fb4")
 
