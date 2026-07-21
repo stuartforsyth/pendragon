@@ -116,30 +116,49 @@ def ask_damage_mode(parent, prompt):
     return chosen["mode"]
 
 
-def resolve_roster(defn, n_players):
-    """Resolve a new-shape encounter definition's roster to concrete counts.
+def _to_float(v, default):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return default
 
-    Returns a list of ``(adversary, count, promote)``. ``count`` per line is
-    either a fixed integer or ``"per_player"`` (× the party size × the scaling
-    factor). Used by both generation and the Creator's live preview.
+
+def _to_int(v, default):
+    try:
+        return int(round(float(v)))
+    except (TypeError, ValueError):
+        return default
+
+
+def resolve_roster(defn, n_players):
+    """Resolve an encounter definition's roster to concrete counts.
+
+    Scaling lives on each roster line: with ``per_player`` true the line's
+    ``count`` is a multiplier of the party size (e.g. 1.5 × players), otherwise
+    ``count`` is a fixed integer. Returns a list of ``(adversary, n, promote)``.
+
+    Legacy definitions — a global ``scaling`` block with lines whose ``count``
+    is the string ``"per_player"`` — are still understood.
     """
     scaling = defn.get("scaling", {})
-    per_player = scaling.get("per_player", 1.0)
+    legacy_factor = scaling.get("per_player", 1.0)
     if scaling.get("mode", "per_player") != "per_player":
-        per_player = 1.0  # fixed-count encounter: 'per_player' lines act as ×1
+        legacy_factor = 1.0  # legacy fixed-count encounter
     out = []
     for line in defn.get("roster", []):
         adv = line.get("adversary")
         if not adv:
             continue
         count = line.get("count", 1)
-        if count == "per_player":
-            n = max(1, round(n_players * per_player))
-        else:
-            try:
-                n = max(0, int(count))
-            except (TypeError, ValueError):
-                n = 0
+        if "per_player" in line:                    # new self-scaling line
+            if line["per_player"]:
+                n = max(1, round(_to_float(count, 1.0) * n_players))
+            else:
+                n = max(0, _to_int(count, 0))
+        elif count == "per_player":                 # legacy global-scaled line
+            n = max(1, round(n_players * legacy_factor))
+        else:                                       # legacy fixed line
+            n = max(0, _to_int(count, 0))
         if n:
             out.append((adv, n, bool(line.get("promote"))))
     return out

@@ -71,9 +71,9 @@ where any rollable value is shown).
     "name": "Bandit ambush",
     "description": "Cutthroats spring from the treeline.",
     "tags": ["human", "wilderness", "low"],
-    "scaling": { "mode": "per_player", "per_player": 1.0 },  // or mode:"fixed"
     "roster": [
-      { "adversary": "Bandit", "count": "per_player", "promote": false }
+      { "adversary": "Bodyguards", "count": 1.5, "per_player": true,  "promote": false },
+      { "adversary": "King Lot",   "count": 1,   "per_player": false, "promote": true  }
     ],
     "leader": { "adversary": "Bandit", "promote": true },     // optional
     "notes": "Terrain: dense woods (−5 to Bow)."
@@ -81,21 +81,24 @@ where any rollable value is shown).
 }
 ```
 
-- **`roster`** — the list of adversary lines. `count` is either an integer or
-  `"per_player"` (multiplied by the party size × `scaling.per_player`).
+- **`roster`** — the list of adversary lines. **Scaling is per line**: with
+  `per_player: true` the line's `count` is a multiplier of the party size
+  (fractions allowed, e.g. `1.5` × players); with `per_player: false` the
+  `count` is a fixed integer (e.g. `1` King Lot). There is **no** global
+  `scaling` block — each line scales itself.
 - **`leader`** — optional single adversary, auto-promoted (mirrors today's
   theme leader = one auto-promoted combatant).
-- **`scaling`** — `per_player` (default) or `fixed` counts.
 - **`tags`** — free classification (category, terrain, difficulty band) for
   search/filter.
 - Morale/ransom/knight-value come from the **adversaries** themselves, not the
   encounter (no duplication).
 
 ### Backward compatibility
-The current `encounter_themes` (`{core, leader, per_player}`) map onto this
-shape and are read unchanged; the Encounter tab keeps generating from them.
-New definitions are written in the richer form. A load-time adapter presents
-both as `encounters`.
+Older definitions are migrated on load (`to_editable`): a legacy global
+`scaling` block is folded into each line's own multiplier, and a legacy random
+pool (`{core, leader, per_player}`, today's `encounter_themes`) becomes explicit
+per-player roster lines. `resolve_roster` still understands the legacy
+`count: "per_player"` + `scaling` form, so nothing needs rewriting on disk.
 
 ---
 

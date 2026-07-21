@@ -23,26 +23,50 @@ from encounter import resolve_roster
 def blank_encounter():
     return {
         "source": "user", "name": "", "description": "", "tags": [],
-        "scaling": {"mode": "per_player", "per_player": 1.0},
         "roster": [], "leader": None, "notes": "",
     }
 
 
+def _fmt_count(v):
+    """Display a count value: whole numbers without a trailing '.0'."""
+    if isinstance(v, float) and v.is_integer():
+        return str(int(v))
+    return str(v)
+
+
 def to_editable(defn):
-    """A new-shape editable copy; convert a legacy pool theme best-effort."""
+    """An editable copy in the self-scaling roster shape.
+
+    New-shape definitions pass through. Legacy definitions are migrated: a global
+    ``scaling`` block is folded into each roster line's own multiplier, and a
+    legacy random pool (``core`` + ``per_player``) becomes explicit per-player
+    roster lines.
+    """
     if "roster" in defn:
         d = copy.deepcopy(blank_encounter())
         d.update(copy.deepcopy(defn))
-        d.setdefault("scaling", {"mode": "per_player", "per_player": 1.0})
+        scaling = d.pop("scaling", None)
+        factor = 1.0
+        if isinstance(scaling, dict) and scaling.get("mode", "per_player") == "per_player":
+            factor = scaling.get("per_player", 1.0)
+        for line in d["roster"]:
+            if "per_player" in line:
+                continue  # already self-scaling
+            if line.get("count") == "per_player":   # migrate legacy scaled line
+                line["per_player"] = True
+                line["count"] = factor
+            else:                                   # migrate legacy fixed line
+                line["per_player"] = False
         return d
     d = blank_encounter()
     d["name"] = defn.get("name", "")
     core = defn.get("core", [])
-    # Legacy picks (per_player × players) from the pool; split the factor across
-    # the pool's members so the converted roster totals the same, not ×len(core).
-    d["scaling"]["per_player"] = defn.get("per_player", 1.0) / max(1, len(core))
+    # Legacy pool (per_player × players): split the factor across the pool's
+    # members so the converted roster totals the same, not ×len(core).
+    factor = defn.get("per_player", 1.0) / max(1, len(core))
     for adv in core:
-        d["roster"].append({"adversary": adv, "count": "per_player", "promote": False})
+        d["roster"].append({"adversary": adv, "count": factor,
+                            "per_player": True, "promote": False})
     lead = defn.get("leader")
     if lead:
         d["leader"] = {"adversary": lead, "promote": True}
@@ -166,21 +190,19 @@ class EncounterCreatorTab(ttk.Frame):
                                   font=("TkDefaultFont", 10))
         self.notes_text.pack(fill="both", expand=True, padx=6, pady=4)
 
-        scl = self._section("Scaling")
-        self.mode_var = tk.StringVar(value="per_player")
-        ttk.Radiobutton(scl, text="Per player", value="per_player",
-                        variable=self.mode_var, command=self._update_preview).grid(
-                            row=0, column=0, sticky="w", padx=4, pady=3)
-        ttk.Radiobutton(scl, text="Fixed counts", value="fixed",
-                        variable=self.mode_var, command=self._update_preview).grid(
-                            row=0, column=1, sticky="w", padx=4)
-        ttk.Label(scl, text="Per-player ×:").grid(row=0, column=2, sticky="e", padx=(12, 2))
-        self.perplayer_var = tk.StringVar(value="1.0")
-        e = ttk.Entry(scl, textvariable=self.perplayer_var, width=5)
-        e.grid(row=0, column=3, sticky="w")
-        self.perplayer_var.trace_add("write", lambda *a: self._update_preview())
-
-        rf = self._section("Roster")
+        rf = self._section("Roster  (each line scales itself)")
+        hint = ttk.Label(rf, foreground="#555", font=("TkDefaultFont", 9), justify="left",
+                         text=("Set a count per adversary. Tick “× players” to scale with "
+                               "party size (fractions allowed, e.g. 1.5× players of "
+                               "Bodyguards); leave it unticked for a fixed number "
+                               "(e.g. 1 King Lot)."))
+        hint.pack(anchor="w", fill="x", padx=6, pady=(4, 2))
+        hint.bind("<Configure>",
+                  lambda e, l=hint: l.configure(wraplength=max(300, e.width - 8)))
+        hdr = ttk.Frame(rf)
+        hdr.pack(fill="x", padx=6)
+        ttk.Label(hdr, text="Adversary", width=22, font=("TkDefaultFont", 9, "bold")).pack(side="left")
+        ttk.Label(hdr, text="Count", font=("TkDefaultFont", 9, "bold")).pack(side="left")
         self.roster_frame = ttk.Frame(rf)
         self.roster_frame.pack(fill="x", padx=6, pady=2)
         addbar = ttk.Frame(rf)
@@ -269,9 +291,6 @@ class EncounterCreatorTab(ttk.Frame):
         self.name_var.set(defn.get("name", "") or key or "")
         self.desc_var.set(defn.get("description", ""))
         self.tags_var.set(", ".join(defn.get("tags", [])))
-        scaling = defn.get("scaling", {})
-        self.mode_var.set(scaling.get("mode", "per_player"))
-        self.perplayer_var.set(str(scaling.get("per_player", 1.0)))
         for row in list(self.roster_rows):
             row["frame"].destroy()
         self.roster_rows = []
@@ -285,22 +304,25 @@ class EncounterCreatorTab(ttk.Frame):
         self._update_preview()
 
     def _add_roster_row(self, line=None):
-        line = line or {"adversary": "", "count": "per_player", "promote": False}
+        line = line or {"adversary": "", "count": 1, "per_player": True, "promote": False}
         fr = ttk.Frame(self.roster_frame)
         fr.pack(fill="x", pady=1)
         av = tk.StringVar(value=line.get("adversary", ""))
-        per_player = line.get("count") == "per_player"
-        pv = tk.BooleanVar(value=per_player)
-        cv = tk.StringVar(value=("" if per_player else str(line.get("count", 1))))
+        # Accept new (per_player flag) and legacy (count == "per_player") shapes.
+        per_player = line.get("per_player", line.get("count") == "per_player")
+        raw = line.get("count", 1)
+        if raw == "per_player":
+            raw = 1
+        cv = tk.StringVar(value=_fmt_count(raw))
+        pv = tk.BooleanVar(value=bool(per_player))
         prom = tk.BooleanVar(value=bool(line.get("promote")))
         ttk.Combobox(fr, textvariable=av, width=20, state="readonly",
                      values=self._adversary_names()).pack(side="left")
-        ttk.Label(fr, text="count").pack(side="left", padx=(6, 1))
-        ttk.Entry(fr, textvariable=cv, width=4).pack(side="left")
-        ttk.Checkbutton(fr, text="×players", variable=pv,
-                        command=self._update_preview).pack(side="left", padx=(4, 0))
+        ttk.Entry(fr, textvariable=cv, width=5).pack(side="left", padx=(6, 4))
+        ttk.Checkbutton(fr, text="× players", variable=pv,
+                        command=self._update_preview).pack(side="left")
         ttk.Checkbutton(fr, text="promote", variable=prom,
-                        command=self._update_preview).pack(side="left", padx=(4, 0))
+                        command=self._update_preview).pack(side="left", padx=(8, 0))
         ttk.Button(fr, text="✕", width=2,
                    command=lambda: self._remove_roster_row(row)).pack(side="left", padx=(6, 0))
         for var in (av, cv):
@@ -320,24 +342,25 @@ class EncounterCreatorTab(ttk.Frame):
         d["name"] = self.name_var.get().strip()
         d["description"] = self.desc_var.get().strip()
         d["tags"] = [t.strip() for t in self.tags_var.get().split(",") if t.strip()]
-        try:
-            pp = float(self.perplayer_var.get())
-        except (TypeError, ValueError):
-            pp = 1.0
-        d["scaling"] = {"mode": self.mode_var.get(), "per_player": pp}
         d["roster"] = []
         for row in self.roster_rows:
             adv = row["adversary"].get()
             if not adv:
                 continue
-            if row["per_player"].get():
-                count = "per_player"
+            per_player = bool(row["per_player"].get())
+            raw = row["count"].get().strip()
+            if per_player:
+                try:
+                    count = float(raw)
+                except (TypeError, ValueError):
+                    count = 1.0
             else:
                 try:
-                    count = max(0, int(row["count"].get()))
+                    count = max(0, int(round(float(raw))))
                 except (TypeError, ValueError):
                     count = 1
             d["roster"].append({"adversary": adv, "count": count,
+                                "per_player": per_player,
                                 "promote": bool(row["promote"].get())})
         leader = self.leader_var.get().strip()
         d["leader"] = ({"adversary": leader, "promote": bool(self.leader_promote.get())}
