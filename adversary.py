@@ -209,12 +209,15 @@ def _text_to_map(s):
 # ---------------------------------------------------------------------------
 
 class AdversaryTab(ttk.Frame):
-    def __init__(self, parent, generator, set_status):
+    def __init__(self, parent, generator, set_status, on_change=None):
         super().__init__(parent)
         self.generator = generator
         self.rules = generator.rules
         self.combat = self.rules.combat
         self.set_status = set_status
+        # Called after the library is saved/deleted so other tabs (the Encounter
+        # tracker's dropdowns) can pick up new/removed adversaries live.
+        self.on_change = on_change
         self.draft = blank_adversary()
         self.draft_key = None          # library key being edited, or None if new
         self.attack_rows = []
@@ -485,6 +488,8 @@ class AdversaryTab(ttk.Frame):
         self.set_status(f"Deleted {self.draft_key}.", "#a33")
         self.draft_key = None
         self._refresh_library()
+        if self.on_change:
+            self.on_change()
         self._new("generic")
 
     # -- editor load / collect ---------------------------------------------
@@ -840,6 +845,8 @@ class AdversaryTab(ttk.Frame):
         path = save_combat(self.combat, self.rules.data_dir)
         self.draft_key = key
         self._refresh_library()
+        if self.on_change:
+            self.on_change()
         self.set_status(f"Saved '{key}' to {path}.", "#2a7d2a")
 
     # -- external entry point (Create Adversary bridge from the NPC tab) ---

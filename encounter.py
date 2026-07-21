@@ -20,6 +20,11 @@ from rules import roll_expr
 # Combat resolution (rulebook: d20 roll-under; crit = exact; fumble = nat 20)
 # ---------------------------------------------------------------------------
 
+def _alpha(names):
+    """Case-insensitive alphabetical list of the keys in a names mapping."""
+    return sorted(names, key=str.casefold)
+
+
 def resolve_skill(value):
     """Roll d20 against a skill value. Returns (roll, outcome)."""
     roll = random.randint(1, 20)
@@ -138,6 +143,9 @@ class Combatant:
         self.description = template.get("description", "")
         self.tier = template.get("tier", "")
         self.promotion_title = template.get("promotion_title", "Champion")
+        # A named adversary (a specific NPC) reads distinctly in the tracker,
+        # much like a promoted champion.
+        self.named = template.get("kind") == "named"
 
         ch = template["characteristics"]
         app_raw = ch.get("APP", "2D6+3")  # battle-card foes list no APP
@@ -411,9 +419,10 @@ class EncounterTab(ttk.Frame):
         ttk.Spinbox(setup, from_=1, to=20, width=4,
                     textvariable=self.players_var).pack(side="left", padx=(4, 10))
         ttk.Label(setup, text="Encounter:").pack(side="left")
-        self.theme_var = tk.StringVar(value=next(iter(self.encounter.themes), ""))
+        themes = _alpha(self.encounter.themes)
+        self.theme_var = tk.StringVar(value=themes[0] if themes else "")
         self.theme_combo = ttk.Combobox(setup, textvariable=self.theme_var, width=20,
-                                        state="readonly", values=list(self.encounter.themes))
+                                        state="readonly", values=themes)
         self.theme_combo.pack(side="left", padx=(4, 10))
         ttk.Button(setup, text="Generate encounter",
                    command=self.on_generate).pack(side="left")
@@ -422,9 +431,11 @@ class EncounterTab(ttk.Frame):
         addrow = ttk.Frame(self)
         addrow.pack(fill="x", padx=10, pady=(0, 6))
         ttk.Label(addrow, text="Add combatant:").pack(side="left")
-        self.add_var = tk.StringVar(value=next(iter(self.encounter.templates), ""))
-        ttk.Combobox(addrow, textvariable=self.add_var, width=20, state="readonly",
-                     values=list(self.encounter.templates)).pack(side="left", padx=(4, 6))
+        adversaries = _alpha(self.encounter.templates)
+        self.add_var = tk.StringVar(value=adversaries[0] if adversaries else "")
+        self.add_combo = ttk.Combobox(addrow, textvariable=self.add_var, width=20,
+                                      state="readonly", values=adversaries)
+        self.add_combo.pack(side="left", padx=(4, 6))
         ttk.Button(addrow, text="Add", command=self.on_add).pack(side="left")
 
         # How-to block: explain the per-row textboxes and click-to-roll, since the
@@ -523,12 +534,25 @@ class EncounterTab(ttk.Frame):
         # lines (which span it) stretch to the full width instead of being clipped.
         row.columnconfigure(9, weight=1)
 
+        # Named NPCs and promoted champions both stand out from rank-and-file
+        # combatants: bold, coloured, and prefixed with a marker (★ champion,
+        # ◆ named — a named champion shows both).
         down = c.down
-        name_font = self.down_font if down else (self.elite_font if c.elite else self.norm_font)
-        fg = "#999" if down else ("#8a4b00" if c.elite else "#000")
+        standout = c.elite or c.named
+        name_font = self.down_font if down else (
+            self.elite_font if standout else self.norm_font)
+        if down:
+            fg = "#999"
+        elif c.elite:
+            fg = "#8a4b00"          # champion — brown/gold
+        elif c.named:
+            fg = "#5a2a82"          # named NPC — royal purple
+        else:
+            fg = "#000"
 
-        star = "★ " if c.elite else ""
-        name = tk.Label(row, text=f"{star}{c.display_name}", width=22, anchor="w",
+        marker = ("★" if c.elite else "") + ("◆" if c.named else "")
+        marker = f"{marker} " if marker else ""
+        name = tk.Label(row, text=f"{marker}{c.display_name}", width=22, anchor="w",
                         font=name_font, fg=fg)
         name.grid(row=0, column=0, sticky="w")
 
@@ -819,9 +843,15 @@ class EncounterTab(ttk.Frame):
         self._refresh_rows()
         self.set_status(f"Generated {len(self.encounter.combatants)} combatants.", "#2a7d2a")
 
-    def refresh_themes(self):
-        """Pick up encounters created/edited in the Encounter Creator tab."""
-        self.theme_combo["values"] = list(self.encounter.themes)
+    def refresh_choices(self):
+        """Re-populate the Encounter and Add-combatant dropdowns (alphabetical)
+        so encounters/adversaries created or edited in other tabs appear here
+        without restarting the app. Current selections are left untouched."""
+        self.theme_combo["values"] = _alpha(self.encounter.themes)
+        self.add_combo["values"] = _alpha(self.encounter.templates)
+
+    # Kept for the Encounter Creator's Send-to-tracker bridge.
+    refresh_themes = refresh_choices
 
     def run_definition(self, defn, n_players, name=""):
         """Generate a live encounter from a definition (Send-to-tracker bridge)."""

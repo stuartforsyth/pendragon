@@ -647,7 +647,8 @@ class App(tk.Tk):
                 self.notebook, self.generator.rules, self._set_status)
             self.notebook.add(self.encounter_tab, text="Encounter")
             self.adversary_tab = adversary_module.AdversaryTab(
-                self.notebook, self.generator, self._set_status)
+                self.notebook, self.generator, self._set_status,
+                on_change=self.encounter_tab.refresh_choices)
             self.notebook.add(self.adversary_tab, text="Adversary Creator")
             creator = encounter_creator_module.EncounterCreatorTab(
                 self.notebook, self.generator.rules, self._set_status,
@@ -658,7 +659,7 @@ class App(tk.Tk):
         """Generate a live encounter from a definition and switch to the tracker."""
         if not self.encounter_tab:
             return
-        self.encounter_tab.refresh_themes()
+        self.encounter_tab.refresh_choices()
         self.encounter_tab.run_definition(defn, n_players, name)
         self.notebook.select(self.encounter_tab)
 
