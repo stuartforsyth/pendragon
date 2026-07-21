@@ -10,7 +10,7 @@ see_also: [core.combat.combat-round, core.combat.winners-outcome, core.combat.pr
 
 Both combatants roll their modified Combat Skill (opposed). Cross-reference the
 character's result (rows) against the opponent's result (columns). "+4D6" marks
-a critical, which adds the attacker's base Damage dice again. "no Shield/Parry"
+a critical, which adds a flat +4D6 to the winner's Damage. "no Shield/Parry"
 means only Armor Protection applies (the loser did not achieve a partial
 success). Damage is always reduced by the defender's Protection value.
 

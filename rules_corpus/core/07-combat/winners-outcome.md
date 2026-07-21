@@ -12,10 +12,10 @@ In an opposed melee exchange, the combatant with the higher **successful** roll
 is the winner and resolves their outcome first.
 
 **Step Three: Winner's Outcome.** The winner rolls a number of dice equal to
-their Damage Characteristic. A **critical success adds +4D6** to the Damage for
-that round (i.e. the base Damage dice are rolled again on top of the weapon
-dice — e.g. 5D6 becomes 5D6+4D6). Armor Points (plus any shield) are subtracted
-from the total; the remainder is applied to the loser's Hit Points.
+their Damage Characteristic. A **critical success adds a flat +4D6** to the
+Damage for that round (e.g. 5D6 becomes 5D6+4D6). Armor Points (plus any shield)
+are subtracted from the total; the remainder is applied to the loser's Hit
+Points.
 
 **Step Four: Loser's Outcome.** The loser takes the winner's damage, and then:
 

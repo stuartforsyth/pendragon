@@ -16,7 +16,7 @@ Rollable values are:
 | **Skill** (incl. an attack's skill value) | `d20` vs the value | success / **critical** (roll == value) / failure / **fumble** (natural 20 unless value ≥ 20) |
 | **Passion** | `d20` vs the value | success / critical / failure / fumble |
 | **Personality trait** (each side of a pair) | `d20` vs that side's value | success / critical / failure / fumble |
-| **Damage** (a dice expression, e.g. `4d6`, `5D6`) | roll the dice; prompt **"critical hit?"** — Yes adds the **base damage dice again** | total + breakdown |
+| **Damage** (a dice expression, e.g. `4d6`, `5D6`) | roll the dice; prompt a **damage-mode chooser** — Rebated (½, rounded up) / Normal / Critical (**flat +4D6**) / Cancel (roll & log nothing) | total + breakdown |
 
 Non-rollable numbers (Hit Points, Move, Major Wound, Knockdown, Unconscious,
 Glory, armour points, thresholds) are **plain text**, not links.
@@ -47,8 +47,10 @@ In both cases the log line reads, e.g.:
 - Resolution lives once in `encounter.py`:
   - `resolve_skill(value) -> (roll, outcome)` — the d20 success/critical/
     fumble core (used for skills, passions, traits).
-  - `roll_damage(expr, base_dice, critical) -> (total, breakdown)` — weapon/
-    damage dice, adding the base dice again on a critical.
+  - `roll_damage(expr, mode) -> (total, breakdown)` — weapon/damage dice for
+    `mode` in `rebated` (half, rounded up) / `normal` / `critical` (flat +4D6).
+    `ask_damage_mode(parent, prompt)` is the shared chooser dialog (returns the
+    mode or `None` to cancel).
   - Characteristic rolls are pass/fail only: `roll = d20; success if roll <=
     value`. No `resolve_skill` crit/fumble branch.
 - Dice strings go through `rules.roll_expr("XdY+Z")`.

@@ -1045,14 +1045,12 @@ class App(tk.Tk):
                        encounter_module.OUTCOME_COLOR.get(outcome, "#000"))
 
     def _roll_damage_expr(self, label, expr):
-        """Damage: roll the dice expression; a critical adds the base dice again."""
-        m = re.match(r"\s*(\d+)\s*[dD]", str(expr))
-        base_dice = int(m.group(1)) if m else 1
-        crit = messagebox.askyesno(
-            "Critical hit?",
-            f"Was this {label} roll a critical hit?\n\n"
-            "Yes adds the base damage dice again.")
-        total, breakdown = encounter_module.roll_damage(expr, base_dice, crit)
+        """Damage: choose rebated / normal / critical (+4D6), or cancel."""
+        mode = encounter_module.ask_damage_mode(
+            self, f"{label} ({expr}) — resolve damage:")
+        if mode is None:
+            return
+        total, breakdown = encounter_module.roll_damage(expr, mode)
         self._log_roll(f"{label} {breakdown}", f"{label}: {total}", "#1a5fb4")
 
     def _to_clipboard(self, text, message):

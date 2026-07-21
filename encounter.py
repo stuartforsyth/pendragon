@@ -34,14 +34,67 @@ def resolve_skill(value):
     return roll, "failure"
 
 
-def roll_damage(damage_expr, base_dice, critical):
-    """Roll weapon damage; a critical adds the attacker's base Damage dice again."""
+CRITICAL_BONUS = "4D6"  # a critical hit adds a flat +4D6 (Core Ch.7, Table 7.1)
+
+
+def roll_damage(damage_expr, mode="normal"):
+    """Roll weapon damage in one of three modes.
+
+    ``normal``   — the weapon's damage as written.
+    ``rebated``  — blunted/tournament weapon: half damage, rounded up.
+    ``critical`` — a critical hit: the damage roll plus a flat +4D6.
+
+    Returns ``(total, breakdown)``.
+    """
     base = roll_expr(damage_expr)
-    if critical:
-        bonus_expr = f"{base_dice}D6"
-        bonus = roll_expr(bonus_expr)
-        return base + bonus, f"{damage_expr} = {base}  +critical {bonus_expr} = {bonus}  ->  {base + bonus}"
+    if mode == "rebated":
+        total = (base + 1) // 2
+        return total, f"{damage_expr} = {base}  rebated ½  ->  {total}"
+    if mode == "critical":
+        bonus = roll_expr(CRITICAL_BONUS)
+        return (base + bonus,
+                f"{damage_expr} = {base}  +critical {CRITICAL_BONUS} = {bonus}"
+                f"  ->  {base + bonus}")
     return base, f"{damage_expr} = {base}"
+
+
+def ask_damage_mode(parent, prompt):
+    """Modal chooser for a damage roll.
+
+    Returns ``"rebated"``, ``"normal"``, ``"critical"``, or ``None`` (cancel —
+    the caller should roll nothing and log nothing).
+    """
+    dlg = tk.Toplevel(parent)
+    dlg.title("Damage roll")
+    dlg.transient(parent.winfo_toplevel())
+    dlg.resizable(False, False)
+    chosen = {"mode": None}
+
+    def choose(mode):
+        chosen["mode"] = mode
+        dlg.destroy()
+
+    ttk.Label(dlg, text=prompt, wraplength=320).pack(
+        anchor="w", padx=14, pady=(14, 10))
+    for label, mode in (("Rebated — ½ damage", "rebated"),
+                        ("Normal damage", "normal"),
+                        (f"Critical — +{CRITICAL_BONUS}", "critical"),
+                        ("Cancel (don't roll or log)", None)):
+        ttk.Button(dlg, text=label, width=28,
+                   command=lambda m=mode: choose(m)).pack(
+                       fill="x", padx=14, pady=2)
+    tk.Frame(dlg, height=8).pack()
+
+    dlg.bind("<Escape>", lambda e: choose(None))
+    dlg.protocol("WM_DELETE_WINDOW", lambda: choose(None))
+    dlg.update_idletasks()
+    top = parent.winfo_toplevel()
+    x = top.winfo_rootx() + (top.winfo_width() - dlg.winfo_width()) // 2
+    y = top.winfo_rooty() + (top.winfo_height() - dlg.winfo_height()) // 3
+    dlg.geometry(f"+{max(0, x)}+{max(0, y)}")
+    dlg.grab_set()
+    parent.wait_window(dlg)
+    return chosen["mode"]
 
 
 def resolve_roster(defn, n_players):
@@ -93,7 +146,6 @@ class Combatant:
             "SIZ": ch["SIZ"], "DEX": ch["DEX"], "STR": ch["STR"],
             "CON": ch["CON"], "APP": app,
         }
-        self.base_damage_dice = max(1, round((ch["STR"] + ch["SIZ"]) / 6))
 
         self.attacks = copy.deepcopy(template["attacks"])
         self.skills = dict(template.get("skills", {}))
@@ -735,11 +787,11 @@ class EncounterTab(ttk.Frame):
 
     def _roll_attack_damage(self, c, atk):
         weapon = atk["weapon"]
-        crit = messagebox.askyesno(
-            "Critical hit?",
-            f"Was {c.display_name}'s {weapon} attack a critical hit?\n\n"
-            "Yes adds the critical bonus dice.")
-        total, breakdown = roll_damage(atk["damage"], c.base_damage_dice, crit)
+        mode = ask_damage_mode(
+            self, f"{c.display_name}'s {weapon} ({atk['damage']}) — resolve damage:")
+        if mode is None:
+            return
+        total, breakdown = roll_damage(atk["damage"], mode)
         self._log(f"{c.log_name} {weapon} damage: {breakdown}")
         self.set_status(f"{c.display_name} {weapon} damage: {total}", "#1a5fb4")
 

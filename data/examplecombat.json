@@ -11,7 +11,7 @@
     "damage_application": "winner's weapon damage minus defender Armor Points (+ shield) is applied to Hit Points; a single hit >= CON is a Major Wound; total damage >= SIZ triggers Knockdown; below Hit Points/4 = Unconscious; 0 = dead"
   },
   "critical_hit": {
-    "melee_bonus": "on a critical hit, roll the weapon's damage dice PLUS the attacker's base Damage dice again (worked example: 5D6 -> 5D6+4D6)",
+    "melee_bonus": "on a critical hit, roll the weapon's damage normally and add a flat +4D6 (worked example: 5D6 -> 5D6+4D6)",
     "brawling": "a critical doubles Brawling Damage",
     "note": "transcribe exact wording from Core Rulebook Ch.7 'Winner's Outcome' at implementation"
   },
@@ -32,7 +32,7 @@
     "veteran": "Experienced, well-equipped warriors; skills ~15.",
     "elite": "Knights and champions; skills ~15-20."
   },
-  "weapon_note": "Damage is relative to the wielder's Weapon Damage: base 'character'/'brawling' = the adversary's Weapon Damage dice, then apply damage_mod and cap at damage_max. 'fixed' uses damage_dice; 'horse' uses the mount's charge damage. A critical adds the base Weapon Damage dice again (see critical_hit).",
+  "weapon_note": "Damage is relative to the wielder's Weapon Damage: base 'character'/'brawling' = the adversary's Weapon Damage dice, then apply damage_mod and cap at damage_max. 'fixed' uses damage_dice; 'horse' uses the mount's charge damage. A critical adds a flat +4D6 (see critical_hit).",
   "weapons": {
     "Arming Sword": {
       "skill": "Sword",
