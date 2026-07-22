@@ -100,6 +100,15 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | [Passions — Nature, Levels, Courts, Raising/Lowering & Battle Use](../../rules_corpus/core/04-traits-passions/passions-overview.md) | 71, 73, 74, 78 | `passions`, `courts`, `levels`, `directed-passions`, `raising`, `lowering`, `violating`, `battle`, `gaining` |
 | [Traits & Trait Rolls (Decision/Test/Hint, Valorous Roll, Religious Virtues)](../../rules_corpus/core/04-traits-passions/traits-and-trait-rolls.md) | 61, 62, 63, 64, 65, 67 | `traits`, `trait-roll`, `opposing-trait`, `decision-roll`, `test-roll`, `valorous`, `religious-virtues`, `influence`, `famous`, `exalted` |
 
+### 12 — Wealth, Treasure & Trade
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Coinage & Sources of Treasure](../../rules_corpus/core/12-wealth/coinage-and-treasure.md) | 201, 203 | `coinage`, `libra`, `denarius`, `money`, `treasure`, `loot`, `value`, `standard-of-living` |
+| [Favors (Table 12.6)](../../rules_corpus/core/12-wealth/favors.md) | 204, 205, 206 | `favors`, `reciprocity`, `honor`, `table-12-6`, `value` |
+| [Price Lists & Supporting Characters (Squires, Table 12.7)](../../rules_corpus/core/12-wealth/prices-and-supporting-characters.md) | 207, 208, 210, 211 | `prices`, `market`, `horses`, `weapons`, `armor`, `squire`, `supporting-characters`, `table-12-7` |
+| [Ransom (Tables 12.1–12.5)](../../rules_corpus/core/12-wealth/ransom.md) | 201, 202, 203, 204 | `ransom`, `prisoner`, `tables`, `knight`, `noble`, `soldier`, `clergy`, `tribal`, `broker` |
+
 ### 8 — Weapons
 
 | Topic | Pages | Tags |
