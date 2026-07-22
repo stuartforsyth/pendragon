@@ -62,6 +62,14 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | [Movement — Rate, Speed Multipliers & Overland Travel](../../rules_corpus/core/02-game-system/movement.md) | 34, 35, 37 | `movement`, `movement-rate`, `speed`, `overland`, `travel`, `forced-march`, `horse`, `exhaustion`, `roads`, `weather` |
 | [Resolution — Unopposed, Opposed & Fixed](../../rules_corpus/core/02-game-system/resolution.md) | 27, 28, 29 | `resolution`, `roll-under`, `success`, `critical`, `failure`, `fumble`, `opposed`, `partial-success`, `tie`, `mutual-failure`, `fixed-opposition` |
 
+### 10 — Horses
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Horse Colors, Personality, Care & Armor (Tables 10.5–10.7)](../../rules_corpus/core/10-horses/colors-care-and-armor.md) | 185, 186, 187 | `horses`, `colors`, `passive-glory`, `personality`, `care`, `horse-armor`, `caparison`, `first-aid`, `tables` |
+| [Horse Speeds, Exhaustion (Table 10.1) & Training](../../rules_corpus/core/10-horses/horse-speeds-exhaustion-and-training.md) | 181, 182, 184, 185 | `horses`, `gaits`, `speed`, `exhaustion`, `riding-to-death`, `training`, `breeding`, `table-10-1` |
+| [Horse Types & Stats (Tables 10.2–10.4)](../../rules_corpus/core/10-horses/types-and-stats.md) | 180, 183, 184 | `horses`, `charger`, `courser`, `rouncy`, `sumpter`, `mule`, `stats`, `tables`, `tack`, `charge-damage` |
+
 ### 5 — Skills
 
 | Topic | Pages | Tags |
