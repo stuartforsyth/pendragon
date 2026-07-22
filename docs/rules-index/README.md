@@ -70,6 +70,15 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | [Horse Speeds, Exhaustion (Table 10.1) & Training](../../rules_corpus/core/10-horses/horse-speeds-exhaustion-and-training.md) | 181, 182, 184, 185 | `horses`, `gaits`, `speed`, `exhaustion`, `riding-to-death`, `training`, `breeding`, `table-10-1` |
 | [Horse Types & Stats (Tables 10.2–10.4)](../../rules_corpus/core/10-horses/types-and-stats.md) | 180, 183, 184 | `horses`, `charger`, `courser`, `rouncy`, `sumpter`, `mule`, `stats`, `tables`, `tack`, `charge-damage` |
 
+### 11 — Injury & Health
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Aggravation (Table 11.2) & Deterioration](../../rules_corpus/core/11-injury-health/aggravation-and-deterioration.md) | 192, 193, 194 | `aggravation`, `deterioration`, `activity`, `chirurgery`, `debilitated`, `table-11-2` |
+| [Environmental Damage — Cold, Falling, Fire, Suffocation & Poison (Table 11.3)](../../rules_corpus/core/11-injury-health/environmental-damage.md) | 193, 194, 195, 196 | `cold`, `disease`, `falling`, `falling-objects`, `fire`, `suffocation`, `poison`, `potency`, `table-11-3` |
+| [Healing & Recovery — Natural Healing, Chirurgery & First Aid](../../rules_corpus/core/11-injury-health/healing-recovery.md) | 198, 199 | `healing`, `recovery`, `natural-healing`, `chirurgery`, `first-aid`, `healing-rate`, `sunday` |
+| [States of Health & Wounds (Minor/Major/Mortal, Unconscious, Near Death)](../../rules_corpus/core/11-injury-health/states-of-health-and-wounds.md) | 189, 190, 191, 192, 196, 197 | `health`, `debilitated`, `wounds`, `minor-wound`, `major-wound`, `mortal-wound`, `unconscious`, `near-death`, `table-11-1` |
+
 ### 5 — Skills
 
 | Topic | Pages | Tags |
