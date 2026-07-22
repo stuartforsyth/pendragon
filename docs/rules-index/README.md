@@ -16,6 +16,14 @@ A page index of every game system extracted into the rules corpus (`rules_corpus
 
 Standalone rules not (yet) belonging to a multi-topic system index:
 
+### 9 — Armor
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Armor & Helmets (Tables 9.1, 9.2 & 9.3)](../../rules_corpus/core/09-armor/armor-and-helmets.md) | 171, 173, 175, 176, 177 | `armor`, `helmets`, `mail`, `plate`, `textile`, `aketon`, `hauberk`, `coat-of-plates`, `closed-helm`, `tables` |
+| [Armoring Up, Stacking & Armor Penalties](../../rules_corpus/core/09-armor/armoring-up-and-penalties.md) | 169, 170 | `armor`, `donning`, `squire`, `stacking`, `penalties`, `heat`, `sleeping`, `protection` |
+| [Shields (Types & Table 9.4)](../../rules_corpus/core/09-armor/shields.md) | 176, 177 | `shields`, `buckler`, `targe`, `kite`, `round`, `scutum`, `simple`, `missile-penalty`, `table-9-4` |
+
 ### 6 — Aspirations
 
 | Topic | Pages | Tags |
