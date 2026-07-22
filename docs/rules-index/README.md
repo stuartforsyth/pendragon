@@ -62,6 +62,12 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | [Movement — Rate, Speed Multipliers & Overland Travel](../../rules_corpus/core/02-game-system/movement.md) | 34, 35, 37 | `movement`, `movement-rate`, `speed`, `overland`, `travel`, `forced-march`, `horse`, `exhaustion`, `roads`, `weather` |
 | [Resolution — Unopposed, Opposed & Fixed](../../rules_corpus/core/02-game-system/resolution.md) | 27, 28, 29 | `resolution`, `roll-under`, `success`, `critical`, `failure`, `fumble`, `opposed`, `partial-success`, `tie`, `mutual-failure`, `fixed-opposition` |
 
+### Appendix B — Coat of Arms Generator
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Random Coat of Arms Generator (Tables B.1–B.3)](../../rules_corpus/core/appendix-heraldry/coat-of-arms-generator.md) | 241, 242, 243, 244, 245, 246 | `heraldry`, `coat-of-arms`, `blazon`, `tincture`, `charge`, `shield`, `generator`, `tables` |
+
 ### 10 — Horses
 
 | Topic | Pages | Tags |
