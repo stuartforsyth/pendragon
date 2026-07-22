@@ -10,3 +10,9 @@ The mass-combat **Battle system** (Battle skill, unit rounds, the Commander's ro
 - `rulebooks/corerulebook.pdf` / `rulebooks/gmhandbook.pdf` — the Battle system rules.
 
 [← all game systems](README.md)
+
+## Extracted topics
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Passions — Nature, Levels, Courts, Raising/Lowering & Battle Use](../../rules_corpus/core/04-traits-passions/passions-overview.md) | 71, 73, 74, 78 | `passions`, `courts`, `levels`, `directed-passions`, `raising`, `lowering`, `violating`, `battle`, `gaining` |

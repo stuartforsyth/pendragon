@@ -10,7 +10,7 @@ A page index of every game system extracted into the rules corpus (`rules_corpus
 |--------|------|--------|-------|
 | **Combat** | Core, ch. 7 | 32 | [combat.md](combat.md) |
 | **Feasting** | GM Handbook, ch. 3 | 1 | [feasts.md](feasts.md) |
-| **Battle** | Core / GM / Battle Cards | 0 (pending) | [battles.md](battles.md) |
+| **Battle** | Core / GM / Battle Cards | 1 (pending) | [battles.md](battles.md) |
 
 ## Other extracted topics
 
@@ -48,3 +48,15 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | Topic | Pages | Tags |
 |-------|-------|------|
 | [Horsemanship (Skill) + fumbling a Horsemanship roll](../../rules_corpus/core/05-skills/horsemanship.md) | 95, 106 | `skills`, `horsemanship`, `horse`, `riding`, `deed`, `inquiry`, `fumble` |
+
+### 4 — Traits and Passions
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Afflictions — Madness, Melancholy & Misery](../../rules_corpus/core/04-traits-passions/afflictions.md) | 79, 80, 81 | `afflictions`, `madness`, `melancholy`, `misery`, `curing`, `out-of-game`, `glory`, `adoration` |
+| [Directed Traits & Obsessions (Avarice, Fear, Jealousy — Table 4.1)](../../rules_corpus/core/04-traits-passions/directed-traits-and-obsessions.md) | 67, 68, 69, 71 | `directed-traits`, `obsession`, `avarice`, `fear`, `jealousy`, `misery`, `table-4-1` |
+| [The Passion Roll — Inspiration, Impassionment & Passion Crisis (Table 4.2)](../../rules_corpus/core/04-traits-passions/passion-roll-inspiration-and-crisis.md) | 74, 76, 77 | `passion-roll`, `inspiration`, `impassioned`, `inspired`, `passion-crisis`, `melancholy`, `madness`, `internal-conflict`, `table-4-2` |
+| [Passions of Fervor, Adoratio & Civilitas (Love/Hate, Adoration/Devotion, Chivalry/Hospitality/Station)](../../rules_corpus/core/04-traits-passions/passions-fervor-adoratio-civilitas.md) | 86, 87, 88, 89, 90, 91, 93 | `passions`, `fervor`, `love`, `hate`, `adoratio`, `adoration`, `devotion`, `civilitas`, `chivalry`, `hospitality`, `station` |
+| [Passions of Fidelitas (Duty, Fealty, Homage, Loyalty)](../../rules_corpus/core/04-traits-passions/passions-fidelitas.md) | 82, 83, 84, 85 | `passions`, `fidelitas`, `duty`, `fealty`, `homage`, `loyalty`, `liege`, `vassal`, `oath` |
+| [Passions — Nature, Levels, Courts, Raising/Lowering & Battle Use](../../rules_corpus/core/04-traits-passions/passions-overview.md) | 71, 73, 74, 78 | `passions`, `courts`, `levels`, `directed-passions`, `raising`, `lowering`, `violating`, `battle`, `gaining` |
+| [Traits & Trait Rolls (Decision/Test/Hint, Valorous Roll, Religious Virtues)](../../rules_corpus/core/04-traits-passions/traits-and-trait-rolls.md) | 61, 62, 63, 64, 65, 67 | `traits`, `trait-roll`, `opposing-trait`, `decision-roll`, `test-roll`, `valorous`, `religious-virtues`, `influence`, `famous`, `exalted` |
