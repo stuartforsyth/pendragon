@@ -123,3 +123,12 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | [Table 8.1 — Melee & Brawling Weapons](../../rules_corpus/core/08-weapons/melee-weapons.md) | 161, 162, 163, 164, 165 | `weapons`, `melee`, `table-8-1`, `sword`, `axe`, `mace`, `spear`, `lance`, `dagger`, `rebated`, `shield-breaking` |
 | [Table 8.2 — Missile & Thrown Weapons](../../rules_corpus/core/08-weapons/missile-thrown-weapons.md) | 166, 167 | `weapons`, `missile`, `thrown`, `bow`, `crossbow`, `longbow`, `warbow`, `javelin`, `table-8-2`, `damage-cap` |
 | [Weapon Skills, Parry Protection & Breakage](../../rules_corpus/core/08-weapons/weapon-skills.md) | 159, 160, 161 | `weapons`, `weapon-skills`, `charge`, `sword`, `spear`, `hafted`, `flail`, `brawling`, `bow`, `crossbow`, `thrown`, `parry`, `breakage`, `handedness` |
+
+### 14 — The Winter Phase
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Winter Phase — Economic Circumstances & Aging (Steps 4–5)](../../rules_corpus/core/14-winter-phase/economic-and-aging.md) | 227, 228, 229, 230 | `economic`, `standard-of-living`, `maintenance`, `aging`, `senescence`, `infirmity`, `decrepitude`, `death`, `tables-14-2-14-4` |
+| [Winter Phase — Family & Childbirth (Step 11, Tables 14.8–14.12)](../../rules_corpus/core/14-winter-phase/family-childbirth.md) | 233, 234, 235 | `family`, `childbirth`, `conception`, `tragedy`, `child-survival`, `multiple-birth`, `blessed-birth`, `midwifery`, `tables-14-8-14-12` |
+| [Winter Phase — Steps, Personal Events & Experience Rolls](../../rules_corpus/core/14-winter-phase/overview.md) | 221, 227, 230 | `winter-phase`, `procedure`, `personal-events`, `experience-rolls`, `checks`, `table-14-1` |
+| [Winter Phase — Squires, Horses, Training, Glory & Prestige (Steps 6–10)](../../rules_corpus/core/14-winter-phase/stable-training-glory-prestige.md) | 230, 231, 232, 233 | `squire`, `maiden`, `horse-survival`, `training-practice`, `glory`, `prestige-reward`, `getting-fat`, `tables-14-5-14-7` |
