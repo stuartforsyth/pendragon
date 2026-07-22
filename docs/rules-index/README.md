@@ -16,6 +16,20 @@ A page index of every game system extracted into the rules corpus (`rules_corpus
 
 Standalone rules not (yet) belonging to a multi-topic system index:
 
+### 3 — Creating Your Player-knight
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Beginner's Luck — Knights' Luck Benefits (Table 3.9)](../../rules_corpus/core/03-character-creation/beginners-luck.md) | 58, 59 | `beginners-luck`, `heirloom`, `relic`, `family`, `character-creation`, `glory` |
+| [Generating Characteristics (Table 3.3) & Distinctive Features (Table 3.4)](../../rules_corpus/core/03-character-creation/characteristics-generation.md) | 45, 46, 47 | `characteristics`, `siz`, `dex`, `str`, `con`, `app`, `cultural-modifier`, `cultural-maximum`, `distinctive-features` |
+| [Creation Methods, Culture/Gender/Name & Starting Religion (Table 3.2)](../../rules_corpus/core/03-character-creation/creation-methods-and-personal-info.md) | 42, 43, 44, 45 | `creation`, `pregenerated`, `constructed`, `random`, `culture`, `gender`, `name`, `religion` |
+| [Ranks (Page/Squire/Knight) & Training and Practice](../../rules_corpus/core/03-character-creation/knighthood-ranks-and-training.md) | 39, 52, 53 | `knighthood`, `page`, `squire`, `knight`, `esquire`, `ranks`, `training`, `qualification`, `age` |
+| [Parent's Glory, Inherited Glory & Quick Family History (Table 3.1)](../../rules_corpus/core/03-character-creation/parents-glory.md) | 40, 41 | `glory`, `inherited-glory`, `family`, `heroic-events`, `parent` |
+| [Starting Equipment & Horses (Tables 3.7 & 3.8)](../../rules_corpus/core/03-character-creation/starting-equipment-and-horses.md) | 51, 57, 58 | `equipment`, `gear`, `armor`, `shield`, `horses`, `charger`, `rouncy`, `sumpter`, `squire`, `character-creation` |
+| [Starting Passions (Courts, Honor & Inherited Passions)](../../rules_corpus/core/03-character-creation/starting-passions.md) | 50, 51 | `passions`, `courts`, `fidelitas`, `fervor`, `adoratio`, `civilitas`, `honor`, `homage`, `inherited-passions` |
+| [Starting Skills (Table 3.5 & 3.6) — Beginning Values, Cultural & Family bonuses](../../rules_corpus/core/03-character-creation/starting-skills.md) | 51, 52 | `skills`, `beginning-values`, `cultural-skill-modifier`, `family-characteristic`, `personal-skill-additions`, `knightly-skills` |
+| [Starting Personality Traits & Religious Virtues](../../rules_corpus/core/03-character-creation/starting-traits.md) | 49, 50 | `traits`, `trait-pairs`, `religious-virtues`, `valorous`, `christian`, `pagan`, `character-creation` |
+
 ### 2 — The Game System
 
 | Topic | Pages | Tags |
