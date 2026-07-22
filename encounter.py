@@ -13,7 +13,7 @@ import random
 import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox, ttk
 
-from rules import roll_expr
+from rules import roll_expr, _rhu
 
 
 # ---------------------------------------------------------------------------
@@ -286,9 +286,11 @@ class Combatant:
             atk["value"] += cfg.get("skill_bonus", 5)
             atk["damage"] = f"{atk['damage']}+{cfg.get('damage_bonus_dice', 1)}D6"
         mult = cfg.get("hp_multiplier", 1.5)
-        self.max_hp = round(self.max_hp * mult)
-        self.cur_hp = round(self.cur_hp * mult)
-        self.unconscious = max(1, round(self.max_hp / 4))
+        # Pendragon rounds derived stats half-up (0.5+ up); Python's round() uses
+        # banker's rounding, which would round e.g. 22.5 HP or 6.5 Unconscious down.
+        self.max_hp = _rhu(self.max_hp * mult)
+        self.cur_hp = _rhu(self.cur_hp * mult)
+        self.unconscious = max(1, _rhu(self.max_hp / 4))
         self.armor_points += cfg.get("armour_bonus", 0)
         self.glory *= cfg.get("glory_multiplier", 1)
         self.elite = True

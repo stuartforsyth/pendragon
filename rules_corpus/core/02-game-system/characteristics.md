@@ -44,3 +44,8 @@ carry a modifier (usually environmental).
 | **Weapon Damage** (dice) | = (STR + SIZ) ÷ 6, in d6 |
 | **Brawling Damage** (flat) | = (STR + SIZ) ÷ 6, as a flat number |
 | **Movement Rate** | = (STR + DEX) ÷ 2, + 5 |
+
+Derived values use the normal **round-half-up** rule: drop a decimal of 0.1–0.4,
+round 0.5 or higher up (see [[core.game-system.concepts-and-dice]]). E.g. 27 Hit
+Points ÷ 4 = 6.75 → **Unconscious 7**. This is *not* pure "always round up" — 6.4
+would round to 6.
