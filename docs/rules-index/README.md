@@ -10,7 +10,7 @@ A page index of every game system extracted into the rules corpus (`rules_corpus
 |--------|------|--------|-------|
 | **Combat** | Core, ch. 7 | 32 | [combat.md](combat.md) |
 | **Feasting** | GM Handbook, ch. 3 | 1 | [feasts.md](feasts.md) |
-| **Battle** | Core / GM / Battle Cards | 1 (pending) | [battles.md](battles.md) |
+| **Battle** | Core / GM / Battle Cards | 5 (pending) | [battles.md](battles.md) |
 
 ## Other extracted topics
 
@@ -138,3 +138,12 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | [Winter Phase — Family & Childbirth (Step 11, Tables 14.8–14.12)](../../rules_corpus/core/14-winter-phase/family-childbirth.md) | 233, 234, 235 | `family`, `childbirth`, `conception`, `tragedy`, `child-survival`, `multiple-birth`, `blessed-birth`, `midwifery`, `tables-14-8-14-12` |
 | [Winter Phase — Steps, Personal Events & Experience Rolls](../../rules_corpus/core/14-winter-phase/overview.md) | 221, 227, 230 | `winter-phase`, `procedure`, `personal-events`, `experience-rolls`, `checks`, `table-14-1` |
 | [Winter Phase — Squires, Horses, Training, Glory & Prestige (Steps 6–10)](../../rules_corpus/core/14-winter-phase/stable-training-glory-prestige.md) | 230, 231, 232, 233 | `squire`, `maiden`, `horse-survival`, `training-practice`, `glory`, `prestige-reward`, `getting-fat`, `tables-14-5-14-7` |
+
+### 6 — Battle
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [After the Battle — Victory, Casualties (KV) & Glory](../../rules_corpus/gm/06-battle/after-the-battle.md) | 133, 134, 135 | `battle`, `victory`, `defeat`, `knight-value`, `casualties`, `glory`, `ransom`, `tables-6-4-6-8` |
+| [Battlefield Position, Retiring to the Rear & Surrender](../../rules_corpus/gm/06-battle/battlefield-position-and-surrender.md) | 131, 132 | `battle`, `retire-to-rear`, `alone-on-the-field`, `surrender`, `flee`, `morale`, `madness` |
+| [Fighting the Battle — Turn Procedure, Postures & Encounters](../../rules_corpus/gm/06-battle/fighting-the-battle.md) | 125, 126, 127, 128, 129, 130, 131 | `battle`, `battle-turn`, `posture`, `mounted-charge`, `morale`, `disobeying`, `squire`, `missile`, `capture`, `table-6-3` |
+| [Running a Battle — Organization, Intensity, Morale & Commander Rolls](../../rules_corpus/gm/06-battle/running-a-battle.md) | 121, 122, 123, 124, 125 | `battle`, `conroi`, `bataille`, `army`, `intensity`, `encounter`, `morale`, `commander`, `table-6-1`, `table-6-2` |
