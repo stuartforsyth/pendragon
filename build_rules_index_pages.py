@@ -160,38 +160,39 @@ with open(os.path.join(OUT, "feasts.md"), "w") as f:
     f.write("\n".join(feast_md).rstrip() + "\n")
 
 
-# ---- Battles (stub — not yet extracted) -----------------------------------
+# ---- Battle ---------------------------------------------------------------
+# Battle system = the GM Handbook "Battle" chapter + the Battle Cards book. A
+# `battle` tag on a core rule (e.g. using Passions in battle) is battle-relevant
+# but belongs to its own system, so it is excluded here.
 battle_ids = [r["id"] for r in rows
-              if "battle" in r["tags"] or r["book"] == "battlecards"]
+              if r["book"] == "battlecards"
+              or (r["book"] == "gm" and "Battle" in r["chapter"])]
 battle_md = [
     "# Battle — rules index",
     "",
-    "The mass-combat **Battle system** (Battle skill, unit rounds, the "
-    "Commander's roll, and the Battle Cards).",
+    "The mass-combat **Battle system** (GM Handbook, Chapter 6 — Battle): "
+    "conrois & Morale, the Army Commander's roll, Battle Turns and Encounters, "
+    "and casualties/Glory. The **Battle Cards** deck is a separate source.",
     "",
-    "> **Status: not yet extracted into the corpus.** No Battle topics have "
-    "been captured yet, so this index is a placeholder. When a Battle rule is "
-    "first looked up, extract the whole rule with the `extract-rule` skill "
-    "and this page can be filled in.",
+    "> Page numbers are **printed** GM-handbook pages. PDF page = printed + 3.",
     "",
-    "**Sources** (local, git-ignored):",
-    "",
-    "- `rulebooks/battlecards.pdf` — the Battle Card deck.",
-    "- `rulebooks/corerulebook.pdf` / `rulebooks/gmhandbook.pdf` — the Battle "
-    "system rules.",
-    "",
-    "[← all game systems](README.md)",
+    f"**{len(battle_ids)} topic(s)** · [← all game systems](README.md)",
     "",
 ]
 if battle_ids:
-    battle_md += ["## Extracted topics", "",
-                  "| Topic | Pages | Tags |", "|-------|-------|------|"]
+    battle_md += ["| Topic | Pages | Tags |", "|-------|-------|------|"]
     for i in battle_ids:
         r = by_id[i]
         battle_md.append(
             f"| [{r['title']}]({rel(r['source'])}) | {pp(r['pages'])} | "
             f"{', '.join('`'+t+'`' for t in r['tags'])} |")
     battle_md.append("")
+else:
+    battle_md += [
+        "> **Status: not yet extracted.** Sources: `rulebooks/gmhandbook.pdf` "
+        "(Battle chapter) and `rulebooks/battlecards.pdf` (the deck).",
+        "",
+    ]
 with open(os.path.join(OUT, "battles.md"), "w") as f:
     f.write("\n".join(battle_md).rstrip() + "\n")
 
@@ -221,7 +222,7 @@ master = [
     "|--------|------|--------|-------|",
     f"| **Combat** | Core, ch. 7 | {len(all_combat)} | [combat.md](combat.md) |",
     f"| **Feasting** | GM Handbook, ch. 3 | {len(feast_ids)} | [feasts.md](feasts.md) |",
-    f"| **Battle** | Core / GM / Battle Cards | {len(battle_ids)} (pending) | [battles.md](battles.md) |",
+    f"| **Battle** | GM Handbook, ch. 6 | {len(battle_ids)} | [battles.md](battles.md) |",
     "",
     "## Other extracted topics",
     "",

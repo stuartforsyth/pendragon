@@ -10,7 +10,7 @@ A page index of every game system extracted into the rules corpus (`rules_corpus
 |--------|------|--------|-------|
 | **Combat** | Core, ch. 7 | 32 | [combat.md](combat.md) |
 | **Feasting** | GM Handbook, ch. 3 | 1 | [feasts.md](feasts.md) |
-| **Battle** | Core / GM / Battle Cards | 5 (pending) | [battles.md](battles.md) |
+| **Battle** | GM Handbook, ch. 6 | 4 | [battles.md](battles.md) |
 
 ## Other extracted topics
 
