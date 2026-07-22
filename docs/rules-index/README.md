@@ -48,6 +48,9 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | Topic | Pages | Tags |
 |-------|-------|------|
 | [Horsemanship (Skill) + fumbling a Horsemanship roll](../../rules_corpus/core/05-skills/horsemanship.md) | 95, 106 | `skills`, `horsemanship`, `horse`, `riding`, `deed`, `inquiry`, `fumble` |
+| [Skill Groups (Combat, Courtly, Knightly, Ladies, Woodcraft…)](../../rules_corpus/core/05-skills/skill-groups.md) | 96, 97 | `skills`, `groups`, `combat`, `courtly`, `minsterly`, `knightly`, `non-knightly`, `ladies`, `woodcraft`, `app-cap`, `honor` |
+| [Skill Uses — Deeds, Inquiry & Parlance](../../rules_corpus/core/05-skills/skill-uses.md) | 95, 96, 113 | `skills`, `deeds`, `inquiry`, `parlance`, `roll-results`, `leader`, `improving` |
+| [Skills Defined (non-combat) — with Tables 5.1, 5.2 & 5.3](../../rules_corpus/core/05-skills/skills-defined.md) | 98, 99, 101, 102, 107, 111 | `skills`, `awareness`, `chirurgery`, `falconry`, `fashion`, `geniality`, `industry`, `hunting`, `stewardship`, `tables` |
 
 ### 4 — Traits and Passions
 
