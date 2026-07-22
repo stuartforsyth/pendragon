@@ -74,3 +74,11 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | [Passions of Fidelitas (Duty, Fealty, Homage, Loyalty)](../../rules_corpus/core/04-traits-passions/passions-fidelitas.md) | 82, 83, 84, 85 | `passions`, `fidelitas`, `duty`, `fealty`, `homage`, `loyalty`, `liege`, `vassal`, `oath` |
 | [Passions — Nature, Levels, Courts, Raising/Lowering & Battle Use](../../rules_corpus/core/04-traits-passions/passions-overview.md) | 71, 73, 74, 78 | `passions`, `courts`, `levels`, `directed-passions`, `raising`, `lowering`, `violating`, `battle`, `gaining` |
 | [Traits & Trait Rolls (Decision/Test/Hint, Valorous Roll, Religious Virtues)](../../rules_corpus/core/04-traits-passions/traits-and-trait-rolls.md) | 61, 62, 63, 64, 65, 67 | `traits`, `trait-roll`, `opposing-trait`, `decision-roll`, `test-roll`, `valorous`, `religious-virtues`, `influence`, `famous`, `exalted` |
+
+### 8 — Weapons
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Table 8.1 — Melee & Brawling Weapons](../../rules_corpus/core/08-weapons/melee-weapons.md) | 161, 162, 163, 164, 165 | `weapons`, `melee`, `table-8-1`, `sword`, `axe`, `mace`, `spear`, `lance`, `dagger`, `rebated`, `shield-breaking` |
+| [Table 8.2 — Missile & Thrown Weapons](../../rules_corpus/core/08-weapons/missile-thrown-weapons.md) | 166, 167 | `weapons`, `missile`, `thrown`, `bow`, `crossbow`, `longbow`, `warbow`, `javelin`, `table-8-2`, `damage-cap` |
+| [Weapon Skills, Parry Protection & Breakage](../../rules_corpus/core/08-weapons/weapon-skills.md) | 159, 160, 161 | `weapons`, `weapon-skills`, `charge`, `sword`, `spear`, `hafted`, `flail`, `brawling`, `bow`, `crossbow`, `thrown`, `parry`, `breakage`, `handedness` |
