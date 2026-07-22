@@ -88,6 +88,13 @@ Standalone rules not (yet) belonging to a multi-topic system index:
 | [Skill Uses — Deeds, Inquiry & Parlance](../../rules_corpus/core/05-skills/skill-uses.md) | 95, 96, 113 | `skills`, `deeds`, `inquiry`, `parlance`, `roll-results`, `leader`, `improving` |
 | [Skills Defined (non-combat) — with Tables 5.1, 5.2 & 5.3](../../rules_corpus/core/05-skills/skills-defined.md) | 98, 99, 101, 102, 107, 111 | `skills`, `awareness`, `chirurgery`, `falconry`, `fashion`, `geniality`, `industry`, `hunting`, `stewardship`, `tables` |
 
+### 13 — Solo Scenarios
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Other Solos — Lost in the Woods, Madness & Pilgrimage](../../rules_corpus/core/13-solo-scenarios/other-solos-and-pilgrimage.md) | 215, 216, 217, 219 | `solo`, `lost-in-the-woods`, `madness`, `pilgrimage`, `miracles`, `table-13-3`, `table-13-4` |
+| [Standard Activity Solos (Tables 13.1 & 13.2)](../../rules_corpus/core/13-solo-scenarios/standard-activity-solos.md) | 213, 214 | `solo`, `missed-year`, `household-duties`, `court`, `checks`, `table-13-1`, `table-13-2` |
+
 ### 4 — Traits and Passions
 
 | Topic | Pages | Tags |
