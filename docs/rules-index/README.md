@@ -16,6 +16,17 @@ A page index of every game system extracted into the rules corpus (`rules_corpus
 
 Standalone rules not (yet) belonging to a multi-topic system index:
 
+### 6 — Aspirations
+
+| Topic | Pages | Tags |
+|-------|-------|------|
+| [Character Progression & "Winning the Game"](../../rules_corpus/core/06-aspirations/character-progression.md) | 115 | `progression`, `advancement`, `ranks`, `retirement`, `winning` |
+| [Glory — Distribution (Table 6.1), Gaining, Benchmarks & Challenges](../../rules_corpus/core/06-aspirations/glory.md) | 123, 124, 125 | `glory`, `prestige-reward`, `precedence`, `benchmarks`, `challenge`, `distribution`, `table-6-1` |
+| [Honor — Nature, Ranges, Gaining & Oaths](../../rules_corpus/core/06-aspirations/honor.md) | 116, 117, 118, 119 | `honor`, `public-honor`, `private-honor`, `oaths`, `gaining-honor`, `defending-honor`, `passion` |
+| [Ideals — Chivalrous, Religious & Romantic Knight](../../rules_corpus/core/06-aspirations/ideals.md) | 126, 127 | `ideals`, `chivalrous-knight`, `religious-knight`, `romantic-knight`, `chivalry`, `devotion`, `adoration`, `benefits` |
+| [Losing Honor — Violations, Accusation, Grievous Dishonor & Flight](../../rules_corpus/core/06-aspirations/losing-honor.md) | 119, 120, 121, 122, 125 | `honor`, `losing-honor`, `grievous-dishonor`, `accusation`, `false-claims`, `prisoner`, `flight` |
+| [Knight of the Round Table](../../rules_corpus/core/06-aspirations/round-table.md) | 128, 129 | `round-table`, `siege`, `arthur`, `benefits`, `requirements`, `expulsion`, `honor`, `glory` |
+
 ### 3 — Creating Your Player-knight
 
 | Topic | Pages | Tags |
