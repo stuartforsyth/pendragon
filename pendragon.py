@@ -283,8 +283,32 @@ class Generator:
             result["manner"] = self.rules.compose_manner(result["traits"])
             result["passions"] = self.rules.roll_passions(religion)
             result["directed"] = self.rules.roll_directed_trait()
+            # Full Cymric-knight creation (Core Ch.3) overrides the class-level
+            # skills/Glory/passions with the rules-accurate sheet.
+            if (result.get("social_class") == "Knight" and culture == "Cymri"
+                    and self.rules.character_creation):
+                self._apply_full_knight(result)
 
         return result
+
+    def _apply_full_knight(self, r):
+        """Replace the class-level skills/Glory/passions with a full rules-accurate
+        Cymric knight (Core Ch.3): Table 3.5 skills + cultural/family/training,
+        inherited Glory via family history, the complete passion set, plus age,
+        homeland and family lore."""
+        skills, family = self.rules.roll_full_skills(r["stats"], r["culture"])
+        r["skills"] = skills
+        r["family_talent"] = family
+        glory, parent_glory, lore = self.rules.roll_inherited_glory()
+        r["glory"] = glory
+        r["parent_glory"] = parent_glory
+        r["family_lore"] = lore
+        r["passions"] = self.rules.roll_full_passions(r["religion"])
+        defaults = self.rules.character_creation.get("defaults", {})
+        r["age"] = defaults.get("age", 21)
+        r["homeland"] = defaults.get("homeland", "")
+        r["residence"] = defaults.get("residence", "")
+        r["full_knight"] = True
 
     # Fields the GUI can reroll individually, mapped to how to reroll them.
     def reroll_fields(self):
@@ -298,6 +322,10 @@ class Generator:
             fields[1:1] = ["Class", "Skills"]  # right after Name
         return fields
 
+    def _full_knight_context(self, r):
+        return (r.get("social_class") == "Knight" and r.get("culture") == "Cymri"
+                and self.rules and self.rules.character_creation)
+
     def reroll_field(self, r, field):
         """Reroll a single component of an existing result in place."""
         if field == "Name":
@@ -305,19 +333,34 @@ class Generator:
             return
         if self.rules is None:
             return
+        full = bool(r.get("full_knight"))
         if field == "Class":
             self._fill_class(r)
+            if self._full_knight_context(r):
+                self._apply_full_knight(r)   # became (or stayed) a Cymric knight
+            elif full:                       # no longer a Cymric knight
+                for k in ("full_knight", "family_talent", "family_lore",
+                          "parent_glory", "age", "homeland", "residence"):
+                    r.pop(k, None)
         elif field == "Skills":
-            self._fill_skills(r)
+            if full:
+                r["skills"], r["family_talent"] = \
+                    self.rules.roll_full_skills(r["stats"], r["culture"])
+            else:
+                self._fill_skills(r)
         elif field == "Manner":  # re-phrase from the current traits
             r["manner"] = self.rules.compose_manner(r["traits"])
         elif field == "Religion":
             r["religion"] = self.rules.religion_for(r["culture"])
             r["traits"] = self.rules.roll_traits(r["religion"])
             r["manner"] = self.rules.compose_manner(r["traits"])
-            r["passions"] = self.rules.roll_passions(r["religion"])
+            r["passions"] = (self.rules.roll_full_passions(r["religion"]) if full
+                             else self.rules.roll_passions(r["religion"]))
         elif field == "Characteristics":
             self._fill_characteristics(r)
+            if full:  # skills derive from stats, so re-roll the full set too
+                r["skills"], r["family_talent"] = \
+                    self.rules.roll_full_skills(r["stats"], r["culture"])
         elif field == "Appearance":
             s = r["stats"]
             r["appearance"] = self.rules.roll_appearance(
@@ -327,7 +370,8 @@ class Generator:
             r["traits"] = self.rules.roll_traits(r["religion"])
             r["manner"] = self.rules.compose_manner(r["traits"])
         elif field == "Passions":
-            r["passions"] = self.rules.roll_passions(r["religion"])
+            r["passions"] = (self.rules.roll_full_passions(r["religion"]) if full
+                             else self.rules.roll_passions(r["religion"]))
         elif field == "Directed Trait":
             r["directed"] = self.rules.roll_directed_trait()
 
@@ -514,6 +558,18 @@ def format_statblock(r):
     if r.get("glory") is not None:
         lines.append(f"Glory: {r['glory']}")
 
+    if r.get("full_knight"):
+        if r.get("homeland"):
+            res = f" ({r['residence']})" if r.get("residence") else ""
+            lines.append(f"Age {r.get('age', 21)}, of {r['homeland']}{res}.")
+        if r.get("family_talent"):
+            lines.append("Family talent (+3): " + ", ".join(r["family_talent"]))
+        if r.get("parent_glory"):
+            lines.append(f"Inherited Glory from a parent of {r['parent_glory']:,} Glory.")
+        if r.get("family_lore"):
+            lines.append("Family lore: "
+                         + "; ".join(f"an ancestor {ln}" for ln in r["family_lore"]))
+
     if r.get("naming_note"):
         lines.append(f"Naming: {r['naming_note']}")
     if r.get("pronunciation"):
@@ -562,6 +618,15 @@ def format_statblock_markdown(r):
         bullet("Skills", _skills_str(r["skills"]))
     if r.get("glory") is not None:
         bullet("Glory", r["glory"])
+    if r.get("full_knight"):
+        if r.get("homeland"):
+            res = f" ({r['residence']})" if r.get("residence") else ""
+            bullet("Age / Home", f"{r.get('age', 21)} · {r['homeland']}{res}")
+        if r.get("family_talent"):
+            bullet("Family talent", "+3 " + ", ".join(r["family_talent"]))
+        if r.get("family_lore"):
+            bullet("Family lore",
+                   "; ".join(f"an ancestor {ln}" for ln in r["family_lore"]))
     if r.get("naming_note"):
         bullet("Naming", r["naming_note"])
     if r.get("pronunciation"):
@@ -1056,6 +1121,18 @@ class App(tk.Tk):
             self.details.insert("end", "\n")
         if r.get("glory") is not None:
             row("Glory", r["glory"])
+
+        if r.get("full_knight"):
+            self.details.insert("end", "\n")
+            if r.get("homeland"):
+                res = f" ({r['residence']})" if r.get("residence") else ""
+                row("Age / Home", f"{r.get('age', 21)} · {r['homeland']}{res}")
+            if r.get("family_talent"):
+                row("Family talent", "+3 " + ", ".join(r["family_talent"]))
+            if r.get("family_lore"):
+                self.details.insert("end", "Family lore:\n", ("label",))
+                for ln in r["family_lore"]:
+                    self.details.insert("end", f"  • an ancestor {ln}\n")
 
         if r.get("naming_note"):
             self.details.insert("end", "\n")

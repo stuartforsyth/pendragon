@@ -47,6 +47,20 @@ rather than scattering TODOs through the code.
 - [ ] **Glory value** to signal renown.
 - [ ] **Homeland / region** that can drive culture and cultural Passions.
 
+## Full character creation (Cymric knight, Core Ch.3)
+
+- [x] **Phase 1 — the sheet.** Full skills (Table 3.5 beginning values + Cymric
+  cultural + family characteristic + 7 years' Training), rules-based inherited
+  **Glory** via Quick Family History (+ heroic-event family lore), complete
+  starting **Passions**, plus age/homeland. Cymri knights only (other cultures
+  are supplement material — kept to today's lighter generation).
+- [ ] **Phase 2 — kit.** Starting equipment (hauberk+aketon+nasal helm+kite
+  shield, sword/spears/lance/dagger), horses (Charger/Rouncy/Sumpter — stats
+  already seeded in the bestiary), and a **Beginner's Luck heirloom** (Table 3.9).
+- [ ] **Phase 3 — flourish.** Coat of arms (text blazon; Tables B.1–B.3),
+  Ideals (Chivalry/Religious/Romantic), a squire supporting-NPC, and — if the
+  supplement is available — Saxon/Pict cultural creation.
+
 ## Presentation
 
 - [ ] **Generate Portrait** — call a local image generator (ComfyUI / A1111

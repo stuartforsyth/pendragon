@@ -184,7 +184,18 @@
       "the Picts",
       "a fallen comrade",
       "a hated neighbour"
-    ]
+    ],
+    "random_method": {
+      "Honor": "2D6+8",
+      "Homage (Lord)": "2D6+8",
+      "Love (Family)": "2D6+3",
+      "Hospitality": "2D6+3",
+      "Station": "2D6+3",
+      "Devotion (Deity)": "1D6+2",
+      "Hate (Saxons)": "1D6+2"
+    },
+    "distribute": "4D6+1",
+    "cap": 15
   },
   "characteristics": {
     "roll_dice": [
@@ -413,15 +424,54 @@
       "pale blue"
     ],
     "builds": {
-      "small_weak": ["willowy and slight", "small and wiry", "a slight, spare frame", "reedy and slender"],
-      "small_mid": ["small and compact", "short and neat", "trim and light-footed"],
-      "small_strong": ["short but powerfully built", "compact and muscular", "small and hard-knotted with muscle"],
-      "mid_weak": ["lean and unremarkable", "spare and lightly built", "of slender build"],
-      "mid_mid": ["", "", "of middling build", "ordinary in stature"],
-      "mid_strong": ["thickset and strong", "stocky and muscular", "square-built and sturdy"],
-      "big_weak": ["tall and gangly", "rangy and lean", "long-limbed and spare"],
-      "big_mid": ["tall and solid", "long-limbed and sturdy", "rawboned and rangy"],
-      "big_strong": ["large and heavily muscled", "a towering, powerful frame", "broad and mighty", "huge and thickly muscled"]
+      "small_weak": [
+        "willowy and slight",
+        "small and wiry",
+        "a slight, spare frame",
+        "reedy and slender"
+      ],
+      "small_mid": [
+        "small and compact",
+        "short and neat",
+        "trim and light-footed"
+      ],
+      "small_strong": [
+        "short but powerfully built",
+        "compact and muscular",
+        "small and hard-knotted with muscle"
+      ],
+      "mid_weak": [
+        "lean and unremarkable",
+        "spare and lightly built",
+        "of slender build"
+      ],
+      "mid_mid": [
+        "",
+        "",
+        "of middling build",
+        "ordinary in stature"
+      ],
+      "mid_strong": [
+        "thickset and strong",
+        "stocky and muscular",
+        "square-built and sturdy"
+      ],
+      "big_weak": [
+        "tall and gangly",
+        "rangy and lean",
+        "long-limbed and spare"
+      ],
+      "big_mid": [
+        "tall and solid",
+        "long-limbed and sturdy",
+        "rawboned and rangy"
+      ],
+      "big_strong": [
+        "large and heavily muscled",
+        "a towering, powerful frame",
+        "broad and mighty",
+        "huge and thickly muscled"
+      ]
     },
     "scars": [
       "a jagged scar across one cheek",
@@ -444,10 +494,36 @@
         "woad war-marks daubed across the brow",
         "swirling blue tattoos coiling up the neck"
       ],
-      "animals": ["a boar", "a stag", "a raven", "a wolf", "a serpent", "a bear", "a running horse", "an eagle", "a hound", "a coiled dragon"],
+      "animals": [
+        "a boar",
+        "a stag",
+        "a raven",
+        "a wolf",
+        "a serpent",
+        "a bear",
+        "a running horse",
+        "an eagle",
+        "a hound",
+        "a coiled dragon"
+      ],
       "deities": {
-        "pagan": ["Epona", "Cernunnos", "the Morrigan", "Belenus", "Lugh", "Nodens", "Sulis", "Taranis"],
-        "wodinic": ["Woden", "Thunor", "Tiw", "Frige", "Ing"]
+        "pagan": [
+          "Epona",
+          "Cernunnos",
+          "the Morrigan",
+          "Belenus",
+          "Lugh",
+          "Nodens",
+          "Sulis",
+          "Taranis"
+        ],
+        "wodinic": [
+          "Woden",
+          "Thunor",
+          "Tiw",
+          "Frige",
+          "Ing"
+        ]
       }
     }
   },
@@ -993,5 +1069,180 @@
       "though",
       "yet"
     ]
+  },
+  "character_creation": {
+    "beginning_skills": {
+      "Awareness": "5",
+      "Compose": "5",
+      "Courtesy": "APP-5",
+      "Dancing": "DEX/2",
+      "Falconry": "5",
+      "Fashion": "APP-5",
+      "First Aid": "DEX/2",
+      "Flirting": "APP-5",
+      "Folklore": "APP-5",
+      "Gaming": "5",
+      "Hunting": "5",
+      "Intrigue": "APP-5",
+      "Literacy": "0",
+      "Orate": "APP-5",
+      "Play Instrument": "DEX/2",
+      "Recognize": "5",
+      "Religion": "5",
+      "Singing": "5",
+      "Stewardship": "5",
+      "Battle": "5",
+      "Horsemanship": "DEX/2",
+      "Brawling": "STR/2",
+      "Charge": "DEX/2",
+      "Hafted": "DEX/2",
+      "Sword": "DEX/2",
+      "Spear": "DEX/2",
+      "Two-Handed Hafted": "DEX/2",
+      "Bow": "DEX/2",
+      "Crossbow": "DEX/2",
+      "Thrown": "DEX/2"
+    },
+    "knightly_skills": [
+      "Awareness",
+      "Courtesy",
+      "First Aid",
+      "Hunting",
+      "Recognize",
+      "Battle",
+      "Horsemanship",
+      "Brawling",
+      "Charge",
+      "Sword"
+    ],
+    "weapon_skills": [
+      "Brawling",
+      "Charge",
+      "Sword",
+      "Spear",
+      "Hafted",
+      "Two-Handed Hafted",
+      "Bow",
+      "Crossbow",
+      "Thrown"
+    ],
+    "app_based_skills": [
+      "Courtesy",
+      "Fashion",
+      "Flirting",
+      "Folklore",
+      "Intrigue",
+      "Orate"
+    ],
+    "cultural_skill_mods": {
+      "Cymri": {
+        "Charge": 3,
+        "Horsemanship": 3,
+        "Courtesy": 3
+      }
+    },
+    "family_characteristic": [
+      "Awareness",
+      "Battle",
+      "Compose",
+      "Courtesy",
+      "Dancing",
+      "Flirting",
+      "Falconry",
+      "First Aid",
+      "Recognize",
+      "Gaming",
+      "Horsemanship",
+      "Intrigue",
+      "Orate",
+      "Literacy",
+      "Folklore",
+      "Play Instrument",
+      "Religion",
+      "Singing",
+      "Stewardship",
+      "Gifted"
+    ],
+    "personal_skill_points": 10,
+    "training": {
+      "years": 7,
+      "points_per_year": 5
+    },
+    "skill_cap": 15,
+    "knightly_minimum": 10,
+    "family_history": {
+      "parent_base": {
+        "dice": [
+          2,
+          6
+        ],
+        "mult": 100,
+        "add": 2000
+      },
+      "parent_additional": {
+        "dice": [
+          3,
+          6
+        ],
+        "mult": 100,
+        "add": 500
+      },
+      "inherited_fraction": 0.25,
+      "inherited_cap": 4000,
+      "heroic_event_per": 500
+    },
+    "heroic_events": [
+      {
+        "label": "fought at the Battle of Mount Damen (484)",
+        "reroll": "rescued Count Roderick at the Battle of Eburacum"
+      },
+      {
+        "label": "fought at the Battle of Lindsey (490)",
+        "reroll": "helped capture King Octa"
+      },
+      {
+        "label": "fought at the Battle of St. Albans (495)",
+        "reroll": "helped slay King Octa"
+      },
+      {
+        "label": "repelled a Saxon Raid",
+        "sub": [
+          "destroyed a Saxon raiding group single-handed",
+          "destroyed a Saxon raiding group single-handed",
+          "destroyed a Saxon raiding group single-handed",
+          "rescued a damsel from raiders (a family owes a Favor)",
+          "defeated a Saxon chieftain (won a rune-scribed sword; his son is an enemy)",
+          "defeated a Saxon berserker (won an amber knob worth £1)"
+        ]
+      },
+      {
+        "label": "undertook a great quest",
+        "sub": [
+          "quested on behalf of Merlin",
+          "slew Djerl the Goblin (and was cursed)",
+          "slew Jongon the Giant (surviving giants bear a grudge)",
+          "slew Djell the Spriggan (and was cursed)",
+          "escorted Princess Morgan to her wedding with King Uriens",
+          "served as emissary to King Nanteleod of Escavalon"
+        ]
+      },
+      {
+        "label": "distinguished themselves in battle",
+        "sub": [
+          "was a hero at the Battle of Terrabil",
+          "fought at Dorchester (hated by Cornishmen)",
+          "wounded King Cerdic at Sarum (who escaped)",
+          "helped slay King Aescwine at Royston",
+          "wounded King Cwichelm at Cambridge (who escaped)",
+          "was a hero at Summerland (hated by Cornishmen)"
+        ]
+      }
+    ],
+    "defaults": {
+      "year": 508,
+      "age": 21,
+      "homeland": "Salisbury",
+      "residence": "Sarum"
+    }
   }
 }

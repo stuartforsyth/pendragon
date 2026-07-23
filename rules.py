@@ -133,6 +133,9 @@ class Rules:
         self.social_classes = data.get("social_classes", {})
         self.class_weights = data.get("class_weights", {})
 
+        # Optional: full character-creation tables (Cymric knight, Core Ch.3).
+        self.character_creation = data.get("character_creation", {})
+
         # Optional: combat data (loaded from data/combat.json by load_rules).
         self.combat = None
         self.data_dir = ""  # set by load_rules; where combat.json is written
@@ -448,6 +451,152 @@ class Rules:
         name, val = self._motivating_passion({n for n, _ in passions})
         passions.append((name, _clamp(val)))
         return passions
+
+    # -- full character creation (Cymric knight, Core Ch.3) ----------------
+
+    def _skill_base(self, formula, stats):
+        """A beginning skill value: a fixed number, or APP-5 / DEX/2 / STR/2."""
+        f = str(formula)
+        if f == "APP-5":
+            return max(0, stats.get("APP", 10) - 5)
+        if f == "DEX/2":
+            return stats.get("DEX", 10) // 2
+        if f == "STR/2":
+            return stats.get("STR", 10) // 2
+        try:
+            return int(f)
+        except ValueError:
+            return 0
+
+    def _roll_family_characteristic(self):
+        """Table 3.6 — the family's +3 skill (1D20). A 'Gifted' result grants the
+        talent to two rolled skills instead."""
+        table = self.character_creation.get("family_characteristic", [])
+        if not table:
+            return []
+        pick = random.choice(table)
+        if pick == "Gifted":
+            pool = [s for s in table if s != "Gifted"]
+            return [random.choice(pool), random.choice(pool)] if pool else []
+        return [pick]
+
+    def _spend_skill_points(self, skills, points, stats, cc):
+        """Distribute personal + training points with a knightly weighting, honouring
+        the caps: max 15 (incl. cultural/family), APP-based skills not above APP via
+        personal points, and skills that begin at 0 (Literacy) cannot be raised."""
+        cap = cc.get("skill_cap", 15)
+        app = stats.get("APP", 10)
+        app_based = set(cc.get("app_based_skills", []))
+        zero = {k for k, v in cc.get("beginning_skills", {}).items() if str(v) == "0"}
+
+        def limit(sk):
+            return min(cap, app) if sk in app_based else cap
+
+        def can_raise(sk):
+            return sk not in zero and skills.get(sk, 0) < limit(sk)
+
+        # 1. Meet the knightly minimums first (Sword/Charge/Brawling + the two usual
+        #    non-weapon Knightly skills).
+        minimum = cc.get("knightly_minimum", 10)
+        for sk in ("Sword", "Charge", "Brawling", "Horsemanship", "Courtesy"):
+            while points > 0 and skills.get(sk, 0) < minimum and can_raise(sk):
+                skills[sk] = skills.get(sk, 0) + 1
+                points -= 1
+
+        # 2. Fill a knightly focus (weapons + key Knightly skills), then spill the
+        #    remainder across the other skills — round-robin so it spreads.
+        focus = list(cc.get("weapon_skills", [])) + \
+            ["Horsemanship", "Battle", "Awareness", "First Aid", "Hunting",
+             "Courtesy", "Recognize"]
+        rest = focus + [s for s in skills if s not in focus]
+        for group in (focus, rest):
+            while points > 0:
+                progressed = False
+                for sk in group:
+                    if points <= 0:
+                        break
+                    if can_raise(sk):
+                        skills[sk] += 1
+                        points -= 1
+                        progressed = True
+                if not progressed:
+                    break
+        return skills
+
+    def roll_full_skills(self, stats, culture="Cymri"):
+        """A full knight skill set: Table 3.5 beginning values → cultural modifiers →
+        family characteristic → personal additions + 7 years' training. Returns
+        (skills dict, family-talent skill list)."""
+        cc = self.character_creation
+        skills = {name: self._skill_base(base, stats)
+                  for name, base in cc.get("beginning_skills", {}).items()}
+        for sk, bonus in cc.get("cultural_skill_mods", {}).get(culture, {}).items():
+            skills[sk] = skills.get(sk, 0) + bonus
+        family = self._roll_family_characteristic()
+        for sk in family:
+            skills[sk] = skills.get(sk, 0) + 3
+        tr = cc.get("training", {})
+        points = cc.get("personal_skill_points", 10) + \
+            tr.get("years", 0) * tr.get("points_per_year", 0)
+        self._spend_skill_points(skills, points, stats, cc)
+        return skills, family
+
+    def roll_inherited_glory(self):
+        """Inherited Glory via the Quick Family History (Table 3.1): ¼ of the
+        parent's Glory (cap 4,000), plus one Heroic Event per full 500 of the
+        parent's *additional* Glory. Returns (glory, parent_total, lore lines)."""
+        fh = self.character_creation.get("family_history", {})
+        if not fh:
+            return 0, 0, []
+
+        def roll(spec):
+            n, s = spec["dice"]
+            return _roll(n, s) * spec["mult"] + spec["add"]
+
+        base = roll(fh["parent_base"])
+        additional = roll(fh["parent_additional"])
+        parent_total = base + additional
+        inherited = min(fh.get("inherited_cap", 4000),
+                        int(parent_total * fh.get("inherited_fraction", 0.25)))
+        n_events = additional // fh.get("heroic_event_per", 500)
+        return inherited, parent_total, self._roll_heroic_events(n_events)
+
+    def _roll_heroic_events(self, n):
+        events = self.character_creation.get("heroic_events", [])
+        lore, used = [], set()
+        for _ in range(n):
+            if not events:
+                break
+            i = random.randrange(len(events))
+            ev = events[i]
+            if "sub" in ev:
+                lore.append(random.choice(ev["sub"]))
+            elif i in used and ev.get("reroll"):
+                lore.append(ev["reroll"])
+            else:
+                lore.append(ev["label"])
+                used.add(i)
+        return lore
+
+    def roll_full_passions(self, religion):
+        """The full starting-passion set by the Random Method (Core Ch.3):
+        Honor, Homage (Lord), Love (Family), Hospitality, Station, Devotion, and
+        Hate (Saxons), plus distributed extra points (no Passion above the cap)."""
+        p = self.data["passions"]
+        rm = p.get("random_method", {})
+        cap = p.get("cap", 15)
+        deity = self.deity_for(religion)
+        passions = []
+        for name, spec in rm.items():
+            disp = f"Devotion ({deity})" if name.startswith("Devotion") else name
+            passions.append([disp, min(cap, roll_expr(spec))])
+        extra = roll_expr(p.get("distribute", "4D6+1"))
+        for _ in range(extra):
+            raisable = [q for q in passions if q[1] < cap]
+            if not raisable:
+                break
+            random.choice(raisable)[1] += 1
+        return [(n, v) for n, v in passions]
 
     # -- directed traits ---------------------------------------------------
 
