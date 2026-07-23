@@ -262,7 +262,7 @@ class Generator:
             r["skills"] = rolled["skills"]
             r["glory"] = rolled["glory"]
 
-    def generate(self, culture, gender, social_class=None):
+    def generate(self, culture, gender, social_class=None, religion=None):
         cls = None
         if self.rules and self.rules.social_classes:
             gender, cls = self._resolve_class(gender, social_class)
@@ -274,7 +274,9 @@ class Generator:
             result["naming_note"] = self.rules.naming_notes.get(culture, "")
             if self.rules.social_classes:
                 self._fill_class(result, cls)
-            religion = self.rules.religion_for(culture)
+            # A specific religion overrides the culture's default roll.
+            if not (religion and religion in self.rules.religions):
+                religion = self.rules.religion_for(culture)
             result["religion"] = religion
             self._fill_characteristics(result)
             result["traits"] = self.rules.roll_traits(religion)
@@ -636,6 +638,7 @@ class App(tk.Tk):
         self.gender_var = tk.StringVar(value="Male")
         self.culture_var = tk.StringVar(value="Cymri" if "Cymri" in names else names[0])
         self.class_var = tk.StringVar(value="Random")
+        self.religion_var = tk.StringVar(value="Random")
 
         self._build_ui()
 
@@ -706,7 +709,7 @@ class App(tk.Tk):
                 ).grid(row=i // 2, column=i % 2, sticky="w", padx=6, pady=1)
 
         culture_box = ttk.LabelFrame(options, text="Culture")
-        culture_box.pack(side="left", fill="both", expand=True)
+        culture_box.pack(side="left", fill="y", padx=(0, 10))
         grid = ttk.Frame(culture_box)
         grid.pack(fill="both", expand=True, padx=4, pady=4)
         cols = 2
@@ -719,6 +722,19 @@ class App(tk.Tk):
             ttk.Radiobutton(
                 grid, text=c, value=c, variable=self.culture_var
             ).grid(row=i // cols, column=i % cols, sticky="w", padx=6, pady=2)
+
+        # Religion — normally rolled from culture; Random keeps that behaviour,
+        # a specific faith overrides it (and drives the trait virtue modifiers).
+        religions = list(self.generator.rules.religions) if self.generator.rules else []
+        if religions:
+            religion_box = ttk.LabelFrame(options, text="Religion")
+            religion_box.pack(side="left", fill="both", expand=True)
+            rgrid = ttk.Frame(religion_box)
+            rgrid.pack(fill="both", expand=True, padx=4, pady=4)
+            for i, rel in enumerate(["Random"] + religions):
+                ttk.Radiobutton(
+                    rgrid, text=rel, value=rel, variable=self.religion_var
+                ).pack(anchor="w", padx=6, pady=1)
 
         buttons = ttk.Frame(parent)
         buttons.pack(anchor="w", fill="x", padx=10, pady=(2, 4))
@@ -874,6 +890,7 @@ class App(tk.Tk):
         gender = random.choice(("Male", "Female"))
         self.gender_var.set(gender)
         self.culture_var.set(random.choice(self.generator.culture_names()))
+        self.religion_var.set("Random")   # let religion follow the rolled culture
         rules = self.generator.rules
         if rules and rules.social_classes:
             self.class_var.set(rules.roll_class(gender))  # valid for the gender
@@ -892,8 +909,11 @@ class App(tk.Tk):
         if gender == "Random":
             gender = random.choice(("Male", "Female"))
         social_class = self.class_var.get()
+        religion = self.religion_var.get()
+        if religion == "Random":
+            religion = None            # roll from culture (the default)
         try:
-            result = self.generator.generate(culture, gender, social_class)
+            result = self.generator.generate(culture, gender, social_class, religion)
         except ValueError as exc:
             messagebox.showwarning("No names", str(exc))
             return
@@ -1161,6 +1181,8 @@ class App(tk.Tk):
         self.culture_var.set(r["culture"])
         if r.get("social_class"):
             self.class_var.set(r["social_class"])
+        if r.get("religion"):
+            self.religion_var.set(r["religion"])
         self._refresh_display()
         self._enable_npc_controls()
         self.status.config(text=f"Editing '{r['full']}' from the roster.",
