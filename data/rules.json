@@ -399,7 +399,45 @@
       "hazel",
       "green",
       "pale blue"
-    ]
+    ],
+    "builds": {
+      "small_weak": ["willowy and slight", "small and wiry", "a slight, spare frame", "reedy and slender"],
+      "small_mid": ["small and compact", "short and neat", "trim and light-footed"],
+      "small_strong": ["short but powerfully built", "compact and muscular", "small and hard-knotted with muscle"],
+      "mid_weak": ["lean and unremarkable", "spare and lightly built", "of slender build"],
+      "mid_mid": ["", "", "of middling build", "ordinary in stature"],
+      "mid_strong": ["thickset and strong", "stocky and muscular", "square-built and sturdy"],
+      "big_weak": ["tall and gangly", "rangy and lean", "long-limbed and spare"],
+      "big_mid": ["tall and solid", "long-limbed and sturdy", "rawboned and rangy"],
+      "big_strong": ["large and heavily muscled", "a towering, powerful frame", "broad and mighty", "huge and thickly muscled"]
+    },
+    "scars": [
+      "a jagged scar across one cheek",
+      "an old sword-scar down the jaw",
+      "a puckered spear-scar on the forearm",
+      "a broken nose set crooked",
+      "a notched ear",
+      "a scar splitting one eyebrow",
+      "a livid burn scar on the neck",
+      "a missing finger",
+      "a milky, blind eye",
+      "a web of old battle-scars across the hands",
+      "a deep scar through the lip",
+      "a branded slave-mark, long healed"
+    ],
+    "tattoos": {
+      "styles": [
+        "spiralling woad tattoos across the arms",
+        "faded blue knotwork on the forearms",
+        "woad war-marks daubed across the brow",
+        "swirling blue tattoos coiling up the neck"
+      ],
+      "animals": ["a boar", "a stag", "a raven", "a wolf", "a serpent", "a bear", "a running horse", "an eagle", "a hound", "a coiled dragon"],
+      "deities": {
+        "pagan": ["Epona", "Cernunnos", "the Morrigan", "Belenus", "Lugh", "Nodens", "Sulis", "Taranis"],
+        "wodinic": ["Woden", "Thunor", "Tiw", "Frige", "Ing"]
+      }
+    }
   },
   "directed_traits": {
     "obsessions": [

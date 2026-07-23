@@ -227,7 +227,9 @@ class Generator:
         r["stats"] = stats
         r["derived"] = derived
         r["height"] = self.rules.height_for(stats["SIZ"])
-        r["appearance"] = self.rules.roll_appearance(stats["APP"])
+        r["appearance"] = self.rules.roll_appearance(
+            stats["APP"], stats["SIZ"], stats["STR"],
+            r.get("culture", ""), r.get("religion", ""))
 
     def _resolve_class(self, gender, requested):
         """Reconcile gender and a requested class before anything else.
@@ -315,7 +317,10 @@ class Generator:
         elif field == "Characteristics":
             self._fill_characteristics(r)
         elif field == "Appearance":
-            r["appearance"] = self.rules.roll_appearance(r["stats"]["APP"])
+            s = r["stats"]
+            r["appearance"] = self.rules.roll_appearance(
+                s["APP"], s["SIZ"], s["STR"],
+                r.get("culture", ""), r.get("religion", ""))
         elif field == "Personality Traits":
             r["traits"] = self.rules.roll_traits(r["religion"])
             r["manner"] = self.rules.compose_manner(r["traits"])
@@ -442,8 +447,15 @@ def build_description(r):
 
     appearance = r.get("appearance") or {}
     stats = r.get("stats") or {}
+    # Prefer the SIZ+STR build phrase ('large and heavily muscled') as the lead
+    # adjective, but only when it reads as one after 'a ' — noun-phrase builds
+    # ('a towering frame', 'of middling build') fall back to the SIZ-only word.
+    build = appearance.get("build", "")
+    lead_build = build if (build and not build.startswith(("a ", "an ", "of "))
+                           and not build.endswith(("frame", "stature", "build"))) \
+        else _size_word(stats.get("SIZ"))
     adjs = _natural_join([
-        _size_word(stats.get("SIZ")),
+        lead_build,
         _looks_word(appearance.get("descriptor"), gender),
     ])
 
@@ -472,7 +484,8 @@ def format_statblock(r):
     if r.get("appearance"):
         a = r["appearance"]
         height = f", ~{r['height']} tall" if r.get("height") else ""
-        lines.append(f"Appearance: {a['descriptor']}{height}; {a['eyes']} eyes")
+        build = f"{a['build']}; " if a.get("build") else ""
+        lines.append(f"Appearance: {build}{a['descriptor']}{height}; {a['eyes']} eyes")
         if a["features"]:
             lines.append("Distinctive Features: " + "; ".join(a["features"]))
 
@@ -945,7 +958,8 @@ class App(tk.Tk):
         if r.get("appearance"):
             a = r["appearance"]
             height = f", ~{r['height']} tall" if r.get("height") else ""
-            row("Appearance", f"{a['descriptor']}{height}; {a['eyes']} eyes")
+            build = f"{a['build']}; " if a.get("build") else ""
+            row("Appearance", f"{build}{a['descriptor']}{height}; {a['eyes']} eyes")
             if a["features"]:
                 row("Distinctive Features", "; ".join(a["features"]))
 

@@ -103,6 +103,11 @@ class Rules:
         self.app_table = [tuple(row) for row in appearance["app_table"]]
         self.features = appearance["features"]
         self.eye_colours = appearance["eye_colours"]
+        # Period-appropriate physical flavour (optional keys — old data files omit
+        # them): build phrases keyed by SIZ/STR band, scars, and woad tattoos.
+        self.builds = appearance.get("builds", {})
+        self.scars = appearance.get("scars", [])
+        self.tattoos = appearance.get("tattoos", {})
 
         directed = data["directed_traits"]
         self.obsessions = [tuple(o) for o in directed["obsessions"]]
@@ -211,48 +216,111 @@ class Rules:
 
     # -- appearance --------------------------------------------------------
 
-    def random_appearance_feature(self):
-        """One describable feature (e.g. 'a broken nose', 'flowing hair').
-
-        Drawn from Face/Hair (the most 'defining' categories for a combatant)
-        and phrased for readability.
-        """
-        cats = [c for c in ("Face", "Hair") if c in self.features] or list(self.features)
-        if not cats:
-            return ""
-        cat = random.choice(cats)
-        pools = self.features[cat]
-        polarity = random.choice([p for p in ("positive", "negative") if pools.get(p)]
-                                 or list(pools))
-        pool = pools.get(polarity, [])
-        if not pool:
-            return ""
-        return _phrase_feature(cat, random.choice(pool))
-
     def random_eye_colour(self):
         return random.choice(self.eye_colours) if self.eye_colours else ""
 
-    def random_standout_features(self, n=2):
-        """A few distinctive physical features so combatants don't all read alike.
+    # -- period physical traits (build / scars / tattoos) ------------------
 
-        Draws across *every* category (Physique, Limbs, Hair, Face, Speech) —
-        preferring distinct categories — rather than just Face/Hair, so you get
-        build/limbs/voice variety too. Eye-colour descriptors are skipped because
-        eye colour is rolled separately (avoids 'blue eyes, blue eyes').
+    @staticmethod
+    def _band(value, low, high):
+        """'small'/'mid'/'big' (or weak/mid/strong) band for a characteristic."""
+        if value is None:
+            return "mid"
+        return "small" if value <= low else "big" if value >= high else "mid"
+
+    def _build_phrase(self, siz, str_):
+        """An adjective phrase for a combatant's frame, from SIZ + STR.
+
+        Reads naturally both as a lead adjective ('a large and heavily muscled
+        Saxon') and in a Looks line. Middling frames often return '' so not
+        everyone is described.
         """
-        buckets = [(cat, feat) for cat, pols in self.features.items()
-                   for items in pols.values() for feat in items
-                   if "eyes" not in feat.lower()]
-        random.shuffle(buckets)
-        chosen, used_cat = [], set()
-        for cat, feat in buckets:
-            if cat in used_cat:
+        if siz is None or str_ is None or not self.builds:
+            return ""
+        key = f"{self._band(siz, 9, 15)}_{self._band(str_, 9, 15).replace('small', 'weak').replace('big', 'strong')}"
+        pool = self.builds.get(key) or self.builds.get("mid_mid") or []
+        return random.choice(pool) if pool else ""
+
+    def _tattoo_eligible(self, culture, religion):
+        """Woad/animal/deity tattoos suit British/Pictish pagans and Saxons."""
+        r, c = (religion or "").lower(), (culture or "").lower()
+        return ("pagan" in r or "wodinic" in r or "wodin" in r
+                or c in ("saxon", "pict"))
+
+    def _tattoo_phrases(self, culture, religion):
+        """Candidate tattoo descriptions for a pagan/Saxon, else []."""
+        if not self.tattoos or not self._tattoo_eligible(culture, religion):
+            return []
+        out = list(self.tattoos.get("styles", []))
+        animals = self.tattoos.get("animals", [])
+        if animals:
+            out.append(f"a woad tattoo of {random.choice(animals)}")
+        deities = self.tattoos.get("deities", {})
+        r, c = (religion or "").lower(), (culture or "").lower()
+        pool = deities.get("wodinic" if ("wodin" in r or c == "saxon") else "pagan", [])
+        if pool:
+            out.append(f"a tattoo honouring {random.choice(pool)}")
+        return out
+
+    def random_marks(self, culture, religion, n=1):
+        """Scars and (for pagans/Saxons) tattoos — at most one of each."""
+        pool = [("scar", s) for s in self.scars]
+        pool += [("tattoo", t) for t in self._tattoo_phrases(culture, religion)]
+        random.shuffle(pool)
+        out, used = [], set()
+        for cat, val in pool:
+            if cat in used:
                 continue
-            used_cat.add(cat)
-            chosen.append(_phrase_feature(cat, feat))
-            if len(chosen) >= n:
+            used.add(cat)
+            out.append(val)
+            if len(out) >= n:
                 break
-        return chosen
+        return out
+
+    def _cosmetic_features(self):
+        """One light detail from each of a few categories (hair/face/voice/limbs),
+        skipping eye descriptors (eye colour is offered separately)."""
+        out = []
+        for cat in ("Hair", "Face", "Speech", "Limbs"):
+            pols = self.features.get(cat, {})
+            items = [f for its in pols.values() for f in its
+                     if "eyes" not in f.lower()]
+            if items:
+                out.append((cat, _phrase_feature(cat, random.choice(items))))
+        return out
+
+    def random_physical_traits(self, siz=None, str_=None, culture="",
+                               religion="", n=2):
+        """A short list of distinctive, period-appropriate physical traits.
+
+        Weighted toward frame (from SIZ + STR), scars and — for pagans and
+        Saxons — woad/animal/deity tattoos, with the occasional hair/face/voice
+        or eye-colour detail so combatants read distinctly without every one
+        being 'blue eyes, blonde hair, thick accent'.
+        """
+        traits, used = [], set()
+        build = self._build_phrase(siz, str_)
+        if build:
+            traits.append(build)
+            used.add("build")
+        pool = [(3, "scar", s) for s in self.scars]
+        pool += [(4, "tattoo", t) for t in self._tattoo_phrases(culture, religion)]
+        pool += [(1, cat, val) for cat, val in self._cosmetic_features()]
+        if self.eye_colours:
+            pool.append((1, "eyes", f"{random.choice(self.eye_colours)} eyes"))
+        while pool and len(traits) < n:
+            avail = [p for p in pool if p[1] not in used]
+            if not avail:
+                break
+            total = sum(w for w, _, _ in avail)
+            pick, acc = random.uniform(0, total), 0
+            for w, cat, val in avail:
+                acc += w
+                if pick <= acc:
+                    traits.append(val)
+                    used.add(cat)
+                    break
+        return traits
 
     def _app_row(self, app):
         for lo, hi, desc, npos, nneg, special in self.app_table:
@@ -261,11 +329,15 @@ class Rules:
         return "Plain", 1, 1, None
 
     def _draw_features(self, polarity, n):
-        """Return up to n (category, feature) pairs, preferring distinct categories."""
+        """Return up to n (category, feature) pairs, preferring distinct categories.
+
+        Eye-colour features (e.g. 'blue eyes') are skipped: eye colour is rolled
+        separately as ``appearance['eyes']``, so drawing one here would risk a
+        contradiction ('brown eyes ... blue eyes')."""
         if n <= 0:
             return []
         buckets = [(cat, feat) for cat, d in self.features.items()
-                   for feat in d.get(polarity, [])]
+                   for feat in d.get(polarity, []) if "eyes" not in feat.lower()]
         random.shuffle(buckets)
         chosen, used_cat, seen = [], set(), set()
         for cat, feat in buckets:  # prefer distinct categories first
@@ -283,17 +355,24 @@ class Rules:
                 break
         return chosen[:n]
 
-    def roll_appearance(self, app):
+    def roll_appearance(self, app, siz=None, str_=None, culture="", religion=""):
         desc, npos, nneg, special = self._app_row(app)
         details = list(self._draw_features("positive", npos))
         details += self._draw_features("negative", nneg)
         if special:
             details.append((None, special.lower()))
+        # Period marks (scars, and woad/animal/deity tattoos for pagans/Saxons)
+        # read as distinctive features; build (from SIZ + STR) is returned apart
+        # so the read-aloud can use it as a lead adjective.
+        for mark in self.random_marks(culture, religion,
+                                      n=random.choice([0, 1, 1, 2])):
+            details.append((None, mark))
         return {
             "descriptor": desc,
             "features": [feat for _cat, feat in details],
             "feature_details": [[cat, feat] for cat, feat in details],
             "eyes": random.choice(self.eye_colours),
+            "build": self._build_phrase(siz, str_),
         }
 
     # -- traits ------------------------------------------------------------

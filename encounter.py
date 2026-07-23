@@ -201,7 +201,9 @@ class Combatant:
         self.skills = dict(template.get("skills", {}))
         self.notes = template.get("notes", "")
         self.armour_desc = template.get("armour_desc", "")
-        self.feature = ""   # a defining physical characteristic (rolled by Encounter)
+        self.culture = template.get("culture", "")
+        self.religion = template.get("religion", "")
+        self.feature = ""   # distinctive physical traits (rolled by Encounter)
         self.eyes = ""
         h, o = template["health"], template["other"]
         jitter = random.randint(-2, 2) if hp_jitter else 0
@@ -266,7 +268,7 @@ class Combatant:
         return f"{self.armour_desc} — {breakdown}" if self.armour_desc else breakdown
 
     def describe_looks(self):
-        """A short describable look: defining feature + eye colour."""
+        """A short describable look: the rolled distinctive physical traits."""
         parts = [p for p in (self.feature,
                              f"{self.eyes} eyes" if self.eyes else "") if p]
         return ", ".join(parts)
@@ -331,10 +333,15 @@ class Encounter:
         self._counts[type_name] = self._counts.get(type_name, 0) + 1
         label = f"{type_name} {self._counts[type_name]}"
         c = Combatant(type_name, template, label)
-        # Roll one or two standout physical features (mostly two) so otherwise
-        # identical combatants each read distinctly.
-        c.feature = ", ".join(self.rules.random_standout_features(random.choice([1, 2, 2])))
-        c.eyes = self.rules.random_eye_colour()
+        # Roll a couple of distinctive, period-appropriate physical traits (frame
+        # from SIZ/STR, scars, woad tattoos for pagans/Saxons, the odd hair/eye
+        # detail) so otherwise identical combatants each read distinctly.
+        # Join with "; " (not ", ") so traits with internal commas — e.g.
+        # "a milky, blind eye" — stay legible next to one another.
+        c.feature = "; ".join(self.rules.random_physical_traits(
+            siz=c.characteristics["SIZ"], str_=c.characteristics["STR"],
+            culture=c.culture, religion=c.religion, n=random.choice([2, 2, 3])))
+        c.eyes = ""
         self.combatants.append(c)
         return c
 
@@ -502,6 +509,18 @@ class EncounterTab(ttk.Frame):
         # than leaving a wide blank gap on the right.
         howto.bind("<Configure>",
                    lambda e, lbl=howto_lbl: lbl.configure(wraplength=max(300, e.width - 24)))
+        self.howto = howto
+
+        # Shared descriptions: a generic adversary's flavour text (and any
+        # special-mechanics notes) shown once per type here, rather than repeated
+        # on every combatant row. Hidden while there is nothing to show.
+        self.desc_frame = ttk.LabelFrame(self, text="Descriptions & mechanics")
+        self.desc_label = ttk.Label(self.desc_frame, justify="left", foreground="#333",
+                                    font=("TkDefaultFont", 9))
+        self.desc_label.pack(anchor="w", fill="x", padx=8, pady=4)
+        self.desc_frame.bind(
+            "<Configure>",
+            lambda e, lbl=self.desc_label: lbl.configure(wraplength=max(300, e.width - 24)))
 
         # Scrollable combatant tracker.
         tracker = ttk.LabelFrame(self, text="Combatants")
@@ -560,7 +579,30 @@ class EncounterTab(ttk.Frame):
 
     # -- combatant rows ----------------------------------------------------
 
+    def _refresh_descriptions(self):
+        """Collect each combatant type's description + mechanics notes once,
+        in first-seen order, into the shared Descriptions panel above the
+        tracker. Hidden when no combatant has a description or notes."""
+        seen, lines = {}, []
+        for c in self.encounter.combatants:
+            if c.type in seen:
+                continue
+            seen[c.type] = True
+            parts = []
+            if c.description.strip():
+                parts.append(c.description.strip())
+            if c.notes.strip():
+                parts.append(f"Mechanics: {c.notes.strip()}")
+            if parts:
+                lines.append(f"• {c.type} — " + "   ·   ".join(parts))
+        if lines:
+            self.desc_label.config(text="\n".join(lines))
+            self.desc_frame.pack(fill="x", padx=10, pady=(0, 6), after=self.howto)
+        else:
+            self.desc_frame.pack_forget()
+
     def _refresh_rows(self):
+        self._refresh_descriptions()
         for w in self.rows_frame.winfo_children():
             w.destroy()
         if not self.encounter.combatants:
@@ -645,12 +687,12 @@ class EncounterTab(ttk.Frame):
         # attack skill values, attack damage and skills are all clickable tokens.
         self._build_stat_line(row, c, down)
 
-        # Flavour line: the template's description, the armour worn, and a defining
-        # look — so the GM can vividly describe the combatant. Readable size (§7).
+        # Flavour line: the armour worn and this combatant's own distinctive
+        # look — so the GM can vividly describe them. The shared type description
+        # lives once in the Descriptions panel, not repeated on every row. (§7)
         arm = f"Armour: {c.describe_armour()}"
         looks = c.describe_looks()
-        bits = [b for b in (c.description, arm,
-                            f"Looks: {looks}" if looks else "") if b]
+        bits = [b for b in (arm, f"Looks: {looks}" if looks else "") if b]
         flavour = tk.Label(row, text="   ·   ".join(bits), anchor="w", justify="left",
                            wraplength=740, font=self.flavour_font,
                            fg=("#aaa" if down else "#555"))
@@ -793,7 +835,11 @@ class EncounterTab(ttk.Frame):
         c.engaged_with = name
         c._engaged_logged = name
         if name:
-            self._log(f"{c.display_name} engaged with {name}")
+            # Note the foe's specific look on the engagement line so the GM can
+            # describe who this character is fighting at a glance.
+            looks = c.describe_looks()
+            detail = f" — {looks}" if looks else ""
+            self._log(f"{c.display_name} engaged with {name}{detail}")
         else:
             self._log(f"{c.display_name} no longer engaged")
 
