@@ -258,9 +258,14 @@ class AdversaryTab(ttk.Frame):
         frow.pack(fill="x", padx=6, pady=(0, 2))
         ttk.Label(frow, text="Kind:").pack(side="left")
         self.kind_filter = tk.StringVar(value="all")
-        ttk.Combobox(frow, textvariable=self.kind_filter, width=9, state="readonly",
-                     values=["all", "generic", "named"]).pack(side="left", padx=(4, 0))
+        ttk.Combobox(frow, textvariable=self.kind_filter, width=8, state="readonly",
+                     values=["all", "generic", "named"]).pack(side="left", padx=(4, 6))
+        ttk.Label(frow, text="Category:").pack(side="left")
+        self.category_filter = tk.StringVar(value="all")
+        ttk.Combobox(frow, textvariable=self.category_filter, width=8, state="readonly",
+                     values=["all", "human", "beast", "monster", "fae"]).pack(side="left", padx=(4, 0))
         self.kind_filter.trace_add("write", lambda *a: self._refresh_library())
+        self.category_filter.trace_add("write", lambda *a: self._refresh_library())
 
         self.lib_list = tk.Listbox(lib, width=32, height=22, activestyle="dotbox")
         self.lib_list.pack(fill="both", expand=True, padx=6, pady=(2, 2))
@@ -324,6 +329,7 @@ class AdversaryTab(ttk.Frame):
         ttk.Label(idf, text="Category:").grid(row=r, column=2, sticky="e", padx=4)
         ttk.Combobox(idf, textvariable=self.category_var, width=10, state="readonly",
                      values=["human", "beast", "fae", "monster"]).grid(row=r, column=3, sticky="w")
+        self.category_var.trace_add("write", self._toggle_category_ui)
         r += 1
         ttk.Label(idf, text="Name / type:").grid(row=r, column=0, sticky="e", padx=4, pady=2)
         ttk.Entry(idf, textvariable=self.name_var, width=28).grid(
@@ -348,6 +354,7 @@ class AdversaryTab(ttk.Frame):
 
         # Characteristics + auto
         cf = self._section("Characteristics")
+        self._char_frame = cf
         self.char_vars = {}
         for i, k in enumerate(CHAR_ORDER):
             ttk.Label(cf, text=f"{CHAR_FULL[k]}:").grid(row=0, column=2 * i, sticky="e", padx=(6, 1), pady=3)
@@ -361,11 +368,33 @@ class AdversaryTab(ttk.Frame):
 
         # Derived (auto)
         df = self._section("Derived (computed from characteristics)")
+        self._derived_frame = df
         self.derived_lbl = ttk.Label(df, text="", justify="left")
         self.derived_lbl.pack(anchor="w", padx=6, pady=4)
 
+        # Creature combat stats — explicit (beast/monster/fae). Unlike humans,
+        # a creature's Move / Armour / Hit Points are *printed*, not derived, so
+        # they are edited here directly. Shown only for non-human categories.
+        self.cf_creature = self._section("Creature combat stats (printed, not derived)")
+        self.creature_vars = {}
+        cg = ttk.Frame(self.cf_creature)
+        cg.pack(fill="x", padx=6, pady=4)
+        specs = [("hit_points", "Hit Points"), ("major_wound", "Major Wound"),
+                 ("knockdown", "Knockdown"), ("unconscious", "Unconscious"),
+                 ("healing_rate", "Healing Rate"), ("movement", "Move"),
+                 ("armor_points", "Natural Armor"), ("shield", "Shield"),
+                 ("glory", "Glory Won"), ("valorous_modifier", "Valorous mod")]
+        for i, (key, label) in enumerate(specs):
+            r, cc = divmod(i, 3)
+            ttk.Label(cg, text=f"{label}:").grid(row=r, column=cc * 2, sticky="e",
+                                                 padx=(6, 1), pady=2)
+            v = tk.StringVar()
+            self.creature_vars[key] = v
+            ttk.Entry(cg, textvariable=v, width=6).grid(row=r, column=cc * 2 + 1, sticky="w")
+
         # Attacks
         af = self._section("Attacks / weapons")
+        self._attacks_section = af
         self.attacks_frame = ttk.Frame(af)
         self.attacks_frame.pack(fill="x", padx=6, pady=2)
         addbar = ttk.Frame(af)
@@ -375,9 +404,13 @@ class AdversaryTab(ttk.Frame):
                      values=list(self.combat.get("weapons", {}))).pack(side="left")
         ttk.Button(addbar, text="Add weapon",
                    command=self._add_selected_weapon).pack(side="left", padx=(6, 0))
+        # A blank editable row for natural attacks (Claws, Bite, Gore…).
+        ttk.Button(addbar, text="Add natural attack",
+                   command=lambda: self._add_attack_row()).pack(side="left", padx=(6, 0))
 
-        # Armour
-        arf = self._section("Armour")
+        # Armour (human — worn pieces). Creatures use the Natural Armor field above.
+        arf = self._section("Armour (worn — humans)")
+        self._armour_frame = arf
         self.armour_pieces_frame = ttk.Frame(arf)
         self.armour_pieces_frame.pack(fill="x", padx=6, pady=2)
         for i, name in enumerate(self.combat.get("armour_pieces", {})):
@@ -459,16 +492,22 @@ class AdversaryTab(ttk.Frame):
         self.lib_list.delete(0, "end")
         q = self.search_var.get().strip().lower()
         kind = self.kind_filter.get()
+        category = self.category_filter.get()
         self._lib_keys = []
         for key, a in sorted(self._adversaries().items()):
             if kind != "all" and a.get("kind", "generic") != kind:
                 continue
-            hay = f"{key} {a.get('description', '')} {a.get('tier', '')}".lower()
+            cat = a.get("category", "human")
+            if category != "all" and cat != category:
+                continue
+            hay = f"{key} {a.get('description', '')} {a.get('tier', '')} {cat}".lower()
             if q and q not in hay:
                 continue
-            badge = "★" if a.get("kind") == "named" else "▸"
+            # ✦ creature, ★ named, ▸ generic human.
+            badge = "✦" if cat != "human" else ("★" if a.get("kind") == "named" else "▸")
             hp = a.get("health", {}).get("hit_points", "?")
-            self.lib_list.insert("end", f"{badge} {key}   (HP {hp}, {a.get('tier', '')})")
+            tail = a.get("tier") or (cat if cat != "human" else "")
+            self.lib_list.insert("end", f"{badge} {key}   (HP {hp}, {tail})")
             self._lib_keys.append(key)
 
     def _on_select(self, _e):
@@ -549,9 +588,41 @@ class AdversaryTab(ttk.Frame):
         self._set_text(self.passions_text, adv.get("passions", {}))
         self.notes_text.delete("1.0", "end")
         self.notes_text.insert("1.0", adv.get("notes", "") or "")
+        # creature combat stats (from health/other)
+        h, o = adv.get("health", {}), adv.get("other", {})
+        src = {"hit_points": h.get("hit_points", ""), "major_wound": h.get("major_wound", ""),
+               "knockdown": h.get("knockdown", ""), "unconscious": h.get("unconscious", ""),
+               "healing_rate": o.get("healing_rate", ""), "movement": o.get("movement", ""),
+               "armor_points": o.get("armor_points", ""), "shield": o.get("shield", ""),
+               "glory": o.get("glory", ""), "valorous_modifier": o.get("valorous_modifier", "")}
+        for k, var in self.creature_vars.items():
+            var.set("" if src[k] == "" else str(src[k]))
         self._snapshot_traits()
         self._recompute_derived()
         self._recompute_armour()
+        self._toggle_category_ui()
+
+    def _creature_int(self, key):
+        try:
+            return int(float(self.creature_vars[key].get()))
+        except (TypeError, ValueError):
+            return 0
+
+    def _toggle_category_ui(self, *_):
+        """Humans show the derived-stats reference + worn-armour pieces; creatures
+        show the explicit 'Creature combat stats' block instead (their Damage/Move
+        are printed, so the human-formula 'Derived' line would only mislead).
+        Anchored packs keep the human section order intact when toggling back."""
+        human = self.category_var.get() == "human"
+        self.cf_creature.pack_forget()
+        self._derived_frame.pack_forget()
+        self._armour_frame.pack_forget()
+        if human:
+            self._derived_frame.pack(fill="x", padx=8, pady=(6, 0), after=self._char_frame)
+            self._armour_frame.pack(fill="x", padx=8, pady=(6, 0),
+                                    after=self._attacks_section)
+        else:
+            self.cf_creature.pack(fill="x", padx=8, pady=(6, 0), after=self._char_frame)
 
     @staticmethod
     def _set_text(widget, m):
@@ -715,17 +786,35 @@ class AdversaryTab(ttk.Frame):
         adv["religion"] = self.religion_var.get().strip()
         adv["description"] = self.desc_var.get().strip()
         adv["characteristics"] = self._char_ints()
-        # derived -> health/other mapping
-        d = self.rules.derive_stats(adv["characteristics"])
-        adv["health"] = {"hit_points": d["Hit Points"], "knockdown": d["Knockdown"],
-                         "major_wound": d["Major Wound"], "unconscious": d["Unconscious"]}
-        pieces = [n for n, v in self.piece_vars.items() if v.get()]
-        ap, sp = compute_armour(pieces, self.helmet_var.get(), self.shield_var.get(), self.combat)
-        adv["armour"] = {"pieces": pieces, "helmet": self.helmet_var.get(),
-                         "shield": self.shield_var.get()}
-        adv["armour_desc"] = describe_armour(pieces, self.helmet_var.get(), self.shield_var.get())
-        adv["other"] = {"movement": d["Move"], "armor_points": ap, "shield": sp,
-                        "glory": adv["other"].get("glory", 0), "healing_rate": d["Healing Rate"]}
+        if self.category_var.get() == "human":
+            # Humans: derive Hit Points/Move/etc. from characteristics; armour
+            # from worn pieces.
+            d = self.rules.derive_stats(adv["characteristics"])
+            adv["health"] = {"hit_points": d["Hit Points"], "knockdown": d["Knockdown"],
+                             "major_wound": d["Major Wound"], "unconscious": d["Unconscious"]}
+            pieces = [n for n, v in self.piece_vars.items() if v.get()]
+            ap, sp = compute_armour(pieces, self.helmet_var.get(), self.shield_var.get(),
+                                    self.combat)
+            adv["armour"] = {"pieces": pieces, "helmet": self.helmet_var.get(),
+                             "shield": self.shield_var.get()}
+            adv["armour_desc"] = describe_armour(pieces, self.helmet_var.get(),
+                                                 self.shield_var.get())
+            adv["other"] = {"movement": d["Move"], "armor_points": ap, "shield": sp,
+                            "glory": adv["other"].get("glory", 0),
+                            "healing_rate": d["Healing Rate"]}
+        else:
+            # Creatures: printed stats are the source of truth (never re-derive —
+            # that would turn a Dragon's 16d6/Move 65 into human-formula values).
+            cv = {k: self._creature_int(k) for k in self.creature_vars}
+            adv["health"] = {"hit_points": cv["hit_points"], "knockdown": cv["knockdown"],
+                             "major_wound": cv["major_wound"], "unconscious": cv["unconscious"]}
+            adv["armour"] = {"pieces": [], "helmet": "", "shield": ""}
+            adv["armour_desc"] = "Natural armour" + (" + shield" if cv["shield"] else "")
+            adv["other"] = {"movement": cv["movement"], "armor_points": cv["armor_points"],
+                            "shield": cv["shield"], "glory": cv["glory"],
+                            "healing_rate": cv["healing_rate"]}
+            if self.creature_vars["valorous_modifier"].get().strip():
+                adv["other"]["valorous_modifier"] = cv["valorous_modifier"]
         adv["attacks"] = self._collect_attacks()
         adv["skills"] = _text_to_map(self.skills_text.get("1.0", "end"))
         adv["traits"] = _text_to_map(self.traits_text.get("1.0", "end"))
@@ -742,7 +831,9 @@ class AdversaryTab(ttk.Frame):
         wv = tk.StringVar(value=atk.get("weapon", ""))
         sv = tk.StringVar(value=str(atk.get("value", 10)))
         dv = tk.StringVar(value=atk.get("damage", ""))
-        ttk.Combobox(fr, textvariable=wv, width=16, state="readonly",
+        # Editable (not readonly) so natural attacks — Claws, Bite, Gore… — can
+        # be typed for creatures, while humans still pick from the weapon list.
+        ttk.Combobox(fr, textvariable=wv, width=16, state="normal",
                      values=list(self.combat.get("weapons", {}))).pack(side="left")
         ttk.Label(fr, text="skill").pack(side="left", padx=(6, 1))
         ttk.Entry(fr, textvariable=sv, width=4).pack(side="left")

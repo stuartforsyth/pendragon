@@ -662,7 +662,7 @@ class App(tk.Tk):
             self.adversary_tab = adversary_module.AdversaryTab(
                 self.notebook, self.generator, self._set_status,
                 on_change=self.encounter_tab.refresh_choices)
-            self.notebook.add(self.adversary_tab, text="Adversary Creator")
+            self.notebook.add(self.adversary_tab, text="Adversary & Creature Creator")
             creator = encounter_creator_module.EncounterCreatorTab(
                 self.notebook, self.generator.rules, self._set_status,
                 self._send_encounter_to_tracker)

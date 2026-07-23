@@ -257,6 +257,7 @@ class Combatant:
         self.armour_desc = template.get("armour_desc", "")
         self.culture = template.get("culture", "")
         self.religion = template.get("religion", "")
+        self.category = template.get("category", "human")  # human/beast/monster/fae
         self.feature = ""   # distinctive physical traits (rolled by Encounter)
         self.eyes = ""
         h, o = template["health"], template["other"]
@@ -389,14 +390,14 @@ class Encounter:
         self._counts[type_name] = self._counts.get(type_name, 0) + 1
         label = f"{type_name} {self._counts[type_name]}"
         c = Combatant(type_name, template, label)
-        # Roll a couple of distinctive, period-appropriate physical traits (frame
-        # from SIZ/STR, scars, woad tattoos for pagans/Saxons, the odd hair/eye
-        # detail) so otherwise identical combatants each read distinctly.
-        # Join with "; " (not ", ") so traits with internal commas — e.g.
-        # "a milky, blind eye" — stay legible next to one another.
-        c.feature = "; ".join(self.rules.random_physical_traits(
-            siz=c.characteristics["SIZ"], str_=c.characteristics["STR"],
-            culture=c.culture, religion=c.religion, n=random.choice([2, 2, 3])))
+        # Humans get distinctive, period-appropriate physical traits (frame from
+        # SIZ/STR, scars, woad tattoos for pagans/Saxons, the odd hair/eye detail),
+        # joined with "; " so traits with internal commas stay legible. Beasts and
+        # monsters get none — their flavour is their own description/notes.
+        if c.category == "human":
+            c.feature = "; ".join(self.rules.random_physical_traits(
+                siz=c.characteristics["SIZ"], str_=c.characteristics["STR"],
+                culture=c.culture, religion=c.religion, n=random.choice([2, 2, 3])))
         c.eyes = ""
         self.combatants.append(c)
         return c
@@ -728,7 +729,8 @@ class EncounterTab(ttk.Frame):
         # combatants: bold, coloured, and prefixed with a marker (★ champion,
         # ◆ named — a named champion shows both).
         down = c.down
-        standout = c.elite or c.named
+        creature = c.category in ("beast", "monster", "fae")
+        standout = c.elite or c.named or creature
         name_font = self.down_font if down else (
             self.elite_font if standout else self.norm_font)
         if down:
@@ -737,10 +739,18 @@ class EncounterTab(ttk.Frame):
             fg = "#8a4b00"          # champion — brown/gold
         elif c.named:
             fg = "#5a2a82"          # named NPC — royal purple
+        elif c.category == "monster":
+            fg = "#8b1a1a"          # monster — dark red
+        elif c.category == "beast":
+            fg = "#0a6b3b"          # beast — forest green
+        elif c.category == "fae":
+            fg = "#1a6a8a"          # faerie — teal
         else:
             fg = "#000"
 
-        marker = ("★" if c.elite else "") + ("◆" if c.named else "")
+        # ✦ marks a creature (beast/monster/fae); ★ champion, ◆ named.
+        marker = ("★" if c.elite else "") + ("◆" if c.named else "") + \
+                 ("✦" if creature and not c.named else "")
         marker = f"{marker} " if marker else ""
         # A fled combatant is greyed like any 'down' foe but flagged as untracked;
         # widen the label so the flag isn't clipped by the usual fixed width.

@@ -2009,6 +2009,1684 @@
       },
       "kind": "generic",
       "category": "human"
+    },
+    "Carthorse": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Carthorse",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 10,
+        "STR": 15,
+        "CON": 10
+      },
+      "attacks": [
+        {
+          "weapon": "Hooves",
+          "skill": "Hooves",
+          "value": 10,
+          "damage": "2d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 25,
+        "knockdown": 15,
+        "major_wound": 10,
+        "unconscious": 6
+      },
+      "other": {
+        "movement": 18,
+        "armor_points": 3,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 3
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Rouncy": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Rouncy",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 26,
+        "DEX": 10,
+        "STR": 18,
+        "CON": 14
+      },
+      "attacks": [
+        {
+          "weapon": "Hooves",
+          "skill": "Hooves",
+          "value": 10,
+          "damage": "4d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 40,
+        "knockdown": 26,
+        "major_wound": 14,
+        "unconscious": 10
+      },
+      "other": {
+        "movement": 19,
+        "armor_points": 4,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 3
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Charger": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Charger",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 34,
+        "DEX": 17,
+        "STR": 30,
+        "CON": 12
+      },
+      "attacks": [
+        {
+          "weapon": "Hooves",
+          "skill": "Hooves",
+          "value": 17,
+          "damage": "6d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 46,
+        "knockdown": 34,
+        "major_wound": 12,
+        "unconscious": 12
+      },
+      "other": {
+        "movement": 29,
+        "armor_points": 5,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 4
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Courser": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Courser",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 30,
+        "DEX": 25,
+        "STR": 24,
+        "CON": 15
+      },
+      "attacks": [
+        {
+          "weapon": "Hooves",
+          "skill": "Hooves",
+          "value": 25,
+          "damage": "5d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 45,
+        "knockdown": 30,
+        "major_wound": 15,
+        "unconscious": 11
+      },
+      "other": {
+        "movement": 30,
+        "armor_points": 5,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 4
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Donkey": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Donkey",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 15,
+        "STR": 20,
+        "CON": 15
+      },
+      "attacks": [
+        {
+          "weapon": "Hooves",
+          "skill": "Hooves",
+          "value": 15,
+          "damage": "4d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 30,
+        "knockdown": 15,
+        "major_wound": 15,
+        "unconscious": 8
+      },
+      "other": {
+        "movement": 23,
+        "armor_points": 3,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 4
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Mule": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Mule",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 25,
+        "DEX": 8,
+        "STR": 25,
+        "CON": 18
+      },
+      "attacks": [
+        {
+          "weapon": "Hooves",
+          "skill": "Hooves",
+          "value": 8,
+          "damage": "6d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 43,
+        "knockdown": 25,
+        "major_wound": 18,
+        "unconscious": 11
+      },
+      "other": {
+        "movement": 22,
+        "armor_points": 4,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 4
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Palfrey": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Palfrey",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 26,
+        "DEX": 10,
+        "STR": 16,
+        "CON": 8
+      },
+      "attacks": [
+        {
+          "weapon": "Hooves",
+          "skill": "Hooves",
+          "value": 10,
+          "damage": "3d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 34,
+        "knockdown": 26,
+        "major_wound": 8,
+        "unconscious": 9
+      },
+      "other": {
+        "movement": 18,
+        "armor_points": 3,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 2
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Sumpter": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Sumpter",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 22,
+        "DEX": 12,
+        "STR": 15,
+        "CON": 16
+      },
+      "attacks": [
+        {
+          "weapon": "Hooves",
+          "skill": "Hooves",
+          "value": 12,
+          "damage": "3d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 38,
+        "knockdown": 22,
+        "major_wound": 16,
+        "unconscious": 10
+      },
+      "other": {
+        "movement": 19,
+        "armor_points": 3,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 3
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Bear": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Bear",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 25,
+        "DEX": 10,
+        "STR": 25,
+        "CON": 18
+      },
+      "attacks": [
+        {
+          "weapon": "Claws",
+          "skill": "Claws",
+          "value": 13,
+          "damage": "3d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 43,
+        "knockdown": 25,
+        "major_wound": 18,
+        "unconscious": 11
+      },
+      "other": {
+        "movement": 23,
+        "armor_points": 6,
+        "shield": 0,
+        "glory": 10,
+        "healing_rate": 4
+      },
+      "skills": {
+        "Avoidance": 7
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Maul: attacks one target/round with Claws; on a win rolls two separate 3d6 (two wounds). Ferocity: fights on 1 full round after dropping below Unconscious."
+    },
+    "Boar": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Boar",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 20,
+        "DEX": 15,
+        "STR": 30,
+        "CON": 25
+      },
+      "attacks": [
+        {
+          "weapon": "Tusks",
+          "skill": "Tusks",
+          "value": 18,
+          "damage": "6d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 45,
+        "knockdown": 20,
+        "major_wound": 25,
+        "unconscious": 11
+      },
+      "other": {
+        "movement": 28,
+        "armor_points": 5,
+        "shield": 0,
+        "glory": 15,
+        "healing_rate": 6
+      },
+      "skills": {
+        "Avoidance": 10
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Ferocity: keeps attacking normally for 1 round after its Hit Points reach/drop below Unconscious."
+    },
+    "Bull": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Bull",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 30,
+        "DEX": 10,
+        "STR": 30,
+        "CON": 20
+      },
+      "attacks": [
+        {
+          "weapon": "Gore",
+          "skill": "Gore",
+          "value": 10,
+          "damage": "6d6"
+        },
+        {
+          "weapon": "Trample",
+          "skill": "Trample",
+          "value": 18,
+          "damage": "6d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 50,
+        "knockdown": 30,
+        "major_wound": 20,
+        "unconscious": 13
+      },
+      "other": {
+        "movement": 25,
+        "armor_points": 6,
+        "shield": 0,
+        "glory": 10,
+        "healing_rate": 5,
+        "valorous_modifier": 2
+      },
+      "skills": {
+        "Avoidance": 5
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Gore: may move and still Gore; +5 to Gore if it moves first. Trample 18 vs prone foes."
+    },
+    "Deer (Fallow)": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Deer (Fallow)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 17,
+        "DEX": 20,
+        "STR": 15,
+        "CON": 15
+      },
+      "attacks": [
+        {
+          "weapon": "Gore",
+          "skill": "Gore",
+          "value": 11,
+          "damage": "3d6"
+        },
+        {
+          "weapon": "Hoof",
+          "skill": "Hoof",
+          "value": 10,
+          "damage": "3d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 32,
+        "knockdown": 17,
+        "major_wound": 15,
+        "unconscious": 8
+      },
+      "other": {
+        "movement": 23,
+        "armor_points": 3,
+        "shield": 0,
+        "glory": 1,
+        "healing_rate": 3,
+        "valorous_modifier": 10
+      },
+      "skills": {
+        "Avoidance": 18
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Skittish (high Valorous modifier to attack). Gore/Hoof; +Gore modifier and +1d6 if it moves before attacking."
+    },
+    "Deer (Red)": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Deer (Red)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 20,
+        "DEX": 25,
+        "STR": 25,
+        "CON": 20
+      },
+      "attacks": [
+        {
+          "weapon": "Gore",
+          "skill": "Gore",
+          "value": 15,
+          "damage": "5d6"
+        },
+        {
+          "weapon": "Hoof",
+          "skill": "Hoof",
+          "value": 15,
+          "damage": "5d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 40,
+        "knockdown": 20,
+        "major_wound": 20,
+        "unconscious": 10
+      },
+      "other": {
+        "movement": 30,
+        "armor_points": 4,
+        "shield": 0,
+        "glory": 5,
+        "healing_rate": 5,
+        "valorous_modifier": 10
+      },
+      "skills": {
+        "Avoidance": 15
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Skittish (high Valorous modifier to attack). Gore/Hoof; +Gore modifier and +2d6 if it moves before attacking."
+    },
+    "Dog (Common)": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Dog (Common)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 4,
+        "DEX": 25,
+        "STR": 12,
+        "CON": 12
+      },
+      "attacks": [
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 8,
+          "damage": "2d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 16,
+        "knockdown": 4,
+        "major_wound": 12,
+        "unconscious": 4
+      },
+      "other": {
+        "movement": 24,
+        "armor_points": 1,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 2
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Dog (Hunting)": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Dog (Hunting)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 12,
+        "DEX": 20,
+        "STR": 13,
+        "CON": 12
+      },
+      "attacks": [
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 15,
+          "damage": "3d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 24,
+        "knockdown": 12,
+        "major_wound": 12,
+        "unconscious": 6
+      },
+      "other": {
+        "movement": 22,
+        "armor_points": 2,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 3
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Hawk": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Hawk",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 1,
+        "DEX": 20,
+        "STR": 5,
+        "CON": 5
+      },
+      "attacks": [
+        {
+          "weapon": "Claws",
+          "skill": "Claws",
+          "value": 12,
+          "damage": "1d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 6,
+        "knockdown": 1,
+        "major_wound": 5,
+        "unconscious": 2
+      },
+      "other": {
+        "movement": 18,
+        "armor_points": 0,
+        "shield": 0,
+        "glory": 0,
+        "healing_rate": 2
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Wolf": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Wolf",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 5,
+        "DEX": 22,
+        "STR": 12,
+        "CON": 12
+      },
+      "attacks": [
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 20,
+          "damage": "3d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 17,
+        "knockdown": 5,
+        "major_wound": 12,
+        "unconscious": 4
+      },
+      "other": {
+        "movement": 22,
+        "armor_points": 2,
+        "shield": 0,
+        "glory": 5,
+        "healing_rate": 2
+      },
+      "skills": {
+        "Avoidance": 10
+      },
+      "traits": {},
+      "passions": {},
+      "notes": ""
+    },
+    "Dragon": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Dragon",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 80,
+        "DEX": 40,
+        "STR": 80,
+        "CON": 50
+      },
+      "attacks": [
+        {
+          "weapon": "Claws",
+          "skill": "Claws",
+          "value": 17,
+          "damage": "16d6"
+        },
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 15,
+          "damage": "16d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 130,
+        "knockdown": 80,
+        "major_wound": 50,
+        "unconscious": 33
+      },
+      "other": {
+        "movement": 65,
+        "armor_points": 15,
+        "shield": 0,
+        "glory": 1000,
+        "healing_rate": 14,
+        "valorous_modifier": -15,
+        "prudent_modifier": 10,
+        "movement_mode": "flying"
+      },
+      "skills": {
+        "Avoidance": 5
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Flying Attack (fly-by claw/bite, no hover). Bite also grapples; a pinned foe of SIZ <= half the dragon's is swallowed and slain."
+    },
+    "Faerie Knight": {
+      "kind": "generic",
+      "category": "fae",
+      "source": "bestiary",
+      "name": "Faerie Knight",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 20,
+        "DEX": 20,
+        "STR": 20,
+        "CON": 20,
+        "APP": 20
+      },
+      "attacks": [
+        {
+          "weapon": "Dagger",
+          "skill": "Dagger",
+          "value": 10,
+          "damage": "7d6"
+        },
+        {
+          "weapon": "Lance",
+          "skill": "Lance",
+          "value": 21,
+          "damage": "7d6"
+        },
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 21,
+          "damage": "7d6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 23,
+          "damage": "7d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour + shield",
+      "health": {
+        "hit_points": 40,
+        "knockdown": 20,
+        "major_wound": 20,
+        "unconscious": 10
+      },
+      "other": {
+        "movement": 25,
+        "armor_points": 18,
+        "shield": 6,
+        "glory": 200,
+        "healing_rate": 4,
+        "valorous_modifier": -5
+      },
+      "skills": {
+        "Awareness": 15,
+        "Courtesy": 15,
+        "First Aid": 15,
+        "Heraldry": 8,
+        "Hunting": 15,
+        "Tourney": 10,
+        "Horsemanship": 21
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "A powerful Faerie warrior (Armor 18 + shield). A strong sample individual — adjust to taste."
+    },
+    "Giant (Small)": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Giant (Small)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 25,
+        "DEX": 8,
+        "STR": 20,
+        "CON": 25,
+        "APP": 5
+      },
+      "attacks": [
+        {
+          "weapon": "Mace",
+          "skill": "Mace",
+          "value": 13,
+          "damage": "8d6"
+        },
+        {
+          "weapon": "Grapple",
+          "skill": "Grapple",
+          "value": 15,
+          "damage": "8d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 50,
+        "knockdown": 25,
+        "major_wound": 25,
+        "unconscious": 13
+      },
+      "other": {
+        "movement": 19,
+        "armor_points": 15,
+        "shield": 0,
+        "glory": 100,
+        "healing_rate": 5
+      },
+      "skills": {
+        "Avoidance": 5
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Hurls rocks/logs; Grapple; may stomp a foe of smaller SIZ. Mace uses a club (no +1d6 vs mail)."
+    },
+    "Giant (Standard)": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Giant (Standard)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 40,
+        "DEX": 5,
+        "STR": 50,
+        "CON": 30,
+        "APP": 3
+      },
+      "attacks": [
+        {
+          "weapon": "Mace",
+          "skill": "Mace",
+          "value": 15,
+          "damage": "15d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 70,
+        "knockdown": 40,
+        "major_wound": 30,
+        "unconscious": 18
+      },
+      "other": {
+        "movement": 33,
+        "armor_points": 25,
+        "shield": 0,
+        "glory": 250,
+        "healing_rate": 8,
+        "valorous_modifier": -5,
+        "prudent_modifier": 5
+      },
+      "skills": {
+        "Avoidance": 3
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Hurls rocks/logs; may Grapple twice/round; may stomp a foe of smaller SIZ. Mace uses a club (no +1d6 vs mail)."
+    },
+    "Giant (Huge)": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Giant (Huge)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 85,
+        "DEX": 1,
+        "STR": 65,
+        "CON": 35,
+        "APP": 3
+      },
+      "attacks": [
+        {
+          "weapon": "Mace",
+          "skill": "Mace",
+          "value": 7,
+          "damage": "25d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 120,
+        "knockdown": 85,
+        "major_wound": 35,
+        "unconscious": 30
+      },
+      "other": {
+        "movement": 38,
+        "armor_points": 40,
+        "shield": 0,
+        "glory": 500,
+        "healing_rate": 10,
+        "valorous_modifier": -15,
+        "prudent_modifier": 15
+      },
+      "skills": {
+        "Avoidance": 1
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Hurls rocks/whole trees; may Grapple twice/round; may stomp a foe of smaller SIZ. Move -X on rough ground."
+    },
+    "Griffin": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Griffin",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 40,
+        "DEX": 20,
+        "STR": 40,
+        "CON": 25
+      },
+      "attacks": [
+        {
+          "weapon": "Claws",
+          "skill": "Claws",
+          "value": 17,
+          "damage": "8d6"
+        },
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 10,
+          "damage": "8d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 65,
+        "knockdown": 40,
+        "major_wound": 25,
+        "unconscious": 16
+      },
+      "other": {
+        "movement": 35,
+        "armor_points": 10,
+        "shield": 0,
+        "glory": 250,
+        "healing_rate": 7,
+        "valorous_modifier": -5,
+        "movement_mode": "flying"
+      },
+      "skills": {
+        "Avoidance": 30
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Flying Attack. Snatch: a flying bite grapples; on a hold it carries off and drops a foe (SIZ <= 1/3 its own)."
+    },
+    "Hippogriff": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Hippogriff",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 30,
+        "DEX": 25,
+        "STR": 15,
+        "CON": 10
+      },
+      "attacks": [
+        {
+          "weapon": "Hoof",
+          "skill": "Hoof",
+          "value": 12,
+          "damage": "5d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 40,
+        "knockdown": 30,
+        "major_wound": 15,
+        "unconscious": 10
+      },
+      "other": {
+        "movement": 25,
+        "armor_points": 10,
+        "shield": 0,
+        "glory": 200,
+        "healing_rate": 3,
+        "movement_mode": "flying"
+      },
+      "skills": {
+        "Avoidance": 30
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Flying Attack (fly-by; imposes -15 to the foe's opposed roll)."
+    },
+    "Lion": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Lion",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 40,
+        "DEX": 25,
+        "STR": 30,
+        "CON": 20
+      },
+      "attacks": [
+        {
+          "weapon": "Claws",
+          "skill": "Claws",
+          "value": 21,
+          "damage": "7d6"
+        },
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 20,
+          "damage": "7d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 60,
+        "knockdown": 40,
+        "major_wound": 15,
+        "unconscious": 10
+      },
+      "other": {
+        "movement": 33,
+        "armor_points": 10,
+        "shield": 0,
+        "glory": 250,
+        "healing_rate": 5,
+        "valorous_modifier": -5
+      },
+      "skills": {
+        "Avoidance": 10
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Powerful pounce/charge; Valorous modifier to attack it."
+    },
+    "Manticore": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Manticore",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 45,
+        "DEX": 20,
+        "STR": 45,
+        "CON": 25
+      },
+      "attacks": [
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 10,
+          "damage": "9d6"
+        },
+        {
+          "weapon": "Tail Sting",
+          "skill": "Tail Sting",
+          "value": 20,
+          "damage": "9d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 70,
+        "knockdown": 45,
+        "major_wound": 25,
+        "unconscious": 18
+      },
+      "other": {
+        "movement": 38,
+        "armor_points": 10,
+        "shield": 0,
+        "glory": 300,
+        "healing_rate": 7,
+        "valorous_modifier": -10,
+        "prudent_modifier": 10
+      },
+      "skills": {
+        "Avoidance": 10
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Tail Sting (ranged spikes). A prodigious leaper — walls rarely stop it."
+    },
+    "Panther": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Panther",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 25,
+        "STR": 25,
+        "CON": 15
+      },
+      "attacks": [
+        {
+          "weapon": "Claws",
+          "skill": "Claws",
+          "value": 10,
+          "damage": "4d6"
+        },
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 15,
+          "damage": "4d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 30,
+        "knockdown": 15,
+        "major_wound": 15,
+        "unconscious": 8
+      },
+      "other": {
+        "movement": 30,
+        "armor_points": 5,
+        "shield": 0,
+        "glory": 75,
+        "healing_rate": 4
+      },
+      "skills": {
+        "Avoidance": 15
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Attacks with Claws and Bite; a foe hit by both defends against each separately."
+    },
+    "Unicorn (Greater)": {
+      "kind": "generic",
+      "category": "fae",
+      "source": "bestiary",
+      "name": "Unicorn (Greater)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 25,
+        "DEX": 40,
+        "STR": 25,
+        "CON": 25
+      },
+      "attacks": [
+        {
+          "weapon": "Horn",
+          "skill": "Horn",
+          "value": 16,
+          "damage": "5d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 50,
+        "knockdown": 25,
+        "major_wound": 25,
+        "unconscious": 13
+      },
+      "other": {
+        "movement": 38,
+        "armor_points": 5,
+        "shield": 0,
+        "glory": 100,
+        "healing_rate": 5
+      },
+      "skills": {
+        "Avoidance": 15,
+        "Awareness": 18
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Horn. Special healing (regenerates). Can be approached via the Virgin Ploy."
+    },
+    "Unicorn (Lesser)": {
+      "kind": "generic",
+      "category": "fae",
+      "source": "bestiary",
+      "name": "Unicorn (Lesser)",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 45,
+        "STR": 15,
+        "CON": 15
+      },
+      "attacks": [
+        {
+          "weapon": "Horn",
+          "skill": "Horn",
+          "value": 10,
+          "damage": "3d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 30,
+        "knockdown": 15,
+        "major_wound": 15,
+        "unconscious": 8
+      },
+      "other": {
+        "movement": 35,
+        "armor_points": 3,
+        "shield": 0,
+        "glory": 25,
+        "healing_rate": 3,
+        "valorous_modifier": 5
+      },
+      "skills": {
+        "Avoidance": 25,
+        "Awareness": 18
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Horn. Special healing (regenerates). Can be approached via the Virgin Ploy."
+    },
+    "Water Leaper": {
+      "kind": "generic",
+      "category": "fae",
+      "source": "bestiary",
+      "name": "Water Leaper",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 10,
+        "DEX": 20,
+        "STR": 15,
+        "CON": 15
+      },
+      "attacks": [
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 10,
+          "damage": "3d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 25,
+        "knockdown": 10,
+        "major_wound": 15,
+        "unconscious": 6
+      },
+      "other": {
+        "movement": 23,
+        "armor_points": 5,
+        "shield": 0,
+        "glory": 100,
+        "healing_rate": 5,
+        "movement_mode": "flying"
+      },
+      "skills": {},
+      "traits": {},
+      "passions": {},
+      "notes": "Flying/swimming; snatches boaters and drags them under. Bite grapples."
+    },
+    "Wyrm": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Wyrm",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 35,
+        "DEX": 30,
+        "STR": 35,
+        "CON": 25
+      },
+      "attacks": [
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 15,
+          "damage": "7d6"
+        },
+        {
+          "weapon": "Fire Breath",
+          "skill": "Fire Breath",
+          "value": 10,
+          "damage": "7d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 60,
+        "knockdown": 35,
+        "major_wound": 25,
+        "unconscious": 15
+      },
+      "other": {
+        "movement": 38,
+        "armor_points": 15,
+        "shield": 0,
+        "glory": 400,
+        "healing_rate": 5,
+        "valorous_modifier": -10,
+        "prudent_modifier": 10
+      },
+      "skills": {
+        "Avoidance": 7
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Regeneration: heals 1d6 HP/round; slain only by beheading (a Mortal Wound) then applying fire to the stump. Fire Breath: cumulative 1d6 fire damage. Tail Lash."
+    },
+    "Wyvern": {
+      "kind": "generic",
+      "category": "monster",
+      "source": "bestiary",
+      "name": "Wyvern",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 20,
+        "DEX": 60,
+        "STR": 25,
+        "CON": 20
+      },
+      "attacks": [
+        {
+          "weapon": "Bite",
+          "skill": "Bite",
+          "value": 12,
+          "damage": "5d6"
+        },
+        {
+          "weapon": "Claws",
+          "skill": "Claws",
+          "value": 15,
+          "damage": "5d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 40,
+        "knockdown": 20,
+        "major_wound": 20,
+        "unconscious": 10
+      },
+      "other": {
+        "movement": 48,
+        "armor_points": 8,
+        "shield": 0,
+        "glory": 100,
+        "healing_rate": 5,
+        "movement_mode": "flying"
+      },
+      "skills": {
+        "Avoidance": 30
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Flying Attack. Claws only while flying: one target, two separate 3d6 rolls (two wounds); -15 to the foe's opposed roll on a fly-by."
+    },
+    "Yale": {
+      "kind": "generic",
+      "category": "beast",
+      "source": "bestiary",
+      "name": "Yale",
+      "tier": "",
+      "description": "",
+      "promotion_title": "",
+      "characteristics": {
+        "SIZ": 30,
+        "DEX": 10,
+        "STR": 15,
+        "CON": 15
+      },
+      "attacks": [
+        {
+          "weapon": "Gore",
+          "skill": "Gore",
+          "value": 12,
+          "damage": "5d6"
+        }
+      ],
+      "armour": {
+        "pieces": [],
+        "helmet": "",
+        "shield": ""
+      },
+      "armour_desc": "Natural armour",
+      "health": {
+        "hit_points": 45,
+        "knockdown": 30,
+        "major_wound": 15,
+        "unconscious": 12
+      },
+      "other": {
+        "movement": 18,
+        "armor_points": 8,
+        "shield": 0,
+        "glory": 50,
+        "healing_rate": 3
+      },
+      "skills": {
+        "Avoidance": 12
+      },
+      "traits": {},
+      "passions": {},
+      "notes": "Gore: two horn attacks/round, independently aimed; a foe hit by both defends against each separately."
     }
   },
   "encounters": {
