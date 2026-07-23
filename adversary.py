@@ -128,7 +128,7 @@ def blank_adversary(kind="generic", category="human"):
         "health": {"hit_points": 20, "knockdown": 10, "major_wound": 10, "unconscious": 5},
         "other": {"movement": 10, "armor_points": 0, "shield": 0, "glory": 0, "healing_rate": 2},
         "skills": {}, "traits": {}, "passions": {},
-        "armour_desc": "", "promotion_title": "Champion",
+        "armour_desc": "", "promotion_title": "Champion", "notes": "",
     }
 
 
@@ -419,6 +419,13 @@ class AdversaryTab(ttk.Frame):
         self.traits_text.bind("<FocusIn>", lambda e: self._snapshot_traits())
         self.traits_text.bind("<FocusOut>", self._normalise_traits)
 
+        # Free-text notes for special mechanics (regeneration, immunities,
+        # special attacks, etc.) that the structured fields don't capture.
+        nf = self._section("Mechanics / notes")
+        self.notes_text = tk.Text(nf, height=4, width=48, wrap="word",
+                                  font=("TkDefaultFont", 10))
+        self.notes_text.pack(fill="x", padx=6, pady=4)
+
         # Auto-generate all
         gf = self._section("Auto-generate from an NPC template")
         self.gen_gender = tk.StringVar(value="Male")
@@ -529,6 +536,8 @@ class AdversaryTab(ttk.Frame):
         self._set_text(self.skills_text, adv.get("skills", {}))
         self._set_text(self.traits_text, adv.get("traits", {}))
         self._set_text(self.passions_text, adv.get("passions", {}))
+        self.notes_text.delete("1.0", "end")
+        self.notes_text.insert("1.0", adv.get("notes", "") or "")
         self._snapshot_traits()
         self._recompute_derived()
         self._recompute_armour()
@@ -710,6 +719,7 @@ class AdversaryTab(ttk.Frame):
         adv["skills"] = _text_to_map(self.skills_text.get("1.0", "end"))
         adv["traits"] = _text_to_map(self.traits_text.get("1.0", "end"))
         adv["passions"] = _text_to_map(self.passions_text.get("1.0", "end"))
+        adv["notes"] = self.notes_text.get("1.0", "end").strip()
         return adv
 
     # -- attacks -----------------------------------------------------------
