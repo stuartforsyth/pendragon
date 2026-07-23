@@ -43,18 +43,28 @@ def _dice_count(expr):
 def resolve_weapon_damage(wdef, base_damage):
     """The damage a weapon deals for a wielder whose Weapon Damage is base_damage.
 
-    base_damage is a dice string like '4d6' (the adversary's derived Damage).
-    Handles the table's damage_base/damage_mod/damage_max model.
+    base_damage is a dice string like '4d6' (the adversary's derived Damage). Its
+    die count is also the wielder's flat **Brawling Damage** — both equal
+    (STR + SIZ) ÷ 6 (Core p.34). Handles the table's damage_base/damage_mod/
+    damage_max model (Weapons Tables 8.1 & 8.2).
     """
     base = wdef.get("damage_base", "character")
     if base == "fixed":
         return wdef.get("damage_dice", str(base_damage))
     if base == "horse":
         return "Horse"
-    n = _dice_count(base_damage)
+    flat = _dice_count(base_damage)
     m = re.match(r"\s*([+-])\s*(\d+)\s*[dD]6", wdef.get("damage_mod", "") or "")
-    if m:
-        n += (1 if m.group(1) == "+" else -1) * int(m.group(2))
+    mod_dice = (1 if m.group(1) == "+" else -1) * int(m.group(2)) if m else 0
+    if base == "brawling":
+        # Brawling weapons (Dagger, Club, Javelin…) add their XD6 modifier to the
+        # flat Brawling Damage number: Brawling +2D6 with Brawling 4 -> '2D6+4'
+        # (Table 8.1) — NOT 6D6.
+        if mod_dice <= 0:
+            return str(max(1, flat))
+        return f"{mod_dice}D6+{flat}" if flat else f"{mod_dice}D6"
+    # character-based: dice = weapon-damage dice ± the modifier dice, then capped.
+    n = flat + mod_dice
     cap = wdef.get("damage_max")
     if cap:
         n = min(n, _dice_count(cap))
