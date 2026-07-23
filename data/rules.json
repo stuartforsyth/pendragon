@@ -103,6 +103,18 @@
       ],
       "benefit": "+1D6 Damage",
       "deity": "Wodin"
+    },
+    "Heathen": {
+      "favoured": [
+        "Arbitrary",
+        "Honest",
+        "Proud",
+        "Spiritual",
+        "Suspicious",
+        "Vengeful"
+      ],
+      "benefit": "+2 Movement, +1 Healing Rate",
+      "deity": "the Old Gods"
     }
   },
   "culture_religion": {
