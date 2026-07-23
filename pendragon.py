@@ -30,6 +30,7 @@ from tkinter import filedialog, messagebox, ttk
 import adversary as adversary_module
 import encounter as encounter_module
 import encounter_creator as encounter_creator_module
+import pdf_export
 import rules as rules_module
 
 # ---------------------------------------------------------------------------
@@ -306,6 +307,7 @@ class Generator:
         r["passions"] = self.rules.roll_full_passions(r["religion"])
         defaults = self.rules.character_creation.get("defaults", {})
         r["age"] = defaults.get("age", 21)
+        r["born"] = defaults.get("year", 508) - r["age"]
         r["homeland"] = defaults.get("homeland", "")
         r["residence"] = defaults.get("residence", "")
         r["full_knight"] = True
@@ -824,6 +826,12 @@ class App(tk.Tk):
         self.create_adv_btn.pack(side="left", padx=(8, 0))
         self.copy_buttons.append(self.create_adv_btn)
 
+        # Export the official fillable character sheet (full Cymric knights only;
+        # needs pypdf). Enabled by _update_export_state after each generate.
+        self.export_pdf_btn = ttk.Button(buttons, text="Export sheet PDF…",
+                                         command=self.on_export_pdf, state="disabled")
+        self.export_pdf_btn.pack(side="left", padx=(8, 0))
+
         # Reroll a single field.
         reroll = ttk.Frame(parent)
         reroll.pack(anchor="w", padx=10, pady=(0, 8))
@@ -1007,6 +1015,45 @@ class App(tk.Tk):
         self.subtitle.config(text=subtitle_str(r))
         self._render_details(r)
         self._load_notes()
+        self._update_export_state()
+
+    def _update_export_state(self):
+        """The PDF export button is only meaningful for a full Cymric knight, and
+        only works when pypdf is installed."""
+        ok = (pdf_export.PDF_AVAILABLE and self._current
+              and self._current.get("full_knight"))
+        self.export_pdf_btn.config(state="normal" if ok else "disabled")
+
+    def on_export_pdf(self):
+        r = self._current
+        if not (r and r.get("full_knight")):
+            return
+        if not pdf_export.PDF_AVAILABLE:
+            messagebox.showinfo(
+                "PDF export unavailable",
+                "Exporting a filled character sheet needs the 'pypdf' package.\n\n"
+                "Install it with:  python -m pip install pypdf")
+            return
+        here = os.path.dirname(os.path.abspath(__file__))
+        template = pdf_export.sheet_template_path(here)
+        if not os.path.isfile(template):
+            messagebox.showerror(
+                "Sheet template missing",
+                f"Could not find the fillable character sheet at:\n{template}")
+            return
+        path = filedialog.asksaveasfilename(
+            title="Export character sheet PDF",
+            defaultextension=".pdf",
+            initialfile=f"{pdf_export.safe_filename(r['full'])}.pdf",
+            filetypes=[("PDF", "*.pdf"), ("All files", "*.*")])
+        if not path:
+            return
+        try:
+            n = pdf_export.export_sheet(r, template, path)
+        except Exception as exc:                      # noqa: BLE001
+            messagebox.showerror("Export failed", str(exc))
+            return
+        self._set_status(f"Exported {n} fields to {path}", "#2a7d2a")
 
     def on_reroll(self):
         if not self._current:
