@@ -272,7 +272,7 @@ class Combatant:
 
         self.elite = False
         self._base = None          # snapshot for demotion
-        self._out = None           # override: None / "unconscious" / "dead"
+        self._out = None           # override: None / "unconscious" / "dead" / "fled"
         self._engaged_logged = ""  # last engaged-with value written to the log
 
     # -- status ------------------------------------------------------------
@@ -281,6 +281,8 @@ class Combatant:
     def status(self):
         if self.cur_hp <= 0 or self._out == "dead":
             return "dead"
+        if self._out == "fled":            # left the field — no longer tracked
+            return "fled"
         if self._out == "unconscious" or self.cur_hp < self.unconscious:
             return "unconscious"
         return "active"
@@ -685,8 +687,12 @@ class EncounterTab(ttk.Frame):
 
         marker = ("★" if c.elite else "") + ("◆" if c.named else "")
         marker = f"{marker} " if marker else ""
-        name = tk.Label(row, text=f"{marker}{c.display_name}", width=22, anchor="w",
-                        font=name_font, fg=fg)
+        # A fled combatant is greyed like any 'down' foe but flagged as untracked;
+        # widen the label so the flag isn't clipped by the usual fixed width.
+        fled = c.status == "fled"
+        suffix = "  (fled — not tracked)" if fled else ""
+        name = tk.Label(row, text=f"{marker}{c.display_name}{suffix}",
+                        width=40 if fled else 22, anchor="w", font=name_font, fg=fg)
         name.grid(row=0, column=0, sticky="w")
 
         # "<name> engages [who] " — an inline label makes the textbox self-explaining.
@@ -717,8 +723,13 @@ class EncounterTab(ttk.Frame):
         menu = tk.Menu(mb, tearoff=0)
         menu.add_command(label="Demote" if c.elite else "Promote to champion",
                          command=lambda cc=c: self._toggle_promote(cc))
-        menu.add_command(label="Revive" if c.down else "Knock out",
-                         command=lambda cc=c: self._toggle_down(cc))
+        menu.add_command(
+            label="Revive" if c.status in ("unconscious", "dead") else "Knock out",
+            command=lambda cc=c: self._toggle_down(cc))
+        menu.add_command(
+            label="Reactivate (resume tracking)" if c.status == "fled"
+            else "Deactivate (fled / not tracked)",
+            command=lambda cc=c: self._toggle_fled(cc))
         if c.ransom:
             menu.add_command(label="Roll ransom",
                              command=lambda cc=c: self._roll_ransom(cc))
@@ -891,12 +902,24 @@ class EncounterTab(ttk.Frame):
             self._log(f"{c.display_name} no longer engaged")
 
     def _toggle_down(self, c):
-        if c.status == "active":
-            c._out = "unconscious"
-            self._log(f"{c.log_name} knocked out (unconscious)")
-        else:
+        # Knock out <-> revive (unconscious). Kept separate from the fled flag so
+        # 'down' also covering fled doesn't flip the wrong way.
+        if c.status in ("unconscious", "dead"):
             c._out = None
             self._log(f"{c.log_name} brought back up")
+        else:
+            c._out = "unconscious"
+            self._log(f"{c.log_name} knocked out (unconscious)")
+        self._refresh_rows()
+
+    def _toggle_fled(self, c):
+        """Mark a fleeing foe as no longer active/tracked (or resume tracking)."""
+        if c.status == "fled":
+            c._out = None
+            self._log(f"{c.log_name} resumes the fight — active again")
+        else:
+            c._out = "fled"
+            self._log(f"{c.log_name} flees the field — no longer active")
         self._refresh_rows()
 
     def _roll_ransom(self, c):
