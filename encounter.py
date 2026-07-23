@@ -525,15 +525,36 @@ class EncounterTab(ttk.Frame):
         self.players_var = tk.IntVar(value=4)
         ttk.Spinbox(setup, from_=1, to=20, width=4,
                     textvariable=self.players_var).pack(side="left", padx=(4, 10))
-        ttk.Label(setup, text="Encounter:").pack(side="left")
-        themes = _alpha(self.encounter.themes)
-        self.theme_var = tk.StringVar(value=themes[0] if themes else "")
-        self.theme_combo = ttk.Combobox(setup, textvariable=self.theme_var, width=20,
-                                        state="readonly", values=themes)
-        self.theme_combo.pack(side="left", padx=(4, 10))
-        ttk.Button(setup, text="Generate encounter",
+        ttk.Label(setup, text="Encounter search:").pack(side="left")
+        self.theme_var = tk.StringVar(value="")   # the selected encounter to launch
+        self.enc_search_var = tk.StringVar()
+        enc_search = ttk.Entry(setup, textvariable=self.enc_search_var, width=22)
+        enc_search.pack(side="left", padx=(4, 10))
+        self.enc_search_var.trace_add("write", lambda *a: self._refresh_encounter_list())
+        enc_search.bind("<Return>", lambda e: self.on_generate())
+        ttk.Button(setup, text="Launch encounter",
                    command=self.on_generate).pack(side="left")
         ttk.Button(setup, text="Clear", command=self.on_clear).pack(side="left", padx=(6, 0))
+
+        # Searchable list of matching encounters (type to filter; select then
+        # Launch, or double-click) — replaces the old dropdown so a long theme
+        # list is filterable rather than scrolled.
+        enc_frame = ttk.Frame(self)
+        enc_frame.pack(fill="x", padx=10, pady=(0, 6))
+        ttk.Label(enc_frame,
+                  text="Matching encounters — select then Launch, or double-click:",
+                  foreground="#444", font=("TkDefaultFont", 9)).pack(anchor="w")
+        listrow = ttk.Frame(enc_frame)
+        listrow.pack(fill="x")
+        self.enc_list = tk.Listbox(listrow, height=5, activestyle="dotbox",
+                                   exportselection=False)
+        self.enc_list.pack(side="left", fill="x", expand=True)
+        esb = ttk.Scrollbar(listrow, orient="vertical", command=self.enc_list.yview)
+        esb.pack(side="right", fill="y")
+        self.enc_list.configure(yscrollcommand=esb.set)
+        self.enc_list.bind("<<ListboxSelect>>", self._on_encounter_select)
+        self.enc_list.bind("<Double-Button-1>", lambda e: self.on_generate())
+        self._refresh_encounter_list()
 
         addrow = ttk.Frame(self)
         addrow.pack(fill="x", padx=10, pady=(0, 6))
@@ -635,6 +656,32 @@ class EncounterTab(ttk.Frame):
         self._refresh_rows()
 
     # -- combatant rows ----------------------------------------------------
+
+    # -- encounter search list ---------------------------------------------
+
+    def _refresh_encounter_list(self):
+        """Repopulate the encounter list with the themes matching the search
+        box (case-insensitive substring); auto-select a lone match."""
+        self.enc_list.delete(0, "end")
+        q = self.enc_search_var.get().strip().lower()
+        self._enc_keys = []
+        for name in _alpha(self.encounter.themes):
+            if q and q not in name.lower():
+                continue
+            self.enc_list.insert("end", name)
+            self._enc_keys.append(name)
+        if len(self._enc_keys) == 1:
+            self.enc_list.selection_set(0)
+            self.theme_var.set(self._enc_keys[0])
+        elif self.theme_var.get() in self._enc_keys:
+            self.enc_list.selection_set(self._enc_keys.index(self.theme_var.get()))
+        else:
+            self.theme_var.set("")
+
+    def _on_encounter_select(self, _e):
+        sel = self.enc_list.curselection()
+        if sel:
+            self.theme_var.set(self._enc_keys[sel[0]])
 
     def _refresh_descriptions(self):
         """Collect each combatant type's description + mechanics notes once,
@@ -1023,19 +1070,24 @@ class EncounterTab(ttk.Frame):
 
     def on_generate(self):
         theme = self.theme_var.get()
-        if not theme:
-            return
+        if not theme:                      # nothing picked — fall back to a lone match
+            if len(getattr(self, "_enc_keys", [])) == 1:
+                theme = self._enc_keys[0]
+            else:
+                self.set_status("Search, then select an encounter to launch.", "#a33")
+                return
         self.encounter.generate_from_theme(theme, self.players_var.get())
         names = ", ".join(c.display_name for c in self.encounter.combatants)
-        self._log(f"Generated '{theme}' for {self.players_var.get()} players: {names}")
+        self._log(f"Launched '{theme}' for {self.players_var.get()} players: {names}")
         self._refresh_rows()
-        self.set_status(f"Generated {len(self.encounter.combatants)} combatants.", "#2a7d2a")
+        self.set_status(f"Launched '{theme}' — {len(self.encounter.combatants)} combatants.",
+                        "#2a7d2a")
 
     def refresh_choices(self):
-        """Re-populate the Encounter and Add-combatant dropdowns (alphabetical)
-        so encounters/adversaries created or edited in other tabs appear here
-        without restarting the app. Current selections are left untouched."""
-        self.theme_combo["values"] = _alpha(self.encounter.themes)
+        """Re-populate the encounter search list and Add-combatant dropdown
+        (alphabetical) so encounters/adversaries created or edited in other tabs
+        appear here without restarting the app. Current selections are left untouched."""
+        self._refresh_encounter_list()
         self.add_combo["values"] = _alpha(self.encounter.templates)
 
     # Kept for the Encounter Creator's Send-to-tracker bridge.
