@@ -18,7 +18,7 @@ import tkinter as tk
 from tkinter import font as tkfont, messagebox, ttk
 
 from rules import roll_expr, save_combat
-from encounter import CHAR_FULL
+from encounter import CHAR_FULL, bind_mousewheel
 
 CHAR_ORDER = ("SIZ", "DEX", "STR", "CON", "APP")
 
@@ -279,6 +279,7 @@ class AdversaryTab(ttk.Frame):
         canvas.configure(yscrollcommand=vs.set)
         canvas.pack(side="left", fill="both", expand=True)
         vs.pack(side="right", fill="y")
+        bind_mousewheel(canvas)
 
         self._build_editor()
 

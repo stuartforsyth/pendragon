@@ -13,7 +13,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from rules import save_combat
-from encounter import resolve_roster
+from encounter import resolve_roster, bind_mousewheel
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +153,7 @@ class EncounterCreatorTab(ttk.Frame):
         canvas.configure(yscrollcommand=vs.set)
         canvas.pack(side="left", fill="both", expand=True)
         vs.pack(side="right", fill="y")
+        bind_mousewheel(canvas)
         self._build_editor()
 
     def _section(self, title):

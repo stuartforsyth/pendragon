@@ -25,6 +25,52 @@ def _alpha(names):
     return sorted(names, key=str.casefold)
 
 
+def bind_mousewheel(canvas):
+    """Let the mouse wheel scroll a Canvas while the pointer is over it.
+
+    A Canvas has no default wheel binding. On Tk 9 the wheel arrives as
+    <MouseWheel> (delta +-120) even on X11; on Tk 8.6/X11 it arrives as
+    Button-4/Button-5 — both are handled. Because the inner frame covers the
+    whole canvas the pointer is almost always over a child widget, so bind
+    globally while the pointer is anywhere in the canvas's subtree and release
+    only once it has truly left (a <Leave> fired by moving onto a child must
+    not unbind, or the wheel would die over the rows).
+    """
+    step = 3  # lines per wheel notch (one unit felt too slow)
+
+    def _scroll(event):
+        num = getattr(event, "num", 0)
+        if num == 4:
+            canvas.yview_scroll(-step, "units")
+        elif num == 5:
+            canvas.yview_scroll(step, "units")
+        elif event.delta:
+            canvas.yview_scroll(-step if event.delta > 0 else step, "units")
+
+    def _over_canvas():
+        w = canvas.winfo_containing(*canvas.winfo_pointerxy())
+        while w is not None:
+            if w is canvas:
+                return True
+            w = getattr(w, "master", None)
+        return False
+
+    def _bind(_e):
+        canvas.bind_all("<MouseWheel>", _scroll)
+        canvas.bind_all("<Button-4>", _scroll)
+        canvas.bind_all("<Button-5>", _scroll)
+
+    def _unbind(_e):
+        if _over_canvas():
+            return
+        canvas.unbind_all("<MouseWheel>")
+        canvas.unbind_all("<Button-4>")
+        canvas.unbind_all("<Button-5>")
+
+    canvas.bind("<Enter>", _bind, add="+")
+    canvas.bind("<Leave>", _unbind, add="+")
+
+
 def resolve_skill(value):
     """Roll d20 against a skill value. Returns (roll, outcome).
 
@@ -540,6 +586,7 @@ class EncounterTab(ttk.Frame):
         canvas.configure(yscrollcommand=vs.set)
         canvas.pack(side="left", fill="both", expand=True)
         vs.pack(side="right", fill="y")
+        bind_mousewheel(canvas)
 
         # Log + GM notes side by side.
         bottom = ttk.Frame(self)
