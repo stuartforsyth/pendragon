@@ -632,8 +632,9 @@ class App(tk.Tk):
         self.geometry("780x1000")
         self.minsize(720, 860)
 
+        names = self.generator.culture_names()
         self.gender_var = tk.StringVar(value="Male")
-        self.culture_var = tk.StringVar(value=self.generator.culture_names()[0])
+        self.culture_var = tk.StringVar(value="Cymri" if "Cymri" in names else names[0])
         self.class_var = tk.StringVar(value="Random")
 
         self._build_ui()
@@ -687,7 +688,7 @@ class App(tk.Tk):
 
         gender_box = ttk.LabelFrame(options, text="Gender")
         gender_box.pack(side="left", fill="y", padx=(0, 10))
-        for g in ("Male", "Female"):
+        for g in ("Male", "Female", "Random"):
             ttk.Radiobutton(
                 gender_box, text=g, value=g, variable=self.gender_var
             ).pack(anchor="w", padx=8, pady=2)
@@ -709,7 +710,12 @@ class App(tk.Tk):
         grid = ttk.Frame(culture_box)
         grid.pack(fill="both", expand=True, padx=4, pady=4)
         cols = 2
-        for i, c in enumerate(self.generator.culture_names()):
+        # Preferred display order (Cymri default); any other cultures follow, and
+        # a Random option to leave culture to the dice.
+        order = ["Cymri", "Pict", "Saxon", "Irish", "Roman", "Frankish", "Aquitanian"]
+        names = self.generator.culture_names()
+        ordered = [c for c in order if c in names] + [c for c in names if c not in order]
+        for i, c in enumerate(ordered + ["Random"]):
             ttk.Radiobutton(
                 grid, text=c, value=c, variable=self.culture_var
             ).grid(row=i // cols, column=i % cols, sticky="w", padx=6, pady=2)
@@ -876,8 +882,15 @@ class App(tk.Tk):
     def on_generate(self, _checked=False):
         if not _checked and not self._confirm_discard_notes():
             return
+        # "Random" leaves that field to the dice; the radio stays on Random so
+        # repeated Generate keeps re-rolling it (class Random is resolved inside
+        # generate()). Fixed choices are used as-is.
         culture = self.culture_var.get()
+        if culture == "Random":
+            culture = random.choice(self.generator.culture_names())
         gender = self.gender_var.get()
+        if gender == "Random":
+            gender = random.choice(("Male", "Female"))
         social_class = self.class_var.get()
         try:
             result = self.generator.generate(culture, gender, social_class)
@@ -887,8 +900,10 @@ class App(tk.Tk):
 
         self._current = result
         self._current_in_roster = None
-        # A single-gender class (Lady) may have overridden the choice; reflect it.
-        self.gender_var.set(result["gender"])
+        # A single-gender class (Lady) may have overridden the choice; reflect it
+        # — unless the user asked for a random gender, which we leave selected.
+        if self.gender_var.get() != "Random":
+            self.gender_var.set(result["gender"])
         self._refresh_display()
         for b in self.copy_buttons:
             b.config(state="normal")
