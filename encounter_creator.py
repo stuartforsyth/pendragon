@@ -118,8 +118,12 @@ class EncounterCreatorTab(ttk.Frame):
     def _encounters(self):
         return self.combat.get("encounters", {})
 
-    def _adversary_names(self):
-        return sorted(self.combat.get("adversaries", {}))
+    def _adversary_names(self, category=None):
+        advs = self.combat.get("adversaries", {})
+        names = sorted(advs)
+        if category and category != "all":
+            names = [n for n in names if advs[n].get("category", "human") == category]
+        return names
 
     # -- layout ------------------------------------------------------------
 
@@ -202,7 +206,8 @@ class EncounterCreatorTab(ttk.Frame):
                   lambda e, l=hint: l.configure(wraplength=max(300, e.width - 8)))
         hdr = ttk.Frame(rf)
         hdr.pack(fill="x", padx=6)
-        ttk.Label(hdr, text="Adversary", width=22, font=("TkDefaultFont", 9, "bold")).pack(side="left")
+        ttk.Label(hdr, text="Filter", width=8, font=("TkDefaultFont", 9, "bold")).pack(side="left")
+        ttk.Label(hdr, text="Adversary", width=20, font=("TkDefaultFont", 9, "bold")).pack(side="left")
         ttk.Label(hdr, text="Count", font=("TkDefaultFont", 9, "bold")).pack(side="left")
         self.roster_frame = ttk.Frame(rf)
         self.roster_frame.pack(fill="x", padx=6, pady=2)
@@ -211,10 +216,17 @@ class EncounterCreatorTab(ttk.Frame):
         ttk.Button(addbar, text="Add roster line",
                    command=lambda: self._add_roster_row()).pack(side="left")
 
-        lf = self._section("Leader (optional, auto-promoted)")
+        lf = self._section("Leader (optional, auto-promoted) — e.g. a lone monster")
         self.leader_var = tk.StringVar()
-        ttk.Combobox(lf, textvariable=self.leader_var, width=22, state="readonly",
-                     values=[""] + self._adversary_names()).pack(side="left", padx=6, pady=4)
+        self.leader_cat = tk.StringVar(value="all")
+        ttk.Combobox(lf, textvariable=self.leader_cat, width=7, state="readonly",
+                     values=["all", "human", "beast", "monster", "fae"]).pack(side="left", padx=(6, 3), pady=4)
+        leader_combo = ttk.Combobox(lf, textvariable=self.leader_var, width=20, state="readonly",
+                                    values=[""] + self._adversary_names())
+        leader_combo.pack(side="left", pady=4)
+        self.leader_cat.trace_add("write", lambda *a: (
+            leader_combo.configure(values=[""] + self._adversary_names(self.leader_cat.get())),
+            self._update_preview()))
         self.leader_promote = tk.BooleanVar(value=True)
         ttk.Checkbutton(lf, text="promote", variable=self.leader_promote,
                         command=self._update_preview).pack(side="left")
@@ -317,8 +329,16 @@ class EncounterCreatorTab(ttk.Frame):
         cv = tk.StringVar(value=_fmt_count(raw))
         pv = tk.BooleanVar(value=bool(per_player))
         prom = tk.BooleanVar(value=bool(line.get("promote")))
-        ttk.Combobox(fr, textvariable=av, width=20, state="readonly",
-                     values=self._adversary_names()).pack(side="left")
+        # A category filter narrows the (63-entry) adversary list to
+        # human/beast/monster/fae so creatures are easy to find.
+        catv = tk.StringVar(value="all")
+        ttk.Combobox(fr, textvariable=catv, width=7, state="readonly",
+                     values=["all", "human", "beast", "monster", "fae"]).pack(side="left", padx=(0, 3))
+        adv_combo = ttk.Combobox(fr, textvariable=av, width=18, state="readonly",
+                                 values=self._adversary_names())
+        adv_combo.pack(side="left")
+        catv.trace_add("write", lambda *a, cb=adv_combo, c=catv: (
+            cb.configure(values=self._adversary_names(c.get())), self._update_preview()))
         ttk.Entry(fr, textvariable=cv, width=5).pack(side="left", padx=(6, 4))
         ttk.Checkbutton(fr, text="× players", variable=pv,
                         command=self._update_preview).pack(side="left")
@@ -371,12 +391,32 @@ class EncounterCreatorTab(ttk.Frame):
 
     # -- preview / send ----------------------------------------------------
 
+    def _roster_threat(self, defn, n_players):
+        """Total Glory and Hit Points across the resolved roster — a rough threat
+        gauge, so a lone Dragon (1000 Glory) reads as more dangerous than a mob
+        of bandits."""
+        advs = self.combat.get("adversaries", {})
+        glory = hp = 0
+        rows = list(resolve_roster(defn, n_players))
+        leader = defn.get("leader")
+        if isinstance(leader, dict) and leader.get("adversary"):
+            rows.append((leader["adversary"], 1, False))
+        for adv, n, _promote in rows:
+            a = advs.get(adv, {})
+            glory += a.get("other", {}).get("glory", 0) * n
+            hp += a.get("health", {}).get("hit_points", 0) * n
+        return glory, hp
+
     def _update_preview(self, *_):
         defn = self._collect()
         lines, total = preview_lines(defn, self.preview_players.get())
+        glory, hp = self._roster_threat(defn, self.preview_players.get())
         body = "\n".join(f"  • {ln}" for ln in lines) if lines else "  (empty roster)"
+        threat = f"  = {total} combatants"
+        if total:
+            threat += f"   ·   {hp} total Hit Points   ·   ≈{glory:,} Glory"
         self.preview_lbl.config(
-            text=f"For {self.preview_players.get()} players:\n{body}\n  = {total} combatants")
+            text=f"For {self.preview_players.get()} players:\n{body}\n{threat}")
 
     def _send_to_tracker(self):
         defn = self._collect()
