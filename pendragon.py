@@ -311,6 +311,16 @@ class Generator:
         r["homeland"] = defaults.get("homeland", "")
         r["residence"] = defaults.get("residence", "")
         r["full_knight"] = True
+        r["ideals"] = self.rules.assess_ideals(r)
+        r["squire"] = self._make_squire(r)
+
+    def _make_squire(self, knight):
+        """A young supporting-NPC squire attending the knight (Squire class,
+        same culture/faith, a few years younger)."""
+        sq = self.generate(knight.get("culture", "Cymri"), "Male", "Squire",
+                            knight.get("religion"))
+        sq["age"] = max(15, knight.get("age", 21) - random.randint(3, 6))
+        return sq
 
     # Fields the GUI can reroll individually, mapped to how to reroll them.
     def reroll_fields(self):
@@ -322,6 +332,7 @@ class Generator:
         ]
         if self.rules.social_classes:
             fields[1:1] = ["Class", "Skills"]  # right after Name
+            fields.append("Squire")            # full Cymric knights only
         return fields
 
     def _full_knight_context(self, r):
@@ -342,7 +353,8 @@ class Generator:
                 self._apply_full_knight(r)   # became (or stayed) a Cymric knight
             elif full:                       # no longer a Cymric knight
                 for k in ("full_knight", "family_talent", "family_lore",
-                          "parent_glory", "age", "homeland", "residence"):
+                          "parent_glory", "age", "homeland", "residence",
+                          "ideals", "squire"):
                     r.pop(k, None)
         elif field == "Skills":
             if full:
@@ -376,6 +388,13 @@ class Generator:
                              else self.rules.roll_passions(r["religion"]))
         elif field == "Directed Trait":
             r["directed"] = self.rules.roll_directed_trait()
+        elif field == "Squire":
+            if full:
+                r["squire"] = self._make_squire(r)
+            return
+        # Ideals derive from the current traits/passions/skills — keep them fresh.
+        if r.get("full_knight"):
+            r["ideals"] = self.rules.assess_ideals(r)
 
 
 # ---------------------------------------------------------------------------
@@ -405,6 +424,33 @@ def _passions_str(passions):
 def _skills_str(skills):
     return ", ".join(f"{k} {v}" for k, v in
                      sorted(skills.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
+def _ideal_gaps(ideal):
+    """Short 'label current/needed' strings for an Ideal's unmet requirements."""
+    return [f"{x['label'].split('(')[0].strip()} {x['current']}/{x['needed']}"
+            for x in ideal["requirements"] if not x["ok"]]
+
+
+def _ideals_summary(ideals):
+    """One-line standing: the Ideals met, or the nearest one and its shortfalls."""
+    met = [a["name"] for a in ideals if a["met"]]
+    if met:
+        return "qualifies for " + _natural_join(met)
+    nearest = max(ideals, key=lambda a: sum(x["ok"] for x in a["requirements"]))
+    return (f"none yet — nearest {nearest['name']} "
+            f"(needs {'; '.join(_ideal_gaps(nearest))})")
+
+
+def _squire_summary(sq):
+    """One-line summary of the knight's attending squire."""
+    sk = sq.get("skills", {})
+    keyed = ", ".join(f"{k} {sk[k]}" for k in ("Sword", "Horsemanship", "Spear")
+                      if k in sk)
+    tail = f" — {keyed}" if keyed else ""
+    glory = f"; Glory {sq['glory']}" if sq.get("glory") is not None else ""
+    return (f"{sq['full']} ({sq.get('culture', '')} squire, "
+            f"age {sq.get('age', '?')}){tail}{glory}")
 
 
 def subtitle_str(r):
@@ -571,6 +617,10 @@ def format_statblock(r):
         if r.get("family_lore"):
             lines.append("Family lore: "
                          + "; ".join(f"an ancestor {ln}" for ln in r["family_lore"]))
+        if r.get("ideals"):
+            lines.append("Ideals: " + _ideals_summary(r["ideals"]))
+        if r.get("squire"):
+            lines.append("Squire: " + _squire_summary(r["squire"]))
 
     if r.get("naming_note"):
         lines.append(f"Naming: {r['naming_note']}")
@@ -629,6 +679,15 @@ def format_statblock_markdown(r):
         if r.get("family_lore"):
             bullet("Family lore",
                    "; ".join(f"an ancestor {ln}" for ln in r["family_lore"]))
+        if r.get("ideals"):
+            bullet("Ideals", _ideals_summary(r["ideals"]))
+            for a in r["ideals"]:
+                mark = "✓" if a["met"] else "✗"
+                gaps = _ideal_gaps(a)
+                detail = "" if a["met"] else " — needs " + "; ".join(gaps)
+                lines.append(f"    - {mark} {a['name']}{detail}")
+        if r.get("squire"):
+            bullet("Squire", _squire_summary(r["squire"]))
     if r.get("naming_note"):
         bullet("Naming", r["naming_note"])
     if r.get("pronunciation"):
@@ -1180,6 +1239,10 @@ class App(tk.Tk):
                 self.details.insert("end", "Family lore:\n", ("label",))
                 for ln in r["family_lore"]:
                     self.details.insert("end", f"  • an ancestor {ln}\n")
+            if r.get("ideals"):
+                row("Ideals", _ideals_summary(r["ideals"]))
+            if r.get("squire"):
+                row("Squire", _squire_summary(r["squire"]))
 
         if r.get("naming_note"):
             self.details.insert("end", "\n")

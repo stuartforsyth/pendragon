@@ -57,9 +57,19 @@ rather than scattering TODOs through the code.
 - [ ] **Phase 2 — kit.** Starting equipment (hauberk+aketon+nasal helm+kite
   shield, sword/spears/lance/dagger), horses (Charger/Rouncy/Sumpter — stats
   already seeded in the bestiary), and a **Beginner's Luck heirloom** (Table 3.9).
-- [ ] **Phase 3 — flourish.** Coat of arms (text blazon; Tables B.1–B.3),
-  Ideals (Chivalry/Religious/Romantic), a squire supporting-NPC, and — if the
-  supplement is available — Saxon/Pict cultural creation.
+- **Phase 3 — flourish** (partial):
+  - [x] **Ideals** (Chivalrous / Religious / Romantic, Core Ch.6) — assess the
+    knight's standing against each Ideal's Trait/Passion/Skill minimums; report
+    the ones met, or the nearest with its shortfalls. Shown on the sheet and in
+    both exports; refreshes when traits/passions/skills reroll.
+  - [x] **Squire supporting-NPC** — a young (age 15–20) Squire-class attendant of
+    the same culture/faith, with its own name/stats/skills/Glory; individually
+    rerollable.
+  - [ ] **Coat of arms** (text blazon; Tables B.1–B.3) — *deferred, implement
+    later.* Full B.1–B.3 tables already captured in
+    `rules_corpus/core/appendix-heraldry/coat-of-arms-generator.md`.
+  - [ ] **Ideals to pursue / squire-of-note & other flourish** — coat of arms
+    above; and, if the supplement is available, Saxon/Pict cultural creation.
 
 ## Presentation
 

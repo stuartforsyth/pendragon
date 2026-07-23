@@ -598,6 +598,79 @@ class Rules:
             random.choice(raisable)[1] += 1
         return [(n, v) for n, v in passions]
 
+    # -- ideals (Core Ch.6 — Aspirations) ----------------------------------
+
+    def assess_ideals(self, r):
+        """Assess the three knightly Ideals (Chivalrous / Religious / Romantic)
+        against a generated knight's rolled traits, passions and skills.
+
+        Ideals grant bonuses for holding minimum values in prescribed Traits,
+        Passions and Skills. A starting knight rarely qualifies outright (e.g.
+        the Chivalry and Adoration Passions are not part of the starting set),
+        so this reports each Ideal's standing — which requirements are met and
+        by how much they fall short — for the GM to develop in play.
+
+        Returns a list of {'name', 'met', 'requirements': [{'label', 'current',
+        'needed', 'ok'}]}, one per Ideal (Religious is skipped if the religion
+        has no listed virtues).
+        """
+        chivalrous_traits = ("Energetic", "Generous", "Just",
+                             "Merciful", "Modest", "Valorous")
+        romantic_traits = ("Chaste", "Generous", "Honest",
+                           "Modest", "Spiritual", "Temperate")
+
+        traits = {}
+        for left, lval, right, rval in r.get("traits", []):
+            traits[left] = lval
+            traits[right] = rval
+        passions = r.get("passions", []) or []
+        pass_d = {n: v for n, v in passions}
+        skills = r.get("skills", {}) or {}
+
+        def passion_like(prefix):
+            return max((v for n, v in passions if n.startswith(prefix)),
+                       default=0)
+
+        def req(label, current, needed):
+            return {"label": label, "current": int(current),
+                    "needed": int(needed), "ok": current >= needed}
+
+        out = []
+
+        chiv_total = sum(traits.get(t, 0) for t in chivalrous_traits)
+        reqs = [
+            req("Chivalrous traits total (Energetic, Generous, Just, Merciful, "
+                "Modest, Valorous)", chiv_total, 96),
+            req("Chivalry passion", pass_d.get("Chivalry", 0), 15),
+            req("Station passion", pass_d.get("Station", 0), 10),
+            req("Hospitality passion", pass_d.get("Hospitality", 0), 10),
+        ]
+        out.append({"name": "Chivalrous Knight",
+                    "met": all(x["ok"] for x in reqs), "requirements": reqs})
+
+        virtues = self.religions.get(r.get("religion", ""), {}).get("favoured", [])
+        if virtues:
+            n_met = sum(1 for t in virtues if traits.get(t, 0) >= 16)
+            reqs = [
+                req("Faith virtues at 16+ (%s)" % ", ".join(virtues),
+                    n_met, len(virtues)),
+                req("Devotion passion", passion_like("Devotion"), 16),
+                req("Religion skill", skills.get("Religion", 0), 10),
+            ]
+            out.append({"name": "Religious Knight",
+                        "met": all(x["ok"] for x in reqs), "requirements": reqs})
+
+        rom_total = sum(traits.get(t, 0) for t in romantic_traits)
+        reqs = [
+            req("Romantic traits total (Chaste, Generous, Honest, Modest, "
+                "Spiritual, Temperate)", rom_total, 90),
+            req("Adoration (Beloved) passion", passion_like("Adoration"), 10),
+        ]
+        out.append({"name": "Romantic Knight",
+                    "met": all(x["ok"] for x in reqs), "requirements": reqs})
+
+        return out
+
     # -- directed traits ---------------------------------------------------
 
     def roll_directed_trait(self):
