@@ -101,6 +101,10 @@ def skill_display(value):
 
 CRITICAL_BONUS = "4D6"  # a critical hit adds a flat +4D6 (Core Ch.7, Table 7.1)
 
+# Fallback Valorous for the Surrender check when a foe lists no traits
+# (e.g. battle-card conrois). A middling courage the GM can override.
+DEFAULT_VALOROUS = 13
+
 
 def roll_damage(damage_expr, critical=False, rebated=False):
     """Roll weapon damage.
@@ -245,6 +249,10 @@ class Combatant:
 
         self.attacks = copy.deepcopy(template["attacks"])
         self.skills = dict(template.get("skills", {}))
+        self.traits = dict(template.get("traits", {}))  # e.g. Valorous, for Surrender
+        # Valorous drives the Surrender check; battle-card conrois list no traits,
+        # so fall back to a middling courage the GM can adjust.
+        self.valorous = self.traits.get("Valorous", DEFAULT_VALOROUS)
         self.notes = template.get("notes", "")
         self.armour_desc = template.get("armour_desc", "")
         self.culture = template.get("culture", "")
@@ -718,7 +726,8 @@ class EncounterTab(ttk.Frame):
                    command=lambda cc=c, v=dv: self._apply_hp(cc, v.get())).grid(
                        row=0, column=6, padx=(2, 0))
 
-        # Actions menu (promote/demote, knock out/revive, ransom, morale)
+        # Actions menu (promote/demote, knock out/revive, deactivate, ransom,
+        # surrender check)
         mb = ttk.Menubutton(row, text="Actions ▾", width=9)
         menu = tk.Menu(mb, tearoff=0)
         menu.add_command(label="Demote" if c.elite else "Promote to champion",
@@ -733,9 +742,8 @@ class EncounterTab(ttk.Frame):
         if c.ransom:
             menu.add_command(label="Roll ransom",
                              command=lambda cc=c: self._roll_ransom(cc))
-        if c.morale_minimum:
-            menu.add_command(label="Morale check",
-                             command=lambda cc=c: self._morale_check(cc))
+        menu.add_command(label=f"Surrender check (Valorous {c.valorous})",
+                         command=lambda cc=c: self._surrender_check(cc))
         mb["menu"] = menu
         mb.grid(row=0, column=7, padx=(8, 0))
         ttk.Button(row, text="✕", width=2,
@@ -811,7 +819,9 @@ class EncounterTab(ttk.Frame):
 
         plain(f"   ·   Major Wound {c.major_wound}")
         if c.morale_minimum:
-            plain(f", Morale {c.morale_minimum}")
+            # Battle-card datum: the conroi's Minimum Morale to engage this
+            # Encounter (a Battle-system stat), not an individual foe's morale.
+            plain(f", Min Morale to engage {c.morale_minimum}")
 
         txt.configure(state="disabled")
         txt.bind("<Configure>", lambda e, t=txt: self._fit_text_height(t, e.width))
@@ -932,12 +942,27 @@ class EncounterTab(ttk.Frame):
         else:
             self._log(f"{c.log_name} ransom (1D6={roll}): none")
 
-    def _morale_check(self, c):
-        # Morale = d20 roll-under the unit's Morale value; fail = would flee.
-        roll, outcome = resolve_skill(c.morale_minimum)
-        result = "holds" if outcome in ("success", "critical") else "FLEES"
-        self._log(f"{c.log_name} morale check ({c.morale_minimum}): {roll} — {result}")
-        self.set_status(f"{c.display_name} morale {c.morale_minimum}: {roll} — {result}",
+    # Outcomes of the unopposed Valorous roll (GM Handbook Ch.6, Surrender —
+    # gm.battle.battlefield-position-and-surrender, pp.131-132).
+    _SURRENDER = {
+        "critical": "fights on until dead or unconscious",
+        "success": "holds — fights one more round, then checks again",
+        "failure": "attempts to FLEE — resolve the escape, then Deactivate if it gets away",
+        "fumble": "SURRENDERS — take prisoner / Roll ransom, or Deactivate",
+    }
+
+    def _surrender_check(self, c):
+        """The rulebook Surrender check: a GM foe at half Hit Points or less rolls
+        unopposed Valorous. This is the real 'does it flee?' mechanic — Pendragon
+        has no per-foe morale roll (Morale is a conroi-level Battle stat)."""
+        roll, outcome = resolve_skill(c.valorous)
+        shown = skill_display(c.valorous)
+        result = self._SURRENDER[outcome]
+        note = "" if c.cur_hp * 2 <= c.max_hp else \
+            "  (note: the check normally applies only at ½ Hit Points or less)"
+        self._log(f"{c.log_name} surrender check — Valorous {shown}: "
+                  f"{roll} — {outcome.upper()}: {result}{note}")
+        self.set_status(f"{c.display_name} Valorous {shown}: {roll} — {result}",
                         OUTCOME_COLOR.get(outcome, "#000"))
 
     def on_add_round_note(self):
