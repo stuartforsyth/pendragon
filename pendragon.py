@@ -401,7 +401,8 @@ class Generator:
 # Statblock formatting (shared by the display and the clipboard)
 # ---------------------------------------------------------------------------
 
-FAMOUS = 16  # a trait value of 16+ is Famous
+FAMOUS = 16   # a trait value of 16–19 is Famous
+EXALTED = 20  # a trait value of 20+ is Exalted
 
 
 def _trait_entry(left, lval, right, rval):
@@ -934,6 +935,9 @@ class App(tk.Tk):
         self.details.tag_configure("label", font=("TkDefaultFont", 11, "bold"))
         self.details.tag_configure("desc", font=("TkDefaultFont", 11, "italic"),
                                    foreground="#333")
+        # Famous/Exalted trait names share the brown highlight of their roll number.
+        self.details.tag_configure("famous_name", foreground="#8a4b00",
+                                   font=("TkDefaultFont", 11, "bold"))
         self.details.configure(state="disabled")
 
         # GM notes — free text per NPC, persisted with the roster.
@@ -1158,6 +1162,15 @@ class App(tk.Tk):
             link(value, lambda n=name, v=value: self._roll_personality(n, v),
                  famous=value >= FAMOUS)
 
+        def named_roll(name, value):
+            """Insert 'Name <link>'. Famous/Exalted names get the brown highlight;
+            Exalted names are also uppercased."""
+            shown = name.upper() if value >= EXALTED else name
+            name_tags = ("famous_name",) if value >= FAMOUS else ()
+            self.details.insert("end", shown, name_tags)
+            self.details.insert("end", " ")
+            roll_link(name, value)
+
         # Read-aloud description paragraph, above everything else.
         self.details.insert("end", build_description(r) + "\n\n", ("desc",))
 
@@ -1178,18 +1191,16 @@ class App(tk.Tk):
             for i, (left, lval, right, rval) in enumerate(r["traits"]):
                 if i:
                     self.details.insert("end", ", ")
-                self.details.insert("end", f"{left} ")
-                roll_link(left, lval)
-                self.details.insert("end", f"/{right} ")
-                roll_link(right, rval)
+                named_roll(left, lval)
+                self.details.insert("end", "/")
+                named_roll(right, rval)
             self.details.insert("end", "\n")
         if r.get("passions"):
             self.details.insert("end", "Passions: ", ("label",))
             for i, (name, value) in enumerate(r["passions"]):
                 if i:
                     self.details.insert("end", ", ")
-                self.details.insert("end", f"{name} ")
-                roll_link(name, value)
+                named_roll(name, value)
             self.details.insert("end", "\n")
         if r.get("directed"):
             row(r["directed"]["kind"], r["directed"]["text"])
@@ -1222,8 +1233,7 @@ class App(tk.Tk):
                     sorted(r["skills"].items(), key=lambda kv: (-kv[1], kv[0]))):
                 if i:
                     self.details.insert("end", ", ")
-                self.details.insert("end", f"{name} ")
-                roll_link(name, value)
+                named_roll(name, value)
             self.details.insert("end", "\n")
         if r.get("glory") is not None:
             row("Glory", r["glory"])
