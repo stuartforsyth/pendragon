@@ -254,8 +254,23 @@ class Generator:
         if cls is None:  # reroll: pick a class valid for the current gender
             cls = self.rules.roll_class(r["gender"])
         r["social_class"] = cls
-        r["attire"] = self.rules.social_classes[cls].get("attire", "")
         self._fill_skills(r)
+
+    def _fill_attire(self, r):
+        """Compose period-accurate clothing for the description. Knights get both
+        battle gear and a court outfit; everyone else a single clothing clause.
+        Depends on religion (for Clergy), so call after religion is set."""
+        cls = r.get("social_class")
+        if not (self.rules and self.rules.social_classes and cls):
+            return
+        attire = self.rules.roll_attire(cls, r["gender"], r["culture"],
+                                        r.get("religion"))
+        if isinstance(attire, dict):  # Knight: court dress + battle gear
+            r["attire"] = attire.get("court", "")
+            r["battle_gear"] = attire.get("battle", "")
+        else:
+            r["attire"] = attire
+            r.pop("battle_gear", None)
 
     def _fill_skills(self, r):
         rolled = self.rules.roll_skills(r.get("social_class"))
@@ -279,6 +294,7 @@ class Generator:
             if not (religion and religion in self.rules.religions):
                 religion = self.rules.religion_for(culture)
             result["religion"] = religion
+            self._fill_attire(result)  # after religion (Clergy garb follows faith)
             self._fill_characteristics(result)
             result["traits"] = self.rules.roll_traits(religion)
             result["manner"] = self.rules.compose_manner(result["traits"])
@@ -331,7 +347,7 @@ class Generator:
             "Personality Traits", "Passions", "Directed Trait", "Manner",
         ]
         if self.rules.social_classes:
-            fields[1:1] = ["Class", "Skills"]  # right after Name
+            fields[1:1] = ["Class", "Skills", "Attire"]  # right after Name
             fields.append("Squire")            # full Cymric knights only
         return fields
 
@@ -347,8 +363,12 @@ class Generator:
         if self.rules is None:
             return
         full = bool(r.get("full_knight"))
+        if field == "Attire":
+            self._fill_attire(r)
+            return
         if field == "Class":
             self._fill_class(r)
+            self._fill_attire(r)             # clothing scales with the new class
             if self._full_knight_context(r):
                 self._apply_full_knight(r)   # became (or stayed) a Cymric knight
             elif full:                       # no longer a Cymric knight
@@ -370,6 +390,8 @@ class Generator:
             r["manner"] = self.rules.compose_manner(r["traits"])
             r["passions"] = (self.rules.roll_full_passions(r["religion"]) if full
                              else self.rules.roll_passions(r["religion"]))
+            if r.get("social_class") == "Clergy":  # vestments follow the faith
+                self._fill_attire(r)
         elif field == "Characteristics":
             self._fill_characteristics(r)
             if full:  # skills derive from stats, so re-roll the full set too
@@ -559,6 +581,9 @@ def build_description(r):
     if r.get("attire"):
         lead += f", wearing {r['attire']}"
     sentences = [lead + "."]
+    # Knights: the attire above is their court/feast dress; add the battle gear.
+    if r.get("battle_gear"):
+        sentences.append(f"Armed for war, {subj.lower()} wears {r['battle_gear']}.")
 
     details = appearance.get("feature_details") or \
         [[None, f] for f in appearance.get("features", [])]

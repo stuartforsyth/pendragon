@@ -1244,5 +1244,718 @@
       "homeland": "Salisbury",
       "residence": "Sarum"
     }
+  },
+  "wardrobe": {
+    "_note": "Class-scaled clothing pools for the read-aloud description. Composer in rules.roll_attire(). Placeholders {color}/{material}/{brooch} are filled from the tier buckets below.",
+    "materials": {
+      "poor": [
+        "undyed wool",
+        "coarse wool",
+        "roughspun linen",
+        "homespun wool"
+      ],
+      "modest": [
+        "dyed wool",
+        "good linen",
+        "fulled wool"
+      ],
+      "fine": [
+        "fine wool",
+        "bleached linen",
+        "light worsted"
+      ],
+      "rich": [
+        "imported silk",
+        "samite",
+        "fine scarlet wool",
+        "brocade"
+      ]
+    },
+    "colors": {
+      "poor": [
+        "undyed",
+        "grey",
+        "brown",
+        "russet",
+        "dun",
+        "faded green"
+      ],
+      "modest": [
+        "green",
+        "blue",
+        "madder-red",
+        "ochre",
+        "russet"
+      ],
+      "rich": [
+        "crimson",
+        "deep blue",
+        "royal purple",
+        "emerald",
+        "saffron",
+        "wine-red"
+      ]
+    },
+    "brooch": {
+      "poor": [
+        "an iron brooch",
+        "a bone pin",
+        "a leather thong"
+      ],
+      "modest": [
+        "a bronze brooch",
+        "a pewter clasp"
+      ],
+      "rich": [
+        "a silver brooch",
+        "a jewelled gold brooch",
+        "a gold clasp set with garnets"
+      ]
+    },
+    "classes": {
+      "Commoner": {
+        "tier": "poor",
+        "male": {
+          "body": [
+            "a {color} {material} tunic to the knee",
+            "a short {color} {material} tunic",
+            "a patched {color} tunic"
+          ],
+          "legs": [
+            "cross-gartered {color} hose",
+            "woollen leggings bound with cord",
+            "plain braies and hose"
+          ],
+          "over": [
+            "a plain hooded mantle fastened with {brooch}",
+            "a coarse cloak pinned with {brooch}",
+            "a weathered {color} cloak"
+          ],
+          "feet": [
+            "rough leather shoes",
+            "undyed turnshoes",
+            "bare feet"
+          ],
+          "accent": [
+            "",
+            "a wide leather belt",
+            "a belt hung with a knife and pouch"
+          ]
+        },
+        "female": {
+          "body": [
+            "a {color} {material} kirtle to the ankle",
+            "a long {color} {material} gown, well-worn"
+          ],
+          "over": [
+            "a plain shawl",
+            "a hooded mantle fastened with {brooch}",
+            "a {color} cloak pinned with {brooch}"
+          ],
+          "feet": [
+            "rough leather shoes",
+            "bare feet"
+          ],
+          "accent": [
+            "a linen headcloth and apron",
+            "an apron and a plain coif",
+            "a simple headcloth"
+          ]
+        },
+        "cultures": {
+          "Irish": {
+            "male": {
+              "body": [
+                "a {color} léine of {material}"
+              ],
+              "over": [
+                "a fringed wool brat pinned with {brooch}"
+              ],
+              "feet": [
+                "rough leather shoes",
+                "bare feet"
+              ],
+              "accent": [
+                "a leather belt",
+                ""
+              ]
+            },
+            "female": {
+              "body": [
+                "a long {color} léine of {material}"
+              ],
+              "over": [
+                "a fringed wool brat pinned with {brooch}"
+              ],
+              "feet": [
+                "leather shoes",
+                "bare feet"
+              ],
+              "accent": [
+                "a linen headcloth"
+              ]
+            }
+          },
+          "Saxon": {
+            "male": {
+              "body": [
+                "a short {color} {material} tunic, belted"
+              ],
+              "legs": [
+                "{color} trousers cross-gartered to the knee",
+                "visible woollen trousers with leggings"
+              ],
+              "over": [
+                "a wool cloak clasped at one shoulder with {brooch}"
+              ],
+              "feet": [
+                "leather shoes"
+              ],
+              "accent": [
+                "a leather belt with a seax",
+                ""
+              ]
+            },
+            "female": {
+              "body": [
+                "a {color} {material} gown over an underdress"
+              ],
+              "over": [
+                "a wool mantle pinned at the breast with {brooch}"
+              ],
+              "feet": [
+                "leather shoes"
+              ],
+              "accent": [
+                "a linen headcloth",
+                "a plain veil"
+              ]
+            }
+          },
+          "Pict": {
+            "male": {
+              "body": [
+                "a short {color} {material} tunic"
+              ],
+              "legs": [
+                "tattooed bare legs",
+                "checked woollen trews"
+              ],
+              "over": [
+                "a checked wool cloak pinned with {brooch}"
+              ],
+              "feet": [
+                "rawhide shoes",
+                "bare feet"
+              ],
+              "accent": [
+                "blue woad markings on the arms"
+              ]
+            },
+            "female": {
+              "body": [
+                "a {color} {material} dress"
+              ],
+              "over": [
+                "a checked wool shawl pinned with {brooch}"
+              ],
+              "feet": [
+                "bare feet",
+                "rawhide shoes"
+              ],
+              "accent": [
+                "woad markings",
+                "a headcloth"
+              ]
+            }
+          }
+        }
+      },
+      "Squire": {
+        "tier": "modest",
+        "male": {
+          "body": [
+            "a {color} {material} tunic to mid-thigh",
+            "a neat {color} {material} tunic"
+          ],
+          "legs": [
+            "fitted {color} hose",
+            "woollen hose cross-gartered"
+          ],
+          "over": [
+            "a good {color} cloak fastened with {brooch}",
+            "a hooded {color} mantle pinned with {brooch}"
+          ],
+          "feet": [
+            "sturdy leather boots",
+            "well-made turnshoes"
+          ],
+          "accent": [
+            "a belt hung with a knife",
+            "a leather belt and pouch",
+            "his lord's badge at the shoulder"
+          ]
+        },
+        "female": {
+          "body": [
+            "a {color} {material} gown",
+            "a neat {color} kirtle"
+          ],
+          "over": [
+            "a {color} mantle pinned with {brooch}"
+          ],
+          "feet": [
+            "leather shoes"
+          ],
+          "accent": [
+            "a linen veil",
+            "a belt and pouch"
+          ]
+        },
+        "cultures": {
+          "Saxon": {
+            "male": {
+              "body": [
+                "a {color} {material} tunic, belted"
+              ],
+              "legs": [
+                "{color} trousers cross-gartered to the knee"
+              ],
+              "over": [
+                "a wool cloak clasped at the shoulder with {brooch}"
+              ],
+              "feet": [
+                "leather boots"
+              ],
+              "accent": [
+                "a leather belt with a seax",
+                "his lord's badge at the shoulder"
+              ]
+            }
+          }
+        }
+      },
+      "Knight": {
+        "court_tier": "rich",
+        "battle": {
+          "wealth": [
+            {
+              "weight": 2,
+              "gear": "a mail hauberk over an aketon, an open helm, and a large kite shield"
+            },
+            {
+              "weight": 5,
+              "gear": "a mail hauberk over an aketon, a nasal helm, and a large kite shield"
+            },
+            {
+              "weight": 2,
+              "gear": "an advanced hauberk over an aketon, an advanced nasal helm, and a large kite shield"
+            },
+            {
+              "weight": 1,
+              "gear": "a coat of plates over an advanced hauberk, an advanced nasal helm, and a large kite shield"
+            }
+          ],
+          "surcoat": [
+            "",
+            "",
+            "a {color} surcoat blazoned with his arms over the mail",
+            "a {color} surcoat over the mail"
+          ]
+        },
+        "court": {
+          "male": {
+            "body": [
+              "a {color} {material} tunic with embroidered borders",
+              "a fine {color} {material} robe, girded"
+            ],
+            "legs": [
+              "fitted {color} hose"
+            ],
+            "over": [
+              "a fur-trimmed {color} mantle fastened with {brooch}",
+              "a {color} cloak lined with fur, clasped with {brooch}"
+            ],
+            "feet": [
+              "soft leather shoes",
+              "fine leather boots"
+            ],
+            "accent": [
+              "a tooled leather belt",
+              "a belt with a jewelled buckle",
+              "a signet ring"
+            ]
+          },
+          "female": {
+            "body": [
+              "a long {color} {material} gown with embroidered hems"
+            ],
+            "over": [
+              "a fur-trimmed {color} mantle clasped with {brooch}"
+            ],
+            "feet": [
+              "soft leather shoes"
+            ],
+            "accent": [
+              "a girdle of worked leather",
+              "a veil and circlet"
+            ]
+          },
+          "cultures": {
+            "Saxon": {
+              "male": {
+                "body": [
+                  "a fine {color} {material} tunic with embroidered borders"
+                ],
+                "legs": [
+                  "{color} trousers cross-gartered to the knee"
+                ],
+                "over": [
+                  "a fur-trimmed cloak clasped at the shoulder with {brooch}"
+                ],
+                "feet": [
+                  "fine leather boots"
+                ],
+                "accent": [
+                  "a belt with a jewelled buckle",
+                  "arm-rings of gold"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Noble": {
+        "tier": "rich",
+        "male": {
+          "body": [
+            "an ankle-length {color} {material} tunic with embroidered borders",
+            "a {color} {material} robe trimmed with gold thread"
+          ],
+          "legs": [
+            "fitted {color} hose"
+          ],
+          "over": [
+            "a fur-trimmed {color} mantle clasped with {brooch}",
+            "a {color} silk cloak lined with miniver, fastened with {brooch}"
+          ],
+          "feet": [
+            "soft embroidered shoes",
+            "fine leather shoes with gilded points"
+          ],
+          "accent": [
+            "a jewelled belt",
+            "gold rings and a torc",
+            "a gold chain of office"
+          ]
+        },
+        "female": {
+          "body": [
+            "a long {color} {material} gown with embroidered sleeves",
+            "a trailing {color} {material} gown, gold-bordered"
+          ],
+          "over": [
+            "a fur-trimmed {color} mantle clasped with {brooch}"
+          ],
+          "feet": [
+            "soft embroidered shoes"
+          ],
+          "accent": [
+            "a jewelled girdle and rings",
+            "a fine veil with a gold circlet",
+            "a torc and rings"
+          ]
+        },
+        "cultures": {
+          "Saxon": {
+            "male": {
+              "body": [
+                "a fur-trimmed {color} {material} tunic with embroidered borders"
+              ],
+              "legs": [
+                "fine {color} trousers cross-gartered to the knee"
+              ],
+              "over": [
+                "a rich cloak clasped at the shoulder with {brooch}"
+              ],
+              "feet": [
+                "fine leather boots"
+              ],
+              "accent": [
+                "gold arm-rings and a jewelled belt",
+                "a heavy gold torc"
+              ]
+            }
+          },
+          "Irish": {
+            "male": {
+              "body": [
+                "a saffron léine of {material}"
+              ],
+              "over": [
+                "a long fringed brat clasped with {brooch}"
+              ],
+              "feet": [
+                "fine leather shoes"
+              ],
+              "accent": [
+                "a gold torc and arm-rings"
+              ]
+            },
+            "female": {
+              "body": [
+                "a long saffron léine of {material}"
+              ],
+              "over": [
+                "a fine fringed brat clasped with {brooch}"
+              ],
+              "feet": [
+                "soft leather shoes"
+              ],
+              "accent": [
+                "gold torc, rings, and a veil"
+              ]
+            }
+          }
+        }
+      },
+      "Lady": {
+        "tier": "rich",
+        "female": {
+          "body": [
+            "a long {color} {material} gown with a fitted bodice and trailing sleeves",
+            "a flowing {color} {material} gown with gold-embroidered hems"
+          ],
+          "over": [
+            "a fur-lined {color} mantle clasped with {brooch}"
+          ],
+          "feet": [
+            "soft embroidered slippers"
+          ],
+          "accent": [
+            "a veil and a gold circlet",
+            "a jewelled girdle, rings, and a fine veil",
+            "a wimple and a gem-set fillet"
+          ]
+        }
+      },
+      "Clergy": {
+        "tier": "modest",
+        "by_religion": {
+          "British Christian": {
+            "male": {
+              "body": [
+                "a plain undyed woollen habit",
+                "a long dark monastic robe"
+              ],
+              "over": [
+                "a hooded cowl",
+                "",
+                "an embroidered chasuble and stole over a white alb"
+              ],
+              "feet": [
+                "plain sandals",
+                "leather shoes"
+              ],
+              "accent": [
+                "a knotted cord girdle and a wooden cross",
+                "a rope girdle and a simple pectoral cross",
+                "a leather-bound psalter at the belt"
+              ]
+            },
+            "female": {
+              "body": [
+                "a plain undyed habit"
+              ],
+              "over": [
+                "a dark veil and wimple"
+              ],
+              "feet": [
+                "plain sandals"
+              ],
+              "accent": [
+                "a knotted cord girdle and a wooden cross"
+              ]
+            }
+          },
+          "Roman Christian": {
+            "male": {
+              "body": [
+                "a long white alb belted at the waist",
+                "a plain undyed cassock"
+              ],
+              "over": [
+                "a dark hooded cowl",
+                "",
+                "an embroidered chasuble and stole for the Mass"
+              ],
+              "feet": [
+                "sandals",
+                "leather shoes"
+              ],
+              "accent": [
+                "a pectoral cross",
+                "a rope girdle and a wooden cross"
+              ]
+            },
+            "female": {
+              "body": [
+                "a plain undyed habit"
+              ],
+              "over": [
+                "a dark veil and wimple"
+              ],
+              "feet": [
+                "plain sandals"
+              ],
+              "accent": [
+                "a knotted cord girdle and a wooden cross"
+              ]
+            }
+          },
+          "Pagan": {
+            "male": {
+              "body": [
+                "long undyed robes",
+                "a {color} robe of {material}"
+              ],
+              "over": [
+                "a hooded cloak of undyed wool",
+                ""
+              ],
+              "feet": [
+                "bare feet",
+                "leather shoes"
+              ],
+              "accent": [
+                "a bronze torc and a sprig of oak",
+                "a sickle and a pouch of herbs",
+                "a staff of holly and a bronze torc"
+              ]
+            },
+            "female": {
+              "body": [
+                "long flowing {color} robes"
+              ],
+              "over": [
+                "a hooded mantle",
+                ""
+              ],
+              "feet": [
+                "bare feet",
+                "leather shoes"
+              ],
+              "accent": [
+                "a bronze torc and mistletoe",
+                "a wreath of oak leaves and a bronze sickle"
+              ]
+            }
+          },
+          "Wodinic": {
+            "male": {
+              "body": [
+                "a plain {color} {material} tunic and trousers",
+                "long dark robes"
+              ],
+              "over": [
+                "a wolfskin mantle clasped with {brooch}",
+                "a wool cloak pinned with {brooch}"
+              ],
+              "feet": [
+                "leather shoes",
+                "leather boots"
+              ],
+              "accent": [
+                "runic amulets and a hammer pendant",
+                "a carved staff and bone amulets",
+                "a Thunor's-hammer amulet"
+              ]
+            },
+            "female": {
+              "body": [
+                "a long {color} {material} gown"
+              ],
+              "over": [
+                "a fur-trimmed mantle clasped with {brooch}"
+              ],
+              "feet": [
+                "leather shoes"
+              ],
+              "accent": [
+                "a girdle hung with amulets and charms",
+                "a staff and a pouch of runes"
+              ]
+            }
+          },
+          "Heathen": {
+            "male": {
+              "body": [
+                "a plain {color} {material} tunic and trousers",
+                "long dark robes"
+              ],
+              "over": [
+                "a bearskin mantle clasped with {brooch}",
+                "a wool cloak pinned with {brooch}"
+              ],
+              "feet": [
+                "leather shoes",
+                "leather boots"
+              ],
+              "accent": [
+                "runic amulets and a hammer pendant",
+                "a carved staff and bone charms"
+              ]
+            },
+            "female": {
+              "body": [
+                "a long {color} {material} gown"
+              ],
+              "over": [
+                "a fur-trimmed mantle clasped with {brooch}"
+              ],
+              "feet": [
+                "leather shoes"
+              ],
+              "accent": [
+                "a girdle hung with amulets and charms"
+              ]
+            }
+          },
+          "_default": {
+            "male": {
+              "body": [
+                "plain undyed robes"
+              ],
+              "over": [
+                "a hooded mantle",
+                ""
+              ],
+              "feet": [
+                "leather shoes",
+                "sandals"
+              ],
+              "accent": [
+                "a cord girdle and a holy token"
+              ]
+            },
+            "female": {
+              "body": [
+                "plain undyed robes"
+              ],
+              "over": [
+                "a veil and hooded mantle"
+              ],
+              "feet": [
+                "leather shoes",
+                "sandals"
+              ],
+              "accent": [
+                "a cord girdle and a holy token"
+              ]
+            }
+          }
+        }
+      }
+    }
   }
 }

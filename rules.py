@@ -78,6 +78,25 @@ def _clamp(v, lo=1, hi=20):
     return max(lo, min(hi, v))
 
 
+def _join_natural(items):
+    """Comma-join with an Oxford 'and': [a, b, c] -> 'a, b, and c'."""
+    items = [i for i in items if i]
+    if len(items) <= 1:
+        return items[0] if items else ""
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return f"{', '.join(items[:-1])}, and {items[-1]}"
+
+
+# 'a' -> 'an' before a vowel (safe for our garment/colour vocabulary, which has
+# no vowel-letter/consonant-sound words like 'a one' or 'a European').
+_ARTICLE_RE = re.compile(r"\b([Aa])\s+(?=[aeiouAEIOU])")
+
+
+def _fix_articles(text):
+    return _ARTICLE_RE.sub(lambda m: m.group(1) + "n ", text)
+
+
 # ---------------------------------------------------------------------------
 # Rules container + generation
 # ---------------------------------------------------------------------------
@@ -133,6 +152,9 @@ class Rules:
         self.social_classes = data.get("social_classes", {})
         self.class_weights = data.get("class_weights", {})
 
+        # Optional: period-accurate clothing pools (read-aloud description).
+        self.wardrobe = data.get("wardrobe", {})
+
         # Optional: full character-creation tables (Cymric knight, Core Ch.3).
         self.character_creation = data.get("character_creation", {})
 
@@ -173,6 +195,89 @@ class Rules:
                   for name, (lo, hi) in info["skills"].items()}
         glory = random.randint(*info["glory"])
         return {"skills": skills, "glory": glory}
+
+    # -- clothing / attire -------------------------------------------------
+
+    # Which colour/material/brooch bucket a wealth tier draws from.
+    _TIER_BUCKETS = {
+        "poor": {"material": "poor", "color": "poor", "brooch": "poor"},
+        "modest": {"material": "modest", "color": "modest", "brooch": "modest"},
+        "fine": {"material": "fine", "color": "modest", "brooch": "rich"},
+        "rich": {"material": "rich", "color": "rich", "brooch": "rich"},
+    }
+    _SLOT_ORDER = ("body", "legs", "over", "feet", "accent")
+
+    def _fill_placeholders(self, phrase, tier):
+        """Substitute {color}/{material}/{brooch} from the tier's pools."""
+        buckets = self._TIER_BUCKETS.get(tier, self._TIER_BUCKETS["modest"])
+        # token -> (pool name in wardrobe, bucket key)
+        for token, pool in (("{material}", "materials"), ("{color}", "colors"),
+                            ("{brooch}", "brooch")):
+            if token in phrase:
+                key = token.strip("{}")  # material / color / brooch
+                choices = self.wardrobe.get(pool, {}).get(buckets[key])
+                if choices:
+                    phrase = phrase.replace(token, random.choice(choices))
+        return phrase
+
+    def _slots_for(self, node, gender, culture):
+        """Pick the gendered slot-set from a wardrobe node, honouring a culture
+        override where one exists."""
+        src = node.get("cultures", {}).get(culture, node)
+        gkey = "female" if gender == "Female" else "male"
+        return (src.get(gkey) or node.get(gkey)
+                or src.get("male") or src.get("female") or {})
+
+    def _compose_slots(self, slots, tier):
+        """Compose one garment phrase per present slot into a readable clause."""
+        parts = []
+        for slot in self._SLOT_ORDER:
+            pool = slots.get(slot)
+            if pool:
+                phrase = self._fill_placeholders(random.choice(pool), tier)
+                if phrase:
+                    parts.append(phrase)
+        return _fix_articles(_join_natural(parts))
+
+    def _compose_knight_battle(self, battle):
+        """Roll a Table 9.1 armour suit by wealth, with an optional surcoat."""
+        rows = battle.get("wealth", [])
+        gear = ""
+        if rows:
+            row = random.choices(rows, weights=[r.get("weight", 1) for r in rows])[0]
+            gear = self._fill_placeholders(row.get("gear", ""), "rich")
+        surcoat = self._fill_placeholders(
+            random.choice(battle.get("surcoat", [""])), "rich")
+        text = f"{gear}, with {surcoat}" if (gear and surcoat) else (gear or surcoat)
+        return _fix_articles(text)
+
+    def roll_attire(self, social_class, gender, culture, religion=None):
+        """Compose period-accurate clothing for the read-aloud description.
+
+        Returns a plain string for most classes, or a dict
+        ``{'battle': str, 'court': str}`` for Knights (who always get both
+        their battle gear and a courtly/feast outfit). Falls back to the legacy
+        ``social_classes[cls]['attire']`` string when no wardrobe data exists.
+        """
+        spec = self.wardrobe.get("classes", {}).get(social_class)
+        if not spec:
+            return self.social_classes.get(social_class, {}).get("attire", "")
+
+        if "by_religion" in spec:  # Clergy — garb follows the faith
+            by = spec["by_religion"]
+            node = by.get(religion) or by.get("_default") or {}
+            return self._compose_slots(
+                self._slots_for(node, gender, culture), spec.get("tier", "modest"))
+
+        if "battle" in spec:  # Knight — battle gear + court dress
+            court = self._compose_slots(
+                self._slots_for(spec["court"], gender, culture),
+                spec.get("court_tier", "rich"))
+            return {"battle": self._compose_knight_battle(spec["battle"]),
+                    "court": court}
+
+        return self._compose_slots(
+            self._slots_for(spec, gender, culture), spec.get("tier", "modest"))
 
     # -- religion ----------------------------------------------------------
 
