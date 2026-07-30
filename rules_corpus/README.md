@@ -49,5 +49,5 @@ Never hand-edit the JSONL — regenerate it: `python build_rules_index.py`.
    numbers). PDF page = printed page + 3 for the core rulebook.
 4. `python build_rules_index.py` to refresh the index.
 
-**Source:** *King Arthur Pendragon* 5th Ed. (Chaosium / Nocturnal Media).
+**Source:** *King Arthur Pendragon* 6th Ed. (Chaosium).
 Paraphrased as a play aid; PDFs are copyrighted and kept locally only.

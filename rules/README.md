@@ -20,6 +20,6 @@ Each file covers one aspect of an NPC:
 | [characteristics.md](characteristics.md) | SIZ / DEX / STR / CON / APP and derived stats |
 | [appearance.md](appearance.md) | Distinctive Features tables for physical description |
 
-**Source:** *King Arthur Pendragon* 5th Edition (Chaosium / Nocturnal Media).
+**Source:** *King Arthur Pendragon* 6th Edition (Chaosium).
 Text is paraphrased/summarised for use as a play aid. The rulebook PDFs are
 copyrighted and kept locally only (see `.gitignore`).

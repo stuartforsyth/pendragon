@@ -4,7 +4,7 @@ Pendragon NPC Name Generator
 ============================
 
 A small Tkinter GUI for quickly generating names and full NPC details for
-non-player characters in *King Arthur Pendragon* (5th Edition).
+non-player characters in *King Arthur Pendragon* (6th Edition).
 
 Pick a gender and a culture, press **Generate**, and you get a random name plus
 a rolled-up NPC: religion, Characteristics, Distinctive Features (appearance),

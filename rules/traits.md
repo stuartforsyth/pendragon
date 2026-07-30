@@ -25,7 +25,7 @@ moments (and grants Glory).
 | Trusting | Suspicious |
 | Valorous | Cowardly |
 
-> Note: in KAP 5e the "pious" trait is named **Spiritual** (Spiritual/Worldly).
+> Note: in KAP 6e the "pious" trait is named **Spiritual** (Spiritual/Worldly).
 
 ## Trait levels
 
