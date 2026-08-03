@@ -370,9 +370,12 @@ class Rules:
             out.append(f"a tattoo honouring {random.choice(pool)}")
         return out
 
-    def random_marks(self, culture, religion, n=1):
-        """Scars and (for pagans/Saxons) tattoos — at most one of each."""
-        pool = [("scar", s) for s in self.scars]
+    def random_marks(self, culture, religion, n=1, include_scars=True):
+        """Scars and (for pagans/Saxons) tattoos — at most one of each.
+
+        ``include_scars=False`` drops battle scars (unbecoming of a refined
+        noble) while keeping cultural tattoos."""
+        pool = [("scar", s) for s in self.scars] if include_scars else []
         pool += [("tattoo", t) for t in self._tattoo_phrases(culture, religion)]
         random.shuffle(pool)
         out, used = [], set()
@@ -463,17 +466,23 @@ class Rules:
                 break
         return chosen[:n]
 
-    def roll_appearance(self, app, siz=None, str_=None, culture="", religion=""):
+    def roll_appearance(self, app, siz=None, str_=None, culture="", religion="",
+                        include_negative=True):
+        """Roll a full appearance. ``include_negative=False`` omits unflattering
+        features and battle scars (e.g. for a refined noble) while keeping the
+        flattering details and cultural tattoos."""
         desc, npos, nneg, special = self._app_row(app)
         details = list(self._draw_features("positive", npos))
-        details += self._draw_features("negative", nneg)
+        if include_negative:
+            details += self._draw_features("negative", nneg)
         if special:
             details.append((None, special.lower()))
         # Period marks (scars, and woad/animal/deity tattoos for pagans/Saxons)
         # read as distinctive features; build (from SIZ + STR) is returned apart
         # so the read-aloud can use it as a lead adjective.
         for mark in self.random_marks(culture, religion,
-                                      n=random.choice([0, 1, 1, 2])):
+                                      n=random.choice([0, 1, 1, 2]),
+                                      include_scars=include_negative):
             details.append((None, mark))
         return {
             "descriptor": desc,

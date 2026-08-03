@@ -230,7 +230,8 @@ class Generator:
         r["height"] = self.rules.height_for(stats["SIZ"])
         r["appearance"] = self.rules.roll_appearance(
             stats["APP"], stats["SIZ"], stats["STR"],
-            r.get("culture", ""), r.get("religion", ""))
+            r.get("culture", ""), r.get("religion", ""),
+            include_negative=r.get("include_negative_appearance", True))
 
     def _resolve_class(self, gender, requested):
         """Reconcile gender and a requested class before anything else.
@@ -278,12 +279,14 @@ class Generator:
             r["skills"] = rolled["skills"]
             r["glory"] = rolled["glory"]
 
-    def generate(self, culture, gender, social_class=None, religion=None):
+    def generate(self, culture, gender, social_class=None, religion=None,
+                 include_negative_appearance=True):
         cls = None
         if self.rules and self.rules.social_classes:
             gender, cls = self._resolve_class(gender, social_class)
 
-        result = {"culture": culture, "gender": gender}
+        result = {"culture": culture, "gender": gender,
+                  "include_negative_appearance": include_negative_appearance}
         self._fill_name(result)
 
         if self.rules is not None:
@@ -333,8 +336,11 @@ class Generator:
     def _make_squire(self, knight):
         """A young supporting-NPC squire attending the knight (Squire class,
         same culture/faith, a few years younger)."""
-        sq = self.generate(knight.get("culture", "Cymri"), "Male", "Squire",
-                            knight.get("religion"))
+        sq = self.generate(
+            knight.get("culture", "Cymri"), "Male", "Squire",
+            knight.get("religion"),
+            include_negative_appearance=knight.get(
+                "include_negative_appearance", True))
         sq["age"] = max(15, knight.get("age", 21) - random.randint(3, 6))
         return sq
 
@@ -401,7 +407,8 @@ class Generator:
             s = r["stats"]
             r["appearance"] = self.rules.roll_appearance(
                 s["APP"], s["SIZ"], s["STR"],
-                r.get("culture", ""), r.get("religion", ""))
+                r.get("culture", ""), r.get("religion", ""),
+                include_negative=r.get("include_negative_appearance", True))
         elif field == "Personality Traits":
             r["traits"] = self.rules.roll_traits(r["religion"])
             r["manner"] = self.rules.compose_manner(r["traits"])
@@ -791,6 +798,9 @@ class App(tk.Tk):
         self.culture_var = tk.StringVar(value="Cymri" if "Cymri" in names else names[0])
         self.class_var = tk.StringVar(value="Random")
         self.religion_var = tk.StringVar(value="Random")
+        # When off, omit unflattering features and battle scars (e.g. for a
+        # refined noble whom 'battle-scarred hands' would not suit).
+        self.negative_traits_var = tk.BooleanVar(value=True)
 
         self._build_ui()
 
@@ -887,6 +897,13 @@ class App(tk.Tk):
                 ttk.Radiobutton(
                     rgrid, text=rel, value=rel, variable=self.religion_var
                 ).pack(anchor="w", padx=6, pady=1)
+
+        toggles = ttk.Frame(parent)
+        toggles.pack(anchor="w", fill="x", padx=10, pady=(2, 0))
+        ttk.Checkbutton(
+            toggles, text="Negative physical traits (scars, unflattering features)",
+            variable=self.negative_traits_var,
+        ).pack(side="left")
 
         buttons = ttk.Frame(parent)
         buttons.pack(anchor="w", fill="x", padx=10, pady=(2, 4))
@@ -1074,7 +1091,9 @@ class App(tk.Tk):
         if religion == "Random":
             religion = None            # roll from culture (the default)
         try:
-            result = self.generator.generate(culture, gender, social_class, religion)
+            result = self.generator.generate(
+                culture, gender, social_class, religion,
+                include_negative_appearance=self.negative_traits_var.get())
         except ValueError as exc:
             messagebox.showwarning("No names", str(exc))
             return
