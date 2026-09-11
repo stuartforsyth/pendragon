@@ -284,6 +284,12 @@ class Combatant:
         self._out = None           # override: None / "unconscious" / "dead" / "fled"
         self._engaged_logged = ""  # last engaged-with value written to the log
 
+        # Situational modifier (mounted vs. foot, shield penalty, prone, etc.).
+        # A single net value the GM sets per combatant; every characteristic,
+        # attack-skill and named-skill roll for them applies it automatically
+        # until it's changed or cleared back to 0.
+        self.modifier = 0
+
     # -- status ------------------------------------------------------------
 
     @property
@@ -579,7 +585,12 @@ class EncounterTab(ttk.Frame):
                 "positive to add it, then press Apply or Enter. Example: an enemy on 28/28 takes "
                 "8 damage → type -8, Apply → 20/28. A single hit ≥ Constitution is a Major Wound.\n"
                 "• Click any underlined stat number to roll it (characteristic, attack skill, damage, "
-                "skill)."
+                "skill).\n"
+                "• Mod — a situational modifier (e.g. -5 mounted vs. mounted, +5 mounted vs. foot, "
+                "-2 shield penalty; net them yourself, e.g. +3), then press Enter. It's applied "
+                "automatically to every characteristic, attack-skill and named-skill roll for that "
+                "combatant — not to damage — until you change it back to 0. Red = penalty, "
+                "green = bonus."
             ),
         )
         howto_lbl.pack(anchor="w", fill="x", padx=8, pady=4)
@@ -723,7 +734,7 @@ class EncounterTab(ttk.Frame):
         row.grid(row=i, column=0, sticky="ew", padx=2, pady=1)
         # A weighted trailing column soaks up spare width so the stat and flavour
         # lines (which span it) stretch to the full width instead of being clipped.
-        row.columnconfigure(9, weight=1)
+        row.columnconfigure(11, weight=1)
 
         # Named NPCs and promoted champions both stand out from rank-and-file
         # combatants: bold, coloured, and prefixed with a marker (★ champion,
@@ -806,6 +817,19 @@ class EncounterTab(ttk.Frame):
         ttk.Button(row, text="✕", width=2,
                    command=lambda cc=c: self._remove(cc)).grid(row=0, column=8, padx=(4, 0))
 
+        # Situational modifier — a single net value (e.g. -5 mounted vs. mounted,
+        # +5 mounted vs. foot, -2 shield penalty, summed by the GM) applied
+        # automatically to every characteristic/skill roll below until changed.
+        tk.Label(row, text="Mod", font=self.norm_font, fg=fg).grid(
+            row=0, column=9, padx=(10, 2))
+        mod_fg = "#8b1a1a" if c.modifier < 0 else ("#0a6b3b" if c.modifier > 0 else fg)
+        mv = tk.StringVar(value=f"{c.modifier:+d}" if c.modifier else "0")
+        me = tk.Entry(row, width=4, justify="center", textvariable=mv,
+                      fg=mod_fg, font=self.norm_font)
+        me.grid(row=0, column=10)
+        me.bind("<Return>", lambda e, cc=c, w=mv: self._set_modifier(cc, w.get()))
+        me.bind("<FocusOut>", lambda e, cc=c, w=mv: self._set_modifier(cc, w.get()))
+
         # Clickable stat line: every number is a roll link (§7, §8). Characteristics,
         # attack skill values, attack damage and skills are all clickable tokens.
         self._build_stat_line(row, c, down)
@@ -819,7 +843,7 @@ class EncounterTab(ttk.Frame):
         flavour = tk.Label(row, text="   ·   ".join(bits), anchor="w", justify="left",
                            wraplength=740, font=self.flavour_font,
                            fg=("#aaa" if down else "#555"))
-        flavour.grid(row=2, column=0, columnspan=10, sticky="w", padx=(6, 0), pady=(0, 2))
+        flavour.grid(row=2, column=0, columnspan=12, sticky="w", padx=(6, 0), pady=(0, 2))
         # Wrap flavour text to the current row width so it uses the space and never clips.
         row.bind("<Configure>",
                  lambda e, lbl=flavour: lbl.configure(wraplength=max(300, e.width - 12)))
@@ -832,7 +856,7 @@ class EncounterTab(ttk.Frame):
         txt = tk.Text(row, wrap="word", height=1, width=1, borderwidth=0, cursor="",
                       highlightthickness=0, background=self.frame_bg,
                       font=self.stat_font, spacing1=1, spacing3=1)
-        txt.grid(row=1, column=0, columnspan=10, sticky="ew", padx=(6, 0))
+        txt.grid(row=1, column=0, columnspan=12, sticky="ew", padx=(6, 0))
         plain_fg = "#aaa" if down else "#333"
         txt.tag_configure("plain", foreground=plain_fg)
 
@@ -1028,27 +1052,52 @@ class EncounterTab(ttk.Frame):
             self._log(f"— {text}")
             self.round_note.delete(0, "end")
 
+    def _set_modifier(self, c, text):
+        """Apply a combatant's situational modifier (§ How-to). Blank/unparsable
+        text is treated as 0 rather than rejected, so clearing the box just
+        clears the modifier."""
+        text = text.strip()
+        try:
+            value = int(text) if text not in ("", "+", "-") else 0
+        except ValueError:
+            value = 0
+        if value == c.modifier:
+            return
+        c.modifier = value
+        self._log(f"{c.display_name} situational modifier set to {value:+d}" if value
+                  else f"{c.display_name} situational modifier cleared")
+        self._refresh_rows()
+
+    def _mod_shown(self, c, base, display=str):
+        """Roll target plus a combatant's situational modifier: the effective
+        value to roll against, and a label for the log/status line showing the
+        breakdown (e.g. '15 -5 = 10') or just the base when unmodified."""
+        if not c.modifier:
+            return base, display(base)
+        eff = base + c.modifier
+        return eff, f"{display(base)} {c.modifier:+d} = {display(eff)}"
+
     def _roll_char(self, c, key):
         """Characteristic roll: pass/fail only (no crit/fumble — Core Ch.2)."""
-        value = c.characteristics[key]
+        eff, shown = self._mod_shown(c, c.characteristics[key])
         roll = random.randint(1, 20)
-        outcome = "success" if roll <= value else "failure"
+        outcome = "success" if roll <= eff else "failure"
         label = CHAR_FULL[key]
-        self._log(f"{c.log_name} rolls {label} ({value}): {roll} — {outcome.upper()}")
-        self.set_status(f"{c.display_name} {label} {value}: rolled {roll} — {outcome}",
+        self._log(f"{c.log_name} rolls {label} ({shown}): {roll} — {outcome.upper()}")
+        self.set_status(f"{c.display_name} {label} {shown}: rolled {roll} — {outcome}",
                         OUTCOME_COLOR.get(outcome, "#000"))
 
     def _roll_named_skill(self, c, name, value):
-        roll, outcome = resolve_skill(value)
-        shown = skill_display(value)
+        eff, shown = self._mod_shown(c, value, display=skill_display)
+        roll, outcome = resolve_skill(eff)
         self._log(f"{c.log_name} rolls {name} ({shown}): {roll} — {outcome.upper()}")
         self.set_status(f"{c.display_name} {name} {shown}: rolled {roll} — {outcome}",
                         OUTCOME_COLOR.get(outcome, "#000"))
 
     def _roll_attack(self, c, atk):
         weapon = atk["weapon"]
-        roll, outcome = resolve_skill(atk["value"])
-        shown = skill_display(atk["value"])
+        eff, shown = self._mod_shown(c, atk["value"], display=skill_display)
+        roll, outcome = resolve_skill(eff)
         self._log(f"{c.log_name} rolls {weapon} ({shown}): {roll} — {outcome.upper()}")
         self.set_status(f"{c.display_name} {weapon} {shown}: rolled {roll} — {outcome}",
                         OUTCOME_COLOR.get(outcome, "#000"))
