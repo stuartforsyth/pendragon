@@ -1,29 +1,21 @@
 ---
 id: gm.arthurian-acts.feasting
+system: Pendragon 6th Edition
 book: gm
 chapter: "3 — Arthurian Acts"
 pages: [37, 38, 39, 40, 41, 42, 43, 44]
-tags: [feast, banquet, event, event-cards, geniality, glory, seating, courtesy, social, honor]
+tags: [feast, banquet, event, event-cards, geniality, glory, seating, dapifer, host, hostess, courtesy, social, honor]
 title: "Feasting (Feasts & Banquets event)"
-see_also: [core.skills.horsemanship]
+see_also: [core.skills.horsemanship, gm.arthurian-acts.visiting-a-foreign-court]
 ---
 
-Feasts are major social set-pieces, treated on par with tournaments as a vehicle
-for interactions, schemes, rivalries, and alliances. A "feast" may be a holy/market
-day, a wedding or knighting, or just the meal itself. Play runs as a series of
-abstract **Feast Rounds**, each resolved around **Geniality** and **Feast Events**.
+Feasts are major social set-pieces, treated on par with tournaments as a vehicle for interactions, schemes, rivalries, and alliances. A "feast" may be a holy/market day, a wedding or knighting, or just the meal itself. Play runs as a series of abstract **Feast Rounds**, each resolved around **Geniality** and **Feast Events**.
 
 ## Geniality
 
-**Geniality** is a modifier measuring one's nobility in peers' eyes. Add it to
-**APP** and most **Courtly Skills** (Compose, Courtesy, Dancing, Fashion,
-Flirting, Gaming, Intrigue, Orate, Play Instrument, Singing) at court or during a
-feast. It also modifies **everyone else's Recognize** roll made about that knight
-in a courtly setting.
+**Geniality** is a modifier measuring one's nobility in peers' eyes. Add it to **APP** and most **Courtly Skills** (Compose, Courtesy, Dancing, Fashion, Flirting, Gaming, Intrigue, Orate, Play Instrument, Singing) at court or during a feast. It also modifies **everyone else's Recognize** roll made about that knight in a courtly setting.
 
-- Starting Geniality is set by the knight's **clothing** (based on Standard of
-  Living + Fashion skill if applied). Lords maintain their knights at **Ordinary**
-  level by default.
+- Starting Geniality is set by the knight's **clothing** (based on Standard of Living + Fashion skill if applied). Lords maintain their knights at **Ordinary** level by default.
 - **Geniality can never exceed the character's APP.**
 
 **Clothing → Geniality (Table 3.1, Class Minimum column):**
@@ -40,13 +32,11 @@ in a courtly setting.
 | Rich Baron | £32 | +6 |
 | Count, Duke, Minor King | — | — |
 
-Knights may always dress **above** their station if they can afford it; the Class
-Minimum is the floor for that rank.
+Knights may always dress **above** their station if they can afford it; the Class Minimum is the floor for that rank.
 
 ## Feast Rounds
 
-Each Round ≈ 1–2 hours of eating, mixing, revelry, and private talk. The GM sets
-the number of Rounds up front by feast size (**Table 3.2**, suggested minimums):
+Each Round ≈ 1–2 hours of eating, mixing, revelry, and private talk. The GM sets the number of Rounds up front by feast size (**Table 3.2**, suggested minimums):
 
 | Size | Example | Min. Rounds |
 |---|---|---|
@@ -57,24 +47,24 @@ the number of Rounds up front by feast size (**Table 3.2**, suggested minimums):
 
 ## Seating — "the Salt"
 
-Seating is by **rank first, then Glory**; special circumstances can promote a
-character but **never** by random roll. Four areas, relative to the salt cellar at
-the high table (per-Round Geniality effect):
+Where one sits speaks volumes — the seating at a feast or daily meal displays the whole relationship between a lord and his household, and sitting closer to the lord is a sign of status. Seating is by **rank first, then Glory** (all mercenary knights together, then all household knights, then all vassal knights, and so on); special circumstances can promote a character but **never** by random roll. **Newly made knights sit farthest from the high table** — though at the front of that area. Four areas, relative to the salt cellar at the high table (per-Round Geniality effect):
 
-- **Above the Salt** (high table): **+2 Geniality/Round**, but **all Geniality
-  losses from Events are doubled** ("all eyes on you").
+- **Above the Salt** (high table): **+2 Geniality/Round**, but **all Geniality losses from Events are doubled** ("all eyes on you").
 - **Closer to the Salt** (lower table, near its head): **+1 Geniality/Round**.
 - **Farther from the Salt** (default for most guests): no modifier.
-- **On the Floor** (squires, dogs, snubbed guests): **−1 Geniality/Round**, or
-  **−2/Round** if seated here through a fumbled Glory roll.
+- **On the Floor** (squires, dogs, snubbed guests): **−1 Geniality/Round**, or **−2/Round** if seated here through a fumbled Glory roll.
 
-Telling a knight to sit lower than before is an insult; seating them among squires
-or commoners is grave enough to justify breaking with a lord.
+### The dapifer — who seats everyone
+
+**The house *dapifer* ("meat server") is the officer responsible for seating everyone**, and it is the dapifer who guides each guest to their place.
+
+- Being guided to **a different seat closer to the high table** is ==**"a sign of favor, but not a Favor"**== — everyone formerly ahead of the honoree **moves down a seat**.
+- ==**Being told to sit lower than before is a serious insult.**== Telling a knight to sit **among the squires** is worse; telling a knight to sit **among the commoners** is an insult **worthy of them breaking with their lord**.
+
+**Who else is in the hall:** if other high-ranking lords attend, **the women of the high table eat in the solar with the hostess**. At a large feast with visitors, **commoners eat elsewhere**; if enough knights come, **the squires give up their usual place and serve their knights at table** instead. Those On the Floor — squires, dogs, and deliberately snubbed guests — find a place to eat somewhere else in the hall, on fresh rushes or straw if the lord has put any down.
 
 ### The Glory Roll (seating placement)
-Before the feast each knight makes one **unopposed Glory roll** (vs. Glory ÷ 1000).
-Feast size shifts the result: **small feast → move up one level of success; royal
-feast → move down one level** (no worse than Farther from the Salt unless fumbled).
+Before the feast each knight makes one **unopposed Glory roll** (vs. Glory ÷ 1000). Feast size shifts the result: **small feast → move up one level of success; royal feast → move down one level** (no worse than Farther from the Salt unless fumbled).
 
 **Table 3.3 — Feast Seating:**
 
@@ -86,22 +76,14 @@ feast → move down one level** (no worse than Farther from the Salt unless fumb
 | Fumble | Re-roll Glory (this time a fumble counts as a simple failure), then take a seat **one position further down** than the re-roll gives. If that lands on Farther from the Salt, you **eat on the floor** with the dogs and squires. |
 
 ### Effects on Honor
-A knight involuntarily seated **below** a same-rank knight who has **fewer Glory**
-must pass a **Modest** test or lose **1 Honor**. Fumbling the Glory roll — or
-having a **Famous/Exalted Proud** value — inflicts that 1 Honor loss automatically.
+A knight involuntarily seated **below** a same-rank knight who has **fewer Glory** must pass a **Modest** test or lose **1 Honor**. Fumbling the Glory roll — or having a **Famous/Exalted Proud** value — inflicts that 1 Honor loss automatically.
 
 ### Ceding your position
-A character may **voluntarily** cede to a lower area (to sit with comrades) via a
-**Modest** test: success → check Modest and **gain 10 Glory** (**20** on a
-critical), then move down; failure → the move can't be arranged; fumble → it reads
-as disingenuous, costing **1 Honor**. Characters with Famous/Exalted Proud **may
-not** cede.
+A character may **voluntarily** cede to a lower area (to sit with comrades) via a **Modest** test: success → check Modest and **gain 10 Glory** (**20** on a critical), then move down; failure → the move can't be arranged; fumble → it reads as disingenuous, costing **1 Honor**. Characters with Famous/Exalted Proud **may not** cede.
 
 ## Feast Events (cards)
 
-Each Round, each knight totals **APP + Geniality + a Glory prominence bonus**
-(Table 3.4). That **Total APP** sets how many Feast Event Cards may be drawn
-(Table 3.5).
+Each Round, each knight totals **APP + Geniality + a Glory prominence bonus** (Table 3.4). That **Total APP** sets how many Feast Event Cards may be drawn (Table 3.5).
 
 **Table 3.4 — Glory Prominence Modifier:**
 
@@ -130,38 +112,22 @@ Each Round, each knight totals **APP + Geniality + a Glory prominence bonus**
 | 30+ | 6 |
 
 **Drawing rules:**
-- Draw **one card at a time**, then either play it or draw again up to the Total
-  APP limit. **The last card must always be played**, even if harmful.
+- Draw **one card at a time**, then either play it or draw again up to the Total APP limit. **The last card must always be played**, even if harmful.
 - Total APP can rise mid-feast (from Geniality gains), unlocking more draws.
-- A **Host Event Card** (goblet symbol) must be **played immediately** and ends
-  drawing for that Round.
-- Unplayed cards are reshuffled; played cards are set aside until the deck is
-  exhausted, then reshuffled in.
+- A **Host Event Card** (goblet symbol) must be **played immediately** and ends drawing for that Round.
+- Unplayed cards are reshuffled; played cards are set aside until the deck is exhausted, then reshuffled in.
 
-**Reading a card:** most call for an opposed/unopposed Statistic roll — follow the
-card and apply results at once. Some cards are kept across Rounds for a bonus; some
-trigger rolls from every other attendee (each resolves individually). The **number
-at the bottom is the Geniality modifier** gained on playing the card, applied
-regardless of the card's other dice results; your Geniality changes only when the
-card is put in play.
+**Reading a card:** most call for an opposed/unopposed Statistic roll — follow the card and apply results at once. Some cards are kept across Rounds for a bonus; some trigger rolls from every other attendee (each resolves individually). The **number at the bottom is the Geniality modifier** gained on playing the card, applied regardless of the card's other dice results; your Geniality changes only when the card is put in play.
 
 ### The Feast Event Card deck (catalogue)
 
-*Source: Chaosium's printable Feast Event Cards (`pendragon_printable_feast_cards.pdf`,
-a separate deck to the GM handbook). The physical deck has multiple copies of some
-cards; the unique cards are listed below with their **Roll/Test** and **base
-Geniality** (the number printed at the card's foot). Card types:*
+*Source: Chaosium's printable Feast Event Cards (`pendragon_printable_feast_cards.pdf`, a separate deck to the GM handbook). The physical deck has multiple copies of some cards; the unique cards are listed below with their **Roll/Test** and **base Geniality** (the number printed at the card's foot). Card types:*
 
-- **Host cards** (goblet symbol) — play **immediately** on draw; no further draws
-  that Round. These are the *Host …* and *Meet the Host* cards; several convene the
-  **whole hall** (all Player-characters roll).
-- **Keeper cards** — kept in play for an ongoing effect; most **stop you drawing**
-  other cards while held.
-- **All-players cards** — trigger a roll from every attendee (the "More Drink /
-  More Food" and *Host Calls …* family).
+- **Host cards** (goblet symbol) — play **immediately** on draw; no further draws that Round. These are the *Host …* and *Meet the Host* cards; several convene the **whole hall** (all Player-characters roll).
+- **Keeper cards** — kept in play for an ongoing effect; most **stop you drawing** other cards while held.
+- **All-players cards** — trigger a roll from every attendee (the "More Drink / More Food" and *Host Calls …* family).
 
-Several cards defer to other systems: the **Intoxication rules** (drink cards),
-**duel** challenges, and Winter-Phase gains (e.g. a SIZ increase).
+Several cards defer to other systems: the **Intoxication rules** (drink cards), **duel** challenges, and Winter-Phase gains (e.g. a SIZ increase).
 
 | Card | Roll / Test | Base Gen. | Gist |
 |---|---|---|---|
@@ -240,37 +206,23 @@ Several cards defer to other systems: the **Intoxication rules** (drink cards),
 | Young Braggarts | Test: Proud | 0 | Match young knights' tales; success +1, failure −1 Gen. |
 
 ### Other Events (no card)
-A knight who won't risk a card instead picks one of four activities — **Gossiping,
-flirting, gaming, or eating/drinking** — and rolls unopposed vs. the relevant
-Skill/Trait (**Flirting, Gaming, Intrigue, or Indulgent**), modified by Geniality.
-**Success** → a check to that Skill/Trait; **critical** → also earn **Glory equal
-to Total APP**. Use **Table 3.6: Random Feast Courses** (1D20 per course, three
-courses) to generate a "favorite dish" or add colour.
+A knight who won't risk a card instead picks one of four activities — **Gossiping, flirting, gaming, or eating/drinking** — and rolls unopposed vs. the relevant Skill/Trait (**Flirting, Gaming, Intrigue, or Indulgent**), modified by Geniality. **Success** → a check to that Skill/Trait; **critical** → also earn **Glory equal to Total APP**. Use **Table 3.6: Random Feast Courses** (1D20 per course, three courses) to generate a "favorite dish" or add colour.
 
 ## Departing the Feast
 
-**Failing to attend at all** when invited is a grave insult — attend for at least
-one Round or risk dire consequences. After the first Round, a knight may retire by
-**begging leave** with a **Courtesy** roll:
+**Failing to attend at all** when invited is a grave insult — attend for at least one Round or risk dire consequences. After the first Round, a knight may retire by **begging leave** with a **Courtesy** roll:
 - **Success:** a check; **critical:** also **+10 Glory**. Host is gratified.
 - **Failure:** dismissed curtly; **lose 1D3 Geniality** (min 0).
-- **Fumble:** left without leave / gave offence; **lose 1 Honor and all
-  accumulated Geniality**.
+- **Fumble:** left without leave / gave offence; **lose 1 Honor and all accumulated Geniality**.
 
-**Forced Departure:** some Event Cards drag a knight out early (passing out drunk,
-napping after excess, leaving with a lover). These need **no Courtesy roll**, but
-others notice and it may still cost Honor at the GM's discretion.
+**Forced Departure:** some Event Cards drag a knight out early (passing out drunk, napping after excess, leaving with a lover). These need **no Courtesy roll**, but others notice and it may still cost Honor at the GM's discretion.
 
 ## Feasting Glory (end of feast)
 
-At the last Round, total the **Geniality gained solely from Feast Events** (exclude
-starting Geniality) and compare to **Table 3.7**:
+At the last Round, total the **Geniality gained solely from Feast Events** (exclude starting Geniality) and compare to **Table 3.7**:
 
-- **Below threshold:** Glory = (**Appeal + Geniality**) × **Rounds attended**,
-  **max 100 Glory**.
-- **Meets/exceeds threshold:** that Glory **plus the bonus** (standout guest). If
-  several beat it, the **highest accumulated Geniality** wins the bonus; ties go to
-  **highest Glory**.
+- **Below threshold:** Glory = (**Appeal + Geniality**) × **Rounds attended**, **max 100 Glory**.
+- **Meets/exceeds threshold:** that Glory **plus the bonus** (standout guest). If several beat it, the **highest accumulated Geniality** wins the bonus; ties go to **highest Glory**.
 
 **Table 3.7 — Geniality Threshold:**
 
@@ -281,9 +233,7 @@ starting Geniality) and compare to **Table 3.7**:
 | Large | 9 | +50 |
 | Royal | 11 | +100 |
 
-*Example: at a medium feast Sir Avalloc (APP 11) accrues 6 Geniality → (11+6)×3 =
-**51 Glory**. With 8 Geniality (beating the threshold of 7) → 51 + 25 = **76
-Glory** as the standout guest.*
+*Example: at a medium feast Sir Avalloc (APP 11) accrues 6 Geniality → (11+6)×3 = **51 Glory**. With 8 Geniality (beating the threshold of 7) → 51 + 25 = **76 Glory** as the standout guest.*
 
 ## Cost of hosting (core rulebook, printed p. 208)
 

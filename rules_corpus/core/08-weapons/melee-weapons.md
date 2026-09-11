@@ -1,5 +1,6 @@
 ---
 id: core.weapons.melee-weapons
+system: Pendragon 6th Edition
 book: core
 chapter: "8 — Weapons"
 pages: [161, 162, 163, 164, 165]
@@ -8,10 +9,7 @@ title: Table 8.1 — Melee & Brawling Weapons
 see_also: [core.weapons.weapon-skills, core.weapons.missile-thrown-weapons, core.combat.protection]
 ---
 
-**Damage** is the character's Damage Statistic ("Character") or Brawling Damage
-("Brawling"), plus any listed bonus; "Horse" = the mount's Charge Damage. **Long**
-weapons get +5 charging a foe without one. Unless noted, non-sword melee weapons
-**break on a fumble or on a tie vs a sword-wielder**.
+**Damage** is the character's Damage Statistic ("Character") or Brawling Damage ("Brawling"), plus any listed bonus; "Horse" = the mount's Charge Damage. **Long** weapons get +5 charging a foe without one. Unless noted, non-sword melee weapons **break on a fumble or on a tie vs a sword-wielder**.
 
 | Weapon | Skill | Foot/Mtd | Damage | Notes |
 |--------|-------|----------|--------|-------|
@@ -32,13 +30,8 @@ weapons get +5 charging a foe without one. Unless noted, non-sword melee weapons
 | **Dagger** | Brawling | Both | Brawling +2D6 | Close Quarter |
 | **Seax** | Brawling | Foot | Brawling +2D6 | Parry +1 |
 
-**\* Axes vs shields:** when a Battle/Great Axe hits a shielded opponent, the **shield
-blocks only 1D6** (never more than its Protection Value); a **roll of 1 breaks** the
-shield permanently.
+**\* Axes vs shields:** when a Battle/Great Axe hits a shielded opponent, the **shield blocks only 1D6** (never more than its Protection Value); a **roll of 1 breaks** the shield permanently.
 
 ## Rebated (blunted) weapon damage
 
-A rebated weapon deals **half the rolled damage** on a successful action. A **critical
-adds +4D6 first, then the total is halved.** Always use the **full** rolled damage for
-**Knockdown**. (Combines with the Withhold Damage action: reduce dice, compute
-Knockdown, then halve for damage.)
+A rebated weapon deals **half the rolled damage** on a successful action. A **critical adds +4D6 first, then the total is halved.** Always use the **full** rolled damage for **Knockdown**. (Combines with the Withhold Damage action: reduce dice, compute Knockdown, then halve for damage.)

@@ -1,5 +1,6 @@
 ---
 id: core.combat.dropped-broken-weapon
+system: Pendragon 6th Edition
 book: core
 chapter: "7 — Combat"
 pages: [134]
@@ -8,10 +9,7 @@ title: Dropped or Broken Weapon
 see_also: [core.combat.winners-outcome, core.combat.re-arming]
 ---
 
-A loser who **fumbles** their opposed weapon roll drops their sword or breaks
-their non-sword weapon; the unfortunate character must start the next round
-unarmed.
+A loser who **fumbles** their opposed weapon roll drops their sword or breaks their non-sword weapon; the unfortunate character must start the next round unarmed.
 
 - **Swords** break all non-sword weapons other than daggers **on a tie**.
-- A sword breaks **any** weapon, including another sword, when the loser fumbles
-  and the winner criticals.
+- A sword breaks **any** weapon, including another sword, when the loser fumbles and the winner criticals.

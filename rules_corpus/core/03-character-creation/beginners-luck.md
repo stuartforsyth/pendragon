@@ -1,5 +1,6 @@
 ---
 id: core.character-creation.beginners-luck
+system: Pendragon 6th Edition
 book: core
 chapter: "3 — Creating Your Player-knight"
 pages: [58, 59]
@@ -8,10 +9,7 @@ title: Beginner's Luck — Knights' Luck Benefits (Table 3.9)
 see_also: [core.character-creation.starting-equipment-and-horses]
 ---
 
-Every **first** character rolls once on Table 3.9 for an inherited heirloom/relic.
-**Family Heirlooms work only for the core lineage** — if sold or given away they keep
-their monetary value but **lose all Statistic bonuses**. Heirlooms may be passed to
-heirs.
+Every **first** character rolls once on Table 3.9 for an inherited heirloom/relic. **Family Heirlooms work only for the core lineage** — if sold or given away they keep their monetary value but **lose all Statistic bonuses**. Heirlooms may be passed to heirs.
 
 ## Table 3.9 — Knights' Luck Benefits (roll 1D20)
 

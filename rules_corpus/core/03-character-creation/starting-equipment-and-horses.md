@@ -1,5 +1,6 @@
 ---
 id: core.character-creation.starting-equipment-and-horses
+system: Pendragon 6th Edition
 book: core
 chapter: "3 — Creating Your Player-knight"
 pages: [51, 57, 58]
@@ -22,12 +23,9 @@ see_also: [core.character-creation.beginners-luck, core.combat.mounted-combat]
 
 By default a new knight receives the **best gear the family can afford**:
 
-- **Armor:** hauberk (mail coat) + aketon (padding) + nasal helm = **10 Armor
-  Protection**; one **kite shield** = **6 Armor Protection**.
-- **Weapons:** a sword, **four spears and one lance**, a dagger, and one additional
-  weapon of choice.
-- Plus: wooden chest (lock/key), clothing (incl. a £1 set for occasions, cloaks),
-  travel gear, and full horse gear (riding + war saddles/tack, blankets, etc.).
+- **Armor:** hauberk (mail coat) + aketon (padding) + nasal helm = **10 Armor Protection**; one **kite shield** = **6 Armor Protection**.
+- **Weapons:** a sword, **four spears and one lance**, a dagger, and one additional weapon of choice.
+- Plus: wooden chest (lock/key), clothing (incl. a £1 set for occasions, cloaks), travel gear, and full horse gear (riding + war saddles/tack, blankets, etc.).
 
 ## Table 3.8 — Starting Horses
 

@@ -71,7 +71,7 @@ def build() -> list[dict]:
     seen: dict[str, str] = {}  # id -> source, to catch duplicates
     errors: list[str] = []
     for md in sorted(CORPUS.rglob("*.md")):
-        if md.name == "README.md":
+        if md.name in ("README.md", "COVERAGE.md", "EXTRACTION-PLAN.md"):
             continue
         source = str(md.relative_to(ROOT))
         try:

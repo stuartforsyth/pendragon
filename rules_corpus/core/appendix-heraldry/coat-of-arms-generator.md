@@ -1,5 +1,6 @@
 ---
 id: core.heraldry.coat-of-arms-generator
+system: Pendragon 6th Edition
 book: core
 chapter: "Appendix B — Coat of Arms Generator"
 pages: [241, 242, 243, 244, 245, 246]
@@ -8,41 +9,23 @@ title: Random Coat of Arms Generator (Tables B.1–B.3)
 see_also: [core.character-creation.creation-methods-and-personal-info]
 ---
 
-Each knight determines their coat of arms. If no design is preferred, use the random
-method below (the GM acts as the College of Heralds; each device is unique). Arms may
-contain a **charge** (a pictorial element) and/or an **ordinary** (a geometric design).
-Normally a coat of arms combines a chromatic **color** (red, green, blue, purple, black)
-and a **metal** (white/silver, yellow/gold). This compact generator ignores later
-conventions like cadency and quartering.
+Each knight determines their coat of arms. If no design is preferred, use the random method below (the GM acts as the College of Heralds; each device is unique). Arms may contain a **charge** (a pictorial element) and/or an **ordinary** (a geometric design). Normally a coat of arms combines a chromatic **color** (red, green, blue, purple, black) and a **metal** (white/silver, yellow/gold). This compact generator ignores later conventions like cadency and quartering.
 
 ## Procedure
 
-1. **Step 1 — Shield Design:** roll **1D20 on Table B.1** for the composition (a plain
-   Charge, an Ordinary, a Variation, or a Division), following its instructions (some
-   point to Sub-tables B.1.1 Variations / B.1.2 Divisions).
-2. **Step 2 — Tinctures:** roll the **Field Tincture** on Table B.2, then pick the Metal-
-   or Color-Charge column per the **Rule of Tincture**.
-   - *Divisions* (if separate, use normal-shield rules): roll Field Tincture **twice**
-     (ignore the Rule of Tincture); for charges on a Division, roll 1D2 to pick the
-     Metal/Color charge column.
-   - *Variations*: roll Field + Charge Tincture (observing the Rule) for the two-color
-     pattern; reroll Furs until non-Fur. Charges on Variations follow the Division rule.
-   - *Optional:* if an Ordinary sits on a Variation/Fur field, roll 1D6; on 5+ swap the
-     Variation/Fur and the Ordinary tinctures.
-3. **Step 3 — Charges:** roll **1D20 × 1D6 on Table B.3: Charges** (unless Step 1 said
-   otherwise). Roll 1D6 on Sub-table B.3.1 when directed by an asterisk (`*`). If a
-   result offers two choices, pick one or roll 1D2. Charges come in groups of **1D3**
-   unless Step 1 specified single or a group of 2D6; **Ordinaries and religious symbols
-   are singles**. A charge on a **Bordure** is a group of **2D6+5** from column 5.
+1. **Step 1 — Shield Design:** roll **1D20 on Table B.1** for the composition (a plain Charge, an Ordinary, a Variation, or a Division), following its instructions (some point to Sub-tables B.1.1 Variations / B.1.2 Divisions).
+2. **Step 2 — Tinctures:** roll the **Field Tincture** on Table B.2, then pick the Metal- or Color-Charge column per the **Rule of Tincture**.
+   - *Divisions* (if separate, use normal-shield rules): roll Field Tincture **twice** (ignore the Rule of Tincture); for charges on a Division, roll 1D2 to pick the Metal/Color charge column.
+   - *Variations*: roll Field + Charge Tincture (observing the Rule) for the two-color pattern; reroll Furs until non-Fur. Charges on Variations follow the Division rule.
+   - *Optional:* if an Ordinary sits on a Variation/Fur field, roll 1D6; on 5+ swap the Variation/Fur and the Ordinary tinctures.
+3. **Step 3 — Charges:** roll **1D20 × 1D6 on Table B.3: Charges** (unless Step 1 said otherwise). Roll 1D6 on Sub-table B.3.1 when directed by an asterisk (`*`). If a result offers two choices, pick one or roll 1D2. Charges come in groups of **1D3** unless Step 1 specified single or a group of 2D6; **Ordinaries and religious symbols are singles**. A charge on a **Bordure** is a group of **2D6+5** from column 5.
    - *Optional:* italicized charges — roll 1D6, on 5+ only the animal's **head** is shown.
    - *Optional:* more charges — roll 1D6, on a 6 add another charge (Steps 2 & 3).
-   - *Quadrupeds except lions* — roll 1D6 (+1 for herbivores) on **column 1** for the
-     animation/pose.
+   - *Quadrupeds except lions* — roll 1D6 (+1 for herbivores) on **column 1** for the animation/pose.
 
 ### The Rule of Tincture
 
-A **metal** charge must sit on a **color** field, and vice-versa. **Furs** may take
-either (roll 1D2 for the column).
+A **metal** charge must sit on a **color** field, and vice-versa. **Furs** may take either (roll 1D2 for the column).
 
 ## Table B.1 — Shield Design (1D20)
 
@@ -79,10 +62,7 @@ either (roll 1D2 for the column).
 | 18–19 | Paly |
 | 20 | Semé\*\* |
 
-\* Gyronny sectors: 1D6 → 1–3 = 8, 4–5 = 12, 6 = 16.
-\*\* Semé: roll once in column 5 of B.3 for the repeated charge; determine the field
-divisions by rolling the Division column then Design (−2 for Per Quarterly/Per Saltire,
-+2 for others).
+\* Gyronny sectors: 1D6 → 1–3 = 8, 4–5 = 12, 6 = 16. \*\* Semé: roll once in column 5 of B.3 for the repeated charge; determine the field divisions by rolling the Division column then Design (−2 for Per Quarterly/Per Saltire, +2 for others).
 
 ## Sub-table B.1.2 — Divisions (1D20)
 
@@ -98,11 +78,9 @@ divisions by rolling the Division column then Design (−2 for Per Quarterly/Per
 
 **Field Divisions & Treatments** (how the two halves relate):
 - *Solid* — no charges.
-- *Separate\** — reroll twice on the Shield Design table, treating each half (or pairs of
-  quarters) as its own shield.
+- *Separate\** — reroll twice on the Shield Design table, treating each half (or pairs of quarters) as its own shield.
 - *Overall* — the shield design ignores the divisions.
-- *Countercharged* — the charge(s) take the tincture of the opposing division's field; on
-  a Variation, the "band" colors swap position.
+- *Countercharged* — the charge(s) take the tincture of the opposing division's field; on a Variation, the "band" colors swap position.
 
 ## Table B.2 — Tinctures (1D20)
 
@@ -118,14 +96,11 @@ divisions by rolling the Division column then Design (−2 for Per Quarterly/Per
 | 18–19 | Sable (black) | Proper\*\* | Proper\*\* |
 | 20 | Fur\* | Proper\*\* | Proper\*\* |
 
-\* **Fur:** 1D6 → 1–4 Ermine, 5–6 Vair.
-\*\* **Proper:** the charge is painted in its natural colors. For Ordinaries and geometric
-charges read Proper as **Or** (metal) or **Gules** (color).
+\* **Fur:** 1D6 → 1–4 Ermine, 5–6 Vair. \*\* **Proper:** the charge is painted in its natural colors. For Ordinaries and geometric charges read Proper as **Or** (metal) or **Gules** (color).
 
 ## Table B.3 — Charges (1D20 down, 1D6 across)
 
-Columns 1–3 are **Animate**, 4–5 **Inanimate**, 6 **Ordinary**. An asterisk (`*`) sends
-you to Sub-table B.3.1.
+Columns 1–3 are **Animate**, 4–5 **Inanimate**, 6 **Ordinary**. An asterisk (`*`) sends you to Sub-table B.3.1.
 
 | 1D20 | 1 Animate | 2 Animate | 3 Animate | 4 Inanimate | 5 Inanimate | 6 Ordinary |
 |------|-----------|-----------|-----------|-------------|-------------|------------|
@@ -170,27 +145,13 @@ you to Sub-table B.3.1.
 | 5 | Saint or Angel | Palm Leaf | Flory | Shining Spear | Wild Man | Church |
 | 6 | Crucifixion | Thorn Crown | Bottony | Woman Rider | Garb (Wheat) | Lighthouse |
 
-**Peripherals (Bordure or Orle)** row — used for Peripheral Ordinaries (Table B.1 results
-10–12). The six options are Bordure, Orle, Chief, Quarter/Canton and two further Chief
-placements. *(Column-order note: this row was reconstructed from a column-jumbled PDF
-extract; re-verify the exact 1D6 slot ordering against p.246 before relying on it.)*
+**Peripherals (Bordure or Orle)** row — used for Peripheral Ordinaries (Table B.1 results 10–12). The six options are Bordure, Orle, Chief, Quarter/Canton and two further Chief placements. *(Column-order note: this row was reconstructed from a column-jumbled PDF extract; re-verify the exact 1D6 slot ordering against p.246 before relying on it.)*
 
 ## Blazoning (writing the arms down)
 
-A coat of arms is described in words ("blazoning") so it can be reconstructed exactly.
-Blazon from the "bottom" up: first the **Field** and all its divisions/furs/patterns,
-then the **Ordinaries** (and any charges on them), then the **Subordinaries** (and their
-charges), then any other **Charges**.
+A coat of arms is described in words ("blazoning") so it can be reconstructed exactly. Blazon from the "bottom" up: first the **Field** and all its divisions/furs/patterns, then the **Ordinaries** (and any charges on them), then the **Subordinaries** (and their charges), then any other **Charges**.
 
 ### Worked examples
 
-- **Sir Lycus, Bachelor Knight** — Shield 1D20=12 (Peripheral Ordinary + Charge on the
-  Ordinary); Field 1D20=17 → Vert; Ordinary tincture Metal 1D20=1 → Argent; Charge tincture
-  Color 1D20=15 → Sable; Peripherals 1D6=3 → a Chief; Charge col.1 row 16 → a Wolf (1D3=1,
-  1D6=3 full animal). **Blazon: *Vert, on a chief argent a sable wolf.***
-- **Sir Iowerth of Eastridge** — Shield 1D20=14 (Ordinary + Charge on the Field); Field
-  1D20=10 → Purpure; Ordinary Metal 1D20=6 → Argent; Charge Metal 1D20=1 → Argent; Ordinary
-  col.6 1D6=4 → a Bend; Charge col.5 row 12 → a Mullet of 6/8 (1D2=2 → 8 points; 1D3=2 → two
-  stars). **Blazon: *Purpure, a bend between two mullets of eight argent.***
-</content>
-</invoke>
+- **Sir Lycus, Bachelor Knight** — Shield 1D20=12 (Peripheral Ordinary + Charge on the Ordinary); Field 1D20=17 → Vert; Ordinary tincture Metal 1D20=1 → Argent; Charge tincture Color 1D20=15 → Sable; Peripherals 1D6=3 → a Chief; Charge col.1 row 16 → a Wolf (1D3=1, 1D6=3 full animal). **Blazon: *Vert, on a chief argent a sable wolf.***
+- **Sir Iowerth of Eastridge** — Shield 1D20=14 (Ordinary + Charge on the Field); Field 1D20=10 → Purpure; Ordinary Metal 1D20=6 → Argent; Charge Metal 1D20=1 → Argent; Ordinary col.6 1D6=4 → a Bend; Charge col.5 row 12 → a Mullet of 6/8 (1D2=2 → 8 points; 1D3=2 → two stars). **Blazon: *Purpure, a bend between two mullets of eight argent.***

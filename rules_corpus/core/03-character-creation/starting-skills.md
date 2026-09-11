@@ -1,5 +1,6 @@
 ---
 id: core.character-creation.starting-skills
+system: Pendragon 6th Edition
 book: core
 chapter: "3 — Creating Your Player-knight"
 pages: [51, 52]
@@ -8,9 +9,7 @@ title: Starting Skills (Table 3.5 & 3.6) — Beginning Values, Cultural & Family
 see_also: [core.character-creation.knighthood-ranks-and-training, core.combat.mounted-combat]
 ---
 
-Determine Skills in order: **Beginning Values → Cultural Skill Modifiers → Family
-Characteristic → Personal Skill Additions.** Beginning values are set at age 14;
-later Characteristic changes don't alter them.
+Determine Skills in order: **Beginning Values → Cultural Skill Modifiers → Family Characteristic → Personal Skill Additions.** Beginning values are set at age 14; later Characteristic changes don't alter them.
 
 ## Table 3.5 — Beginning Knight Skill Values
 
@@ -33,8 +32,7 @@ Values shown as `APP−5`, `DEX/2`, or `STR/2` derive from that Characteristic.
 | Literacy | 0 | | Two-Handed Hafted | DEX/2 |
 | Orate | APP−5 | | Bow / Crossbow / Thrown | DEX/2 |
 
-\***Knightly Skills** — must reach **10** in Brawling, Charge, Sword, and **two**
-non-weapon Knightly Skills of choice to qualify for knighthood.
+\***Knightly Skills** — must reach **10** in Brawling, Charge, Sword, and **two** non-weapon Knightly Skills of choice to qualify for knighthood.
 
 ## Cultural Skill Modifiers
 
@@ -42,8 +40,7 @@ non-weapon Knightly Skills of choice to qualify for knighthood.
 
 ## Table 3.6 — Family Characteristic (+3 to one Skill)
 
-Every family shares one talent. **Constructed:** choose an entry (not "Gifted").
-**Random:** roll 1D20.
+Every family shares one talent. **Constructed:** choose an entry (not "Gifted"). **Random:** roll 1D20.
 
 | 1D20 | (Skill) | 1D20 | (Skill) |
 |------|---------|------|---------|
@@ -58,9 +55,7 @@ Every family shares one talent. **Constructed:** choose an entry (not "Gifted").
 | 9 Astute | Recognize | 19 Clodhopper | Stewardship |
 | 10 Clever | Gaming | 20 **Gifted** | Roll twice more\* |
 
-\*A second **20** = Transcendent Beauty (Involuntary Adoration, p.89); two 20s raise
-the Adoration bonus to **+10**. Gifted bonuses are **not inherited** — offspring
-reroll.
+\*A second **20** = Transcendent Beauty (Involuntary Adoration, p.89); two 20s raise the Adoration bonus to **+10**. Gifted bonuses are **not inherited** — offspring reroll.
 
 ## Personal Skill Additions
 
@@ -68,6 +63,5 @@ Distribute **10 points** among Skills, with these limits:
 
 - No Skill above **15** (including Cultural/Family bonuses).
 - Cannot raise a Skill whose starting value is **0**.
-- Except for Cultural/Family bonuses, APP-based Skills may not exceed the **APP**
-  value at creation.
+- Except for Cultural/Family bonuses, APP-based Skills may not exceed the **APP** value at creation.
 - **Horsemanship effectively caps mounted Weapon Skills** (see p.149).

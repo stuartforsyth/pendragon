@@ -1,5 +1,6 @@
 ---
 id: gm.battle.running-a-battle
+system: Pendragon 6th Edition
 book: gm
 chapter: "6 — Battle"
 pages: [121, 122, 123, 124, 125]
@@ -10,19 +11,13 @@ see_also: [gm.battle.fighting-the-battle, gm.battle.after-the-battle, core.skill
 
 ## Army organization
 
-- **Conroi** — 10–15 knights + squires led by a banneret; the **only level that
-  directly affects PKs**. The leader makes tactical decisions.
+- **Conroi** — 10–15 knights + squires led by a banneret; the **only level that directly affects PKs**. The leader makes tactical decisions.
 - **Bataille** (battalion) — several conrois under a baron (typically 3).
-- **Army** — split into **three divisions**: vanguard (right), main/middle guard
-  (center, with the commander & supply train), rearguard (left). Divisional and army
-  commanders stay **behind** their troops with reserves.
+- **Army** — split into **three divisions**: vanguard (right), main/middle guard (center, with the commander & supply train), rearguard (left). Divisional and army commanders stay **behind** their troops with reserves.
 
 ## Before the battle
 
-GM determines the forces, designates one **Army Commander** per side and their **Battle
-Skill** (roll **2D6+10** if unknown), sets **Battle Size & Intensity**, and builds two
-Encounter decks (**Foes** and **Opportunities**). Players set their conroi's makeup,
-leadership, and **Morale**.
+GM determines the forces, designates one **Army Commander** per side and their **Battle Skill** (roll **2D6+10** if unknown), sets **Battle Size & Intensity**, and builds two Encounter decks (**Foes** and **Opportunities**). Players set their conroi's makeup, leadership, and **Morale**.
 
 ### Table 6.1 — Battle Size
 
@@ -38,17 +33,11 @@ leadership, and **Morale**.
 
 ## Encounters
 
-Battles are built from **Encounters** (vignettes). **Foes** may recur; **Opportunities**
-come once and are only chosen on a **critical Battle roll** (seize a standard, kill a
-commander). Higher Intensity = the PKs must react more to the GM's choices.
+Battles are built from **Encounters** (vignettes). **Foes** may recur; **Opportunities** come once and are only chosen on a **critical Battle roll** (seize a standard, kill a commander). Higher Intensity = the PKs must react more to the GM's choices.
 
 ## Conroi Morale
 
-Choose one shared Passion (or same-court Passions, usually Fidelitas) as the conroi's
-**Morale** = the **average** of the members' values (**+5 if all pick the same
-Passion**). Morale drops as they fight, rises by defeating foes and Retiring to the Rear,
-and **can never exceed its starting value**. Each Encounter has a **Minimum Morale** to
-engage — below it, the conroi must Retire to the Rear.
+Choose one shared Passion (or same-court Passions, usually Fidelitas) as the conroi's **Morale** = the **average** of the members' values (**+5 if all pick the same Passion**). Morale drops as they fight, rises by defeating foes and Retiring to the Rear, and **can never exceed its starting value**. Each Encounter has a **Minimum Morale** to engage — below it, the conroi must Retire to the Rear.
 
 ## Army Commander Rolls (Clash+)
 
@@ -64,7 +53,4 @@ Each commander rolls **Battle Skill** with **Table 6.2** modifiers:
 | Disease / hunger | −5/+5 |
 | Multiple fractious commanders | −5 |
 
-**Results:** friendly commander **success/critical → first turn is a mounted charge**;
-**fumble → whole army −5 Battle** turn 1. Enemy **success/critical → GM forces one
-Encounter** (once/battle); **fumble → conroi commander may negate one Encounter's Morale
-effect**.
+**Results:** friendly commander **success/critical → first turn is a mounted charge**; **fumble → whole army −5 Battle** turn 1. Enemy **success/critical → GM forces one Encounter** (once/battle); **fumble → conroi commander may negate one Encounter's Morale effect**.

@@ -1,5 +1,6 @@
 ---
 id: core.armor.armor-and-helmets
+system: Pendragon 6th Edition
 book: core
 chapter: "9 — Armor"
 pages: [171, 173, 175, 176, 177]
@@ -8,8 +9,7 @@ title: Armor & Helmets (Tables 9.1, 9.2 & 9.3)
 see_also: [core.armor.armoring-up-and-penalties, core.armor.shields, core.character-creation.starting-equipment-and-horses]
 ---
 
-Armor is **Mail**, **Plate**, or **Textile** (padding). Textile padding (aketon) is worn
-under mail.
+Armor is **Mail**, **Plate**, or **Textile** (padding). Textile padding (aketon) is worn under mail.
 
 ## Table 9.1 — Suits of Armor (total Armor Protection)
 
@@ -27,8 +27,7 @@ under mail.
 | Picts | None | 0 | Buckler (Small) |
 | Roman foot soldiers | Haubergeon, advanced nasal helm, aketon | 9 | Scutum (Large) |
 
-A large shield penalizes **−2 to all Weapon Skills when mounted** (except a Charge with
-spear or lance).
+A large shield penalizes **−2 to all Weapon Skills when mounted** (except a Charge with spear or lance).
 
 ## Table 9.2 — Armor
 
@@ -41,9 +40,7 @@ spear or lance).
 | Advanced Hauberk | Boy King | Mail | 7 | Aketon |
 | Coat of Plates | Late Boy King (515+) | Plate | 6 | Aketon |
 
-**Coat of plates** worn over a (advanced) hauberk gives **+1 Armor Protection** and
-**negates weapon damage bonuses vs Mail** (bonuses vs **Plate** still apply), but imposes
-**−5 Movement Rate on foot**.
+**Coat of plates** worn over a (advanced) hauberk gives **+1 Armor Protection** and **negates weapon damage bonuses vs Mail** (bonuses vs **Plate** still apply), but imposes **−5 Movement Rate on foot**.
 
 ## Table 9.3 — Helmets
 
@@ -58,7 +55,4 @@ Most early helms include a **coif** (mail hood) whose protection is already fact
 
 ### Closed helms
 
-Closed helms (starting with the Advanced Nasal Helm) impose **−5 to all sight/sound
-Awareness rolls**. Raising a **visor** nullifies the penalty but **halves the helm's
-Armor Protection**; a visorless closed helm must be **removed** (1 full Combat Round) to
-nullify it. Assume visors are down unless stated.
+Closed helms (starting with the Advanced Nasal Helm) impose **−5 to all sight/sound Awareness rolls**. Raising a **visor** nullifies the penalty but **halves the helm's Armor Protection**; a visorless closed helm must be **removed** (1 full Combat Round) to nullify it. Assume visors are down unless stated.

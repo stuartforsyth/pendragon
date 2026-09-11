@@ -1,5 +1,6 @@
 ---
 id: core.horses.types-and-stats
+system: Pendragon 6th Edition
 book: core
 chapter: "10 — Horses"
 pages: [180, 183, 184]
@@ -8,8 +9,7 @@ title: Horse Types & Stats (Tables 10.2–10.4)
 see_also: [core.horses.speeds-exhaustion-and-training, core.combat.mounted-combat, core.character-creation.starting-equipment-and-horses]
 ---
 
-**Normal Damage** = trampling/hooves; **Charge Damage** = a spear/lance rider's
-successful Mounted Charge; **Move** = walking Movement Rate.
+**Normal Damage** = trampling/hooves; **Charge Damage** = a spear/lance rider's successful Mounted Charge; **Move** = walking Movement Rate.
 
 ## Table 10.2 — Combat Horses
 
@@ -43,6 +43,4 @@ successful Mounted Charge; **Move** = walking Movement Rate.
 - **Rouncy** — general-purpose riding horse.
 - **Sumpter** — pack horse/pony.
 
-**Tack** (saddle + bridle and their parts) is required for a knight's duties; a **combat
-saddle** has a higher pommel/cantle to secure a struck rider. Horseshoes count as care,
-not tack.
+**Tack** (saddle + bridle and their parts) is required for a knight's duties; a **combat saddle** has a higher pommel/cantle to secure a struck rider. Horseshoes count as care, not tack.

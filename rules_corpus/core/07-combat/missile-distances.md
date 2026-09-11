@@ -1,5 +1,6 @@
 ---
 id: core.combat.missile-distances
+system: Pendragon 6th Edition
 book: core
 chapter: "7 — Combat"
 pages: [137]
