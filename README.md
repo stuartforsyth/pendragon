@@ -30,6 +30,8 @@ Only the NPC Generator needs `Names by Culture.md`; the other three tabs
 appear once `data/combat.json` (or its tracked baseline,
 `data/examplecombat.json`) is present.
 
+![NPC Generator tab — a rolled-up Saxon knight with description, traits, passions, skills, and a session roster](docs/screenshots/01-npc-generator.png)
+
 ## NPC Generator — features
 
 - **Gender**, **Class**, and **Culture** radio buttons — cultures are read live
@@ -87,6 +89,8 @@ appear once `data/combat.json` (or its tracked baseline,
 
 If `data/rules.json` is missing, the app degrades gracefully to name-only mode.
 
+![Encounter tab — a live "Bandit ambush" encounter with click-to-roll stats and a per-combatant situational modifier](docs/screenshots/02-encounter-tracker.png)
+
 ## Encounter tab — features
 
 Runs a live combat, driven by `data/combat.json`:
@@ -119,6 +123,8 @@ Runs a live combat, driven by `data/combat.json`:
 - A **combat log** with round notes, a **GM Notes** box for the fight, and
   both are written to the saved/copied/exported log.
 
+![Adversary & Creature Creator tab — the full stat editor for a named adversary, with weapons, armour, skills, traits and passions](docs/screenshots/03-adversary-creator.png)
+
 ## Adversary & Creature Creator — features
 
 Build and maintain the `adversaries` library that both the NPC Generator's
@@ -132,6 +138,8 @@ Build and maintain the `adversaries` library that both the NPC Generator's
 - **Auto-generate all** — roll a complete adversary (characteristics through
   skills) for a given gender/class in one click, reusing the NPC Generator's
   own rules engine.
+
+![Encounter Creator tab — editing the "Bandit ambush" definition, with a scaling roster and a live preview for 4 players](docs/screenshots/04-encounter-creator.png)
 
 ## Encounter Creator — features
 
