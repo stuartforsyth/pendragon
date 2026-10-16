@@ -115,6 +115,14 @@ not silently made.
 
 ## Notes
 
+- **Dice: the GM enters players' rolls.** The GM screenshares the Table; players roll physical
+  dice and the GM types the result. Every player roll in a design is an *entered value* the
+  app validates (range, critical/fumble against the skill) and then enforces the rules on
+  (caps, minimums, outcomes) — never an app-side roll the players can't see. GM-side rolls
+  (Intensity, NPC commanders) may offer a "roll for me" button beside the entry box. A later
+  design phase will add VTT-style player dice; keep roll handling behind one entry point so
+  that phase can plug in without redesign, and note it in each design.
+
 - One mechanic at a time; feasts and others reuse this process unchanged.
 - Keep the user's VTT boundary explicit: anything tagged **paper/VTT** stays out of the build.
 - If the user adds a request mid-process, record it in the relevant piece file, don't drop it.
