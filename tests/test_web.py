@@ -11,7 +11,7 @@ from web.app import create_app
 def client(tmp_path):
     data = tmp_path / "data"
     data.mkdir()
-    for f in ("rules.json", "examplecombat.json", "rules_index.jsonl"):
+    for f in ("rules.json", "examplecombat.json"):
         shutil.copy(f"{ROOT}/data/{f}", data / f)
     app = create_app(ROOT, sessions_dir=str(tmp_path / "sessions"), data_dir=str(data))
     with TestClient(app) as c:

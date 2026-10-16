@@ -1,4 +1,4 @@
-// Rules lookup over the rules corpus (data/rules_index.jsonl): search or
+// Rules lookup over the rules corpus (rules_corpus/index.jsonl): search or
 // browse by chapter, read the rule, show it on the Table.
 
 import { h, clear, api, post, icon, toast, useCss, debounce, copyText, enc } from "../lib.js";

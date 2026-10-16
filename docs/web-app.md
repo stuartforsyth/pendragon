@@ -41,7 +41,7 @@ web/
   combat_state.py          reduce(events) -> live combat; gm_view / table_view
   table.py                 the player-safe projection (filters secrets server-side)
   hub.py                   server-sent events: "something changed" pings
-  rules_index.py           rules corpus search + markdown rendering
+  rules_index.py           rules corpus search (reads the rules_corpus symlink) + markdown rendering
   routes/                  session, rolls, npc, cast, party, combat, library, rules
   templates/ gm.html table.html
   static/js/ gm.js (shell, log, tray) table.js lib.js tools/<tool>.js

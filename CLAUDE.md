@@ -24,13 +24,22 @@ vanilla JS, no build step) that replaces the original Tkinter desktop app.
 
 ## Answering rules questions — corpus first, then the PDFs
 
+The rules corpus is **not in this repo**: `rules_corpus/` is a **read-only
+symlink** to the user's ttrpg-parser project
+(`/home/stuart/code/ttrpg-parser/Pendragon by Chaosium/rules-corpus/`), which
+owns the corpus, its format (`CONVENTIONS.md` there), the extraction skills
+(`ttrpgextract`, `ttrpgvalidate`) and the index builder. **Never write to
+`rules_corpus/` or anywhere under `/home/stuart/code/ttrpg-parser/`** — read
+only. The app reads `rules_corpus/index.jsonl` (`web/rules_index.py`).
+
 When you need to clarify, confirm, or apply a Pendragon rule (in code, in answers,
 or when designing a feature):
 
 1. **Check the rules corpus first.** Prose rules live in `rules_corpus/**/*.md`
-   (one topic per file, YAML frontmatter). Search it — grep the corpus and/or
-   `data/rules_index.jsonl` (the derived full-text index). Computed tables/dice
-   the app uses live in `data/*.json` (`combat.json`, `rules.json`).
+   (one topic per file, YAML frontmatter; tables are separate files under
+   `rules_corpus/tables/`, embedded in topic files as `![[table-…]]`). Grep the
+   corpus and/or `rules_corpus/index.jsonl`. Computed tables/dice the app uses
+   live in `data/*.json` (`combat.json`, `rules.json`).
 2. **Only if the corpus is silent or you're uncertain, consult the PDFs** in
    `rulebooks/` (`corerulebook.pdf`, `gmhandbook.pdf`, `battlecards.pdf`,
    `pendragon_printable_feast_cards.pdf` — the whole `rulebooks/` folder is
@@ -41,15 +50,9 @@ or when designing a feature):
 3. **Do not answer Pendragon rules from memory** when the corpus or a PDF can
    settle it — cite the corpus `id`/pages.
 
-**Whenever you query a rule from the PDFs, extract the *entire* rule into the
-corpus before moving on** — capture the whole rule (all cases, examples, tables,
-edge conditions), not just the snippet you needed, so the next lookup is answered
-from the corpus and never needs the PDF again. Use the **`extract-rule`** skill
-(Markdown file + regenerated JSON index). See `rules_corpus/README.md` for the
-format and workflow.
-
-Never hand-edit `data/rules_index.jsonl` — regenerate it with
-`python build_rules_index.py` (verify with `--check`).
+If a PDF lookup turns up a rule the corpus lacks or gets wrong, answer from the
+PDF and **tell the user** so they can extract/fix it in ttrpg-parser — don't
+copy it into this repo.
 
 ## Data files
 

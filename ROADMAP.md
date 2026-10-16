@@ -67,7 +67,7 @@ rather than scattering TODOs through the code.
     rerollable.
   - [ ] **Coat of arms** (text blazon; Tables B.1–B.3) — *deferred, implement
     later.* Full B.1–B.3 tables already captured in
-    `rules_corpus/core/appendix-heraldry/coat-of-arms-generator.md`.
+    `rules_corpus/core/appendix-heraldry/coat-of-arms-generator.md` (in the ttrpg-parser corpus).
   - [ ] **Ideals to pursue / squire-of-note & other flourish** — coat of arms
     above; and, if the supplement is available, Saxon/Pict cultural creation.
 

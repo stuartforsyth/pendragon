@@ -1,7 +1,9 @@
-"""Search over the derived rules index (``data/rules_index.jsonl``).
+"""Search over the rules index (``rules_corpus/index.jsonl``).
 
-The index is generated from ``rules_corpus/`` by ``build_rules_index.py``; this
-module only reads it. Search is a small weighted keyword match — titles and
+``rules_corpus`` is a read-only symlink to the ttrpg-parser project's Pendragon
+corpus, which owns and builds the index; this module only reads it. That
+corpus is written for Obsidian, so on load ``![[table]]`` embeds are replaced
+by the table's text and ``[[wikilinks]]`` by their label. Search is a small weighted keyword match — titles and
 tags count far more than body text — which is plenty for ~100 entries.
 """
 
@@ -13,6 +15,7 @@ from markdown_it import MarkdownIt
 
 _md = MarkdownIt("commonmark").enable("table")
 _WORD = re.compile(r"[a-z0-9]+")
+_WIKI = re.compile(r"(!?)\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
 
 
 def render_markdown(text):
@@ -26,6 +29,26 @@ class RulesIndex:
             with open(path, encoding="utf-8") as fh:
                 self.entries = [json.loads(line) for line in fh if line.strip()]
         self._by_id = {e["id"]: e for e in self.entries}
+        self._resolve_wikilinks()
+
+    def _resolve_wikilinks(self):
+        # Wikilink targets are file stems, ids, or "stem#heading".
+        targets = dict(self._by_id)
+        for e in self.entries:
+            stem = e.get("source", "").rsplit("/", 1)[-1]
+            if stem.endswith(".md"):
+                targets[stem[:-3]] = e
+
+        def sub(m):
+            embed, target, label = m.groups()
+            e = targets.get(target.split("#")[0].strip())
+            if embed:
+                return e["text"] if e else ""
+            return label or (e["title"] if e else target.split("#")[0])
+
+        for e in self.entries:
+            if "[[" in e["text"]:
+                e["text"] = _WIKI.sub(sub, e["text"])
 
     def _summary(self, e, snippet=""):
         return {"id": e["id"], "title": e["title"], "book": e["book"],

@@ -255,19 +255,18 @@ automatically.
   baseline on first edit); the app reads/writes only that file, so your own
   named adversaries and custom encounters persist locally without polluting
   the repo.
-- [`rules_corpus/`](rules_corpus/README.md) — prose rules extracted from the
-  rulebooks as one Markdown file per topic (YAML frontmatter + citable page
-  numbers), for Q&A/browsing/RAG. `data/rules_index.jsonl` is its generated
-  full-text index — regenerate with `python build_rules_index.py`, never
-  hand-edit it.
+- `rules_corpus/` — a **read-only symlink** to the Pendragon rules corpus in the
+  separate ttrpg-parser project (prose rules as Markdown + YAML frontmatter,
+  with a generated `index.jsonl` the app searches). Maintained there, never
+  edited from this repo.
 - `sessions/` (git-ignored) — one JSON file per play session: the full event
   log. `data/party.json` and `data/cast.json` (git-ignored) hold the player
   knights and kept NPCs.
 - [`rules/`](rules/) — the older human-readable Markdown docs the generator
   used to parse directly; kept as reference, no longer read by the app
-  (superseded by `data/rules.json` and `rules_corpus/`).
+  (superseded by `data/rules.json` and the rules corpus).
 - `rulebooks/` (git-ignored, local only) — the source PDFs, used to extract
-  material into `rules_corpus/` and `data/*.json`. Not included in the repo
+  reference data into `data/*.json`. Not included in the repo
   (copyrighted).
 - [`docs/`](docs/) — design specs for the click-to-roll behaviour and the
   Adversary/Encounter Creator tabs.

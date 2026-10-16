@@ -73,7 +73,7 @@ class AppState:
         self.sessions = SessionStore(sessions_dir or os.path.join(root, "sessions"))
         self.party = JsonListStore(os.path.join(self.data_dir, "party.json"))
         self.cast = JsonListStore(os.path.join(self.data_dir, "cast.json"))
-        self.rules_index = RulesIndex(os.path.join(self.data_dir, "rules_index.jsonl"))
+        self.rules_index = RulesIndex(os.path.join(root, "rules_corpus", "index.jsonl"))
         self.hub = Hub()
         self.table_mode = "auto"
 
