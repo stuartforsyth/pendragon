@@ -115,13 +115,16 @@ not silently made.
 
 ## Notes
 
-- **Dice: the GM enters players' rolls.** The GM screenshares the Table; players roll physical
-  dice and the GM types the result. Every player roll in a design is an *entered value* the
-  app validates (range, critical/fumble against the skill) and then enforces the rules on
-  (caps, minimums, outcomes) — never an app-side roll the players can't see. GM-side rolls
-  (Intensity, NPC commanders) may offer a "roll for me" button beside the entry box. A later
-  design phase will add VTT-style player dice; keep roll handling behind one entry point so
-  that phase can plug in without redesign, and note it in each design.
+- **Players roll and resolve at the table; the app is not a VTT.** The GM screenshares the
+  Table; players roll physical dice, work out their own results (success, crit, sums,
+  averages such as starting Morale) and tell the GM. That table-side work is part of the fun —
+  never design the app to take it over, and never require player-knight profiles (skills,
+  Passions) in the app. The GM records only the **outcomes and amounts that change tracked
+  state** (e.g. "Battle roll succeeded, chose Pictish Knifemen", "rest roll 4"), and the app
+  enforces the rules on them (caps, minimums, what an outcome permits). Don't ask for a roll
+  that changes nothing the app tracks. GM-side rolls (Intensity, NPCs) may offer "roll for
+  me". A later design phase may add VTT-style player dice; keep outcome capture behind one
+  entry point so it can plug in, and note it in each design.
 
 - One mechanic at a time; feasts and others reuse this process unchanged.
 - Keep the user's VTT boundary explicit: anything tagged **paper/VTT** stays out of the build.
