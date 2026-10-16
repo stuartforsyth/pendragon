@@ -72,36 +72,24 @@ The server publishes a tiny SSE message on every change. GM consoles fetch
 `/api/session/events?after=<last id>` (the log is append-only, so this never
 misses anything) and the combat view; the Table refetches `/api/table`.
 
-## Combat rolls and blows (follow-up)
+## Combat (kept deliberately simple)
 
-- **All combat rolls are public** — characteristic, weapon-skill and skill
-  rolls show their target value on the Table, and click-to-roll never uses
-  the Secret toggle (that belongs to the dice tray only).
-- **Who's fighting whom**: each combatant's *fighting* dropdown lists the
-  other side (foes pick knights, knights pick foes, plus "Other…"). The Table
-  shows "fighting X" on a combatant and "fought by X, Y" on its opponent.
-- **Blows** (`POST /api/combat/blow`, `core.combat.resolve_blow`): clicking a
-  weapon's damage (or *Hit* on the target) resolves one blow per Table 7.1 —
-  the attacker's result (success / critical: +4D6, +2D6 unarmed), the
-  defender's (failed → armour only; partial/tie → armour + shield/parry),
-  rebated (crit dice first, then halve; knockdown on the full roll), reckless
-  (+2D6 / +6D6, no shield/parry), axes through shields (1D6, a 1 breaks it),
-  maces vs mail, extra dice. A knight's blow takes the damage the player
-  rolled. The wound is applied (Major/Mortal Wounds follow), knockdown is
-  flagged (> Knockdown: DEX roll; > twice: automatic), and the whole
-  breakdown is shown to the players. Strike the log entry to undo it.
+The app doesn't track player-knight rolls or damage dice — the players roll
+their own.
 
-## Exchanges (Table 7.1)
-
-**Fight** on a combatant runs one combat round (`POST /api/combat/exchange`,
-`core.combat.resolve_exchange`, checked cell by cell against Core p.133 in
-`tests/test_exchange.py`). The app rolls for anyone with attacks; for a player
-knight the GM enters the skill (pre-filled from the Party sheet's values) and
-the player's d20. The four results on each side become: winner strikes the
-loser (+4D6 on a critical; the loser gets shield/parry only on a partial
-success, i.e. a lower success), a tie (equal successes, or critical vs
-critical — both strike, both get shield/parry, no +4D6), or both lose (nobody
-hurt). Fumblers drop a sword or break other weapons; swords break
-non-sword, non-dagger weapons on a tie, and any weapon when the loser fumbles
-and the sword-wielder criticals. Strikes by app-rolled weapons are applied
-at once; a knight's strike asks for the player's damage dice.
+- **A knight hits an enemy**: *Hit* on the enemy, enter the total damage the
+  player rolled (critical dice included). The enemy's armour comes off
+  automatically (tick *shield* if they got a partial success or tie); the
+  wound, Major/Mortal Wound and knockdown (> Knockdown: DEX roll; > twice:
+  automatic) are worked out and applied.
+- **An enemy attacks a knight**: click the enemy's weapon skill. The app rolls
+  it; the GM clicks the knight's result — critical, success (beat / equal /
+  under the enemy's roll, only asked when both succeed), fail, fumble — and
+  Table 7.1 (Core p.133, `core.combat.resolve_attack`, every cell tested)
+  decides: if the enemy hits, its damage is rolled (+4D6 on its critical;
+  the knight keeps shield/parry only on a partial success or tie) and applied.
+  If the knight wins, they roll damage and the GM uses *Hit*.
+- **Fighting dropdowns**: foes pick knights, knights pick foes; the Table shows
+  "fighting X" / "fought by X, Y".
+- All combat rolls are public and show their target value; the dice tray's
+  Secret toggle is the only way to hide a roll.

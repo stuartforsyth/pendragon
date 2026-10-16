@@ -59,17 +59,6 @@
 .hit-btn:hover { background: #3a1d1a; }
 .cbt-engby { margin-top: 4px; font-size: 13px; color: var(--or); display: flex; align-items: center; gap: 4px; }
 .cbt-engby svg { width: 14px; height: 14px; }
-.blow .section-label { margin: 14px 0 6px; }
-.blow-dmg { height: 34px; display: flex; align-items: center; gap: 6px; font-weight: 800; color: #f3c2bb; font-size: 17px; }
-.blow-target { margin-top: 14px; padding: 8px 10px; border-radius: var(--r); background: var(--sable); border: 1px solid var(--line); }
 
-.fight-btn { border-color: var(--or-deep); color: var(--or-bright); background: #2b2416; }
-.fight-btn:hover { background: #3a2f1a; }
-.fight-grid { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 10px; align-items: stretch; }
-.fight-vs { display: grid; place-items: center; font-size: 24px; color: var(--or); }
-.fight-side { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
-.fight-side.won { border-color: var(--or); box-shadow: 0 0 0 1px var(--or-deep) inset; }
-.fight-out { min-height: 22px; font-weight: 800; font-size: 15px; }
-.verdict-line { margin: 14px 0 10px; padding: 10px 12px; border-radius: var(--r); background: #2b2416; border: 1px solid var(--or-deep); color: var(--or-bright); font-weight: 700; }
-.done-blow, .pending { margin-top: 8px; padding: 10px 12px; }
-.pending { border-color: #6d3530; }
+.attack-roll { font-size: 17px; padding: 10px 12px; border-radius: var(--r); background: var(--sable); border: 1px solid var(--line); }
+.knight-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }

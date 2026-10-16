@@ -549,7 +549,7 @@ def blow_breakdown(b):
             continue
         name = "" if t["label"] == "damage" else f"{t['label']} "
         parts.append(f"{lead}{name}{t['expr']} [{', '.join(map(str, t['rolls']))}]")
-    s = " ".join(parts) + f" = {b['full']}"
+    s = " ".join(parts) + ("" if len(b["terms"]) == 1 and b["terms"][0]["expr"] == "rolled" else f" = {b['full']}")
     if b["rebated"]:
         s += f" · rebated ½ → {b['damage']}"
     if b["armour"]:
@@ -564,63 +564,51 @@ def blow_breakdown(b):
 
 
 # ---------------------------------------------------------------------------
-# A combat exchange: both sides roll, Table 7.1 decides who strikes whom
+# An enemy attacks a player knight: Table 7.1 from the two results
 # ---------------------------------------------------------------------------
 
-def _weapon_kind(wdef, name):
-    skill = (wdef or {}).get("skill", "")
-    if skill == "Sword" or "sword" in (name or "").lower():
-        return "sword"
-    if (name or "").lower() in ("dagger", "seax", "knife") or skill == "Brawling":
-        return "dagger"
-    return "other"
+KNIGHT_RESULTS = ("critical", "higher", "equal", "lower", "failure", "fumble")
 
 
-def resolve_exchange(a_value, b_value, a_roll=None, b_roll=None,
-                     a_weapon=None, b_weapon=None):
-    """One opposed melee exchange read on Table 7.1 (Core p.133).
+def resolve_attack(foe_outcome, knight):
+    """Read Table 7.1 (Core p.133) for an enemy's attack on a player knight.
 
-    Both sides roll their modified Combat Skill (core.game-system.resolution:
-    the higher successful roll wins, the lower success is a Partial Success,
-    equal rolls tie, a critical beats any non-critical). Returns the opposed
-    result plus:
+    ``foe_outcome`` is the enemy's rolled result (critical / success /
+    failure / fumble). ``knight`` is what the player reports: ``critical``;
+    a success that was ``higher`` / ``equal`` / ``lower`` than the enemy's
+    roll (only matters when both succeed); ``failure``; ``fumble``.
 
-    - ``strikes``: who hits whom — ``{"by": "a"|"b", "critical", "shield"}``.
-      The winner strikes the loser with +4D6 on a critical; the loser gets
-      Shield/Parry only on a Partial Success. A tie: both strike, both get
-      Shield/Parry, and no +4D6 even if both criticalled. Mutual failure: none.
-    - ``weapons``: dropped/broken weapons (core.combat.dropped-broken-weapon):
-      every fumbler drops a sword / breaks another weapon; on a tie a sword
-      breaks the other side's non-sword, non-dagger weapon; a sword breaks
-      even another sword when its wielder criticals and the loser fumbles.
-
-    ``a_weapon``/``b_weapon`` are ``(name, weapon_def)`` pairs or None.
+    Returns ``{"result": "foe" | "knight" | "tie" | "none",
+    "foe_strike": {"critical", "shield"} or None, "knight_shield": bool,
+    "fumbled": [...]}`` — the foe's blow (+4D6 on its critical; the knight
+    keeps shield/parry only on a partial success or tie), whether the enemy
+    gets shield/parry against the knight's blow, and who fumbled.
     """
-    from core.dice import resolve_opposed
-    r = resolve_opposed(a_value, b_value, a_roll, b_roll)
-    a = r["a"]
-    strikes = []
-    if r["winner"]:
-        w, l = r["winner"], ("b" if r["winner"] == "a" else "a")
-        strikes.append({"by": w, "critical": r[w]["outcome"] == "critical",
-                        "shield": r[l]["result"] == "partial"})
-    elif a["result"] == "tie":
-        strikes += [{"by": "a", "critical": False, "shield": True},
-                    {"by": "b", "critical": False, "shield": True}]
+    if knight not in KNIGHT_RESULTS:
+        raise ValueError(f"unknown knight result {knight!r}")
+    foe_ok = foe_outcome in ("critical", "success")
+    k_ok = knight in ("critical", "higher", "equal", "lower")
+    fumbled = [who for who, fum in (("foe", foe_outcome == "fumble"),
+                                    ("knight", knight == "fumble")) if fum]
+    tie = {"result": "tie", "foe_strike": {"critical": False, "shield": True},
+           "knight_shield": True, "fumbled": fumbled}
+    if not foe_ok and not k_ok:
+        return {"result": "none", "foe_strike": None, "knight_shield": False, "fumbled": fumbled}
+    if not foe_ok:                                   # knight succeeds, foe fails/fumbles
+        return {"result": "knight", "foe_strike": None, "knight_shield": False, "fumbled": fumbled}
+    if not k_ok:                                     # foe succeeds, knight fails/fumbles
+        return {"result": "foe", "foe_strike": {"critical": foe_outcome == "critical", "shield": False},
+                "knight_shield": False, "fumbled": fumbled}
+    # both succeed
+    if foe_outcome == "critical" and knight == "critical":
+        return tie                                   # all criticals are equal: tie, no +4D6
+    if foe_outcome == "critical":                    # crit beats the knight's success
+        return {"result": "foe", "foe_strike": {"critical": True, "shield": True},
+                "knight_shield": False, "fumbled": fumbled}
+    if knight == "critical" or knight == "higher":   # knight wins; foe's lower success = partial
+        return {"result": "knight", "foe_strike": None, "knight_shield": True, "fumbled": fumbled}
+    if knight == "equal":
+        return tie
+    return {"result": "foe", "foe_strike": {"critical": False, "shield": True},
+            "knight_shield": False, "fumbled": fumbled}
 
-    kinds = {"a": _weapon_kind(*(reversed(a_weapon) if a_weapon else (None, None))),
-             "b": _weapon_kind(*(reversed(b_weapon) if b_weapon else (None, None)))}
-    names = {"a": a_weapon[0] if a_weapon else "weapon", "b": b_weapon[0] if b_weapon else "weapon"}
-    weapons = []
-    for side in ("a", "b"):
-        other = "b" if side == "a" else "a"
-        if r[side]["outcome"] == "fumble":
-            sword_breaks = kinds[other] == "sword" and r[other]["outcome"] == "critical"
-            if kinds[side] == "sword" and not sword_breaks:
-                weapons.append({"side": side, "what": "drops", "weapon": names[side]})
-            else:
-                weapons.append({"side": side, "what": "breaks", "weapon": names[side]})
-        elif (a["result"] == "tie" and kinds[other] == "sword"
-              and kinds[side] == "other"):
-            weapons.append({"side": side, "what": "breaks", "weapon": names[side]})
-    return {**r, "strikes": strikes, "weapons": weapons}
