@@ -30,7 +30,7 @@ export default {
 
     // ---------------------------------------------------------------- layout
     const search = h("input", { class: "input", placeholder: "Search name, tier, description…", type: "search" });
-    const kindSel = selectEl(["all", "generic", "named"], "all");
+    const kindSel = selectEl(["all", "generic", "named", "npc"], "all", ["all", "generic", "named", "NPCs (Cast)"]);
     const catSel = selectEl(["all", ...CATS], "all");
     const listEl = h("div", { class: "list list-scroll adv-list" });
     const countEl = h("span", { class: "faint small" });
@@ -67,7 +67,9 @@ export default {
 
     // ---------------------------------------------------------------- library
     async function refreshLibrary() {
-      library = (await api("/api/adversaries")).adversaries;
+      const [a, c] = await Promise.all([api("/api/adversaries"), api("/api/cast/fightable")]);
+      // Cast NPCs with saved stats are listed too (helm icon, murrey).
+      library = [...c.npcs.map((n) => ({ ...n, isNpc: true })), ...a.adversaries];
       renderList();
     }
 
@@ -80,7 +82,15 @@ export default {
     function renderList() {
       const rows = filtered();
       countEl.textContent = `${rows.length} of ${library.length}`;
-      clear(listEl, rows.length ? rows.map((a) => h("div", {
+      clear(listEl, rows.length ? rows.map((a) => a.isNpc ? h("div", {
+        class: "list-item adv-item npc-item", title: "A Cast NPC — opens their stats as a new named adversary",
+        onclick: () => loadNpc(a),
+      },
+        icon("helm", "npc-ico"),
+        h("div", { class: "adv-item-main" },
+          h("div", { class: "adv-item-name" }, a.key),
+          h("div", { class: "faint small adv-item-sub" }, `NPC · ${a.tier}`)),
+        h("span", { class: "meta" }, a.hp != null ? `HP ${a.hp}` : "")) : h("div", {
         class: `list-item adv-item ${a.key === key ? "on" : ""}`, title: a.description || a.key,
         onclick: () => load(a.key),
       },
@@ -125,6 +135,12 @@ export default {
       d.health ||= {}; d.other ||= {};
       for (const f of ["name", "tier", "culture", "religion", "description", "promotion_title", "notes"]) d[f] ??= "";
       return d;
+    }
+
+    async function loadNpc(n) {
+      if (!(await guardDirty())) return;
+      const r = await api(`/api/cast/${enc(n.cast_id)}/adversary`);
+      setDraft(r.adversary, null, `Stats from the Cast NPC ${n.key} — add armour if they wear any, then Save to keep them as an adversary.`, false);
     }
 
     async function newDraft(kind) {
@@ -460,7 +476,10 @@ export default {
       onLibrary() { refreshLibrary(); },
     };
     if (handoff?.draft) await inst.show(handoff);
-    else if (library.length) await load(library[0].key);
+    else {
+      const first = library.find((a) => !a.isNpc);     // open a real adversary, not a Cast NPC
+      if (first) await load(first.key);
+    }
     return inst;
   },
 };

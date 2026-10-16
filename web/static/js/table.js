@@ -41,15 +41,17 @@ const waxSeal = () => svg(
 
 const TINCTURE = {
   party: ["#24507f", "#d2a645"], foe: ["#8e2219", "#d2a645"], named: ["#5b2f7a", "#d2a645"],
+  npc: ["#7a2f55", "#efe3c6"],
   beast: ["#2f6b3e", "#efe3c6"], monster: ["#1b1612", "#b3342a"], fae: ["#3a8fb0", "#efe3c6"],
 };
 function shield(f) {
-  const key = f.side === "party" ? "party" : f.named ? "named" : (TINCTURE[f.category] ? f.category : "foe");
+  const key = f.side === "party" ? "party" : f.npc ? "npc" : f.named ? "named" : (TINCTURE[f.category] ? f.category : "foe");
   const [field, charge] = TINCTURE[key];
   const rim = f.elite ? "#d2a645" : "#4e3a28";
   const slain = f.status === "dead" ? '<path d="M10 12 34 44M34 12 10 44" stroke="#2a1d14" stroke-width="3.5"/>' : "";
   const chargeShape = f.side === "party"
     ? `<path d="M6 32 22 18l16 14" fill="none" stroke="${charge}" stroke-width="4"/>`
+    : f.npc ? `<path d="M14 36V24a8 8 0 0 1 16 0v12M22 16v20M17 26h10" fill="none" stroke="${charge}" stroke-width="3"/>`
     : `<path d="M6 10 38 40" stroke="${charge}" stroke-width="7" clip-path="url(#sh)"/>`;
   const outline = "M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z";
   return svg(`<clipPath id="sh"><path d="${outline}"/></clipPath><path d="${outline}" fill="${field}"/>${chargeShape}<path d="${outline}" fill="none" stroke="${rim}" stroke-width="${f.elite ? 3 : 2}"/>${slain}`,
@@ -199,7 +201,7 @@ function fighter(f) {
   const hit = prev && prev !== f.wound_state;
   last.states[f.id] = f.wound_state;
   const stCls = `s-${(f.side === "party" ? ({ unconscious: "unconscious", fled: "fled" }[f.status] || "unhurt") : f.wound_state).toLowerCase().replace(/\s+/g, "-")}`;
-  return h("div", { class: `card fighter ${stCls} ${f.elite ? "elite" : ""} ${f.named ? "named" : ""} ${hit ? "hit" : ""}` },
+  return h("div", { class: `card fighter ${stCls} ${f.elite ? "elite" : ""} ${f.npc ? "npc" : f.named ? "named" : ""} ${hit ? "hit" : ""}` },
     shield(f),
     h("div", { class: "nm" }, f.name, f.elite ? h("span", { class: "crown" }, "♛") : null),
     h("div", { class: "st" }, f.side === "party" ? (f.wound_state || (f.player ? `played by ${f.player}` : "")) : f.wound_state),

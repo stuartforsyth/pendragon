@@ -8,6 +8,7 @@ from core.combat import (CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_break
                          resolve_attack, resolve_blow, roll_ransom, surrender_check)
 from core.dice import NotationError, roll_notation, skill_display
 from core.encounter_def import to_editable
+from web.routes.cast import cast_combatant, has_stats
 from web.routes.common import bad, st, to_int
 from web.routes.rolls import record_check, record_damage
 
@@ -72,6 +73,14 @@ async def start(request: Request, body: dict):
     combat = state.combat_data
     defn = body.get("definition")
     name = (body.get("name") or "").strip()
+    lone = None
+    if not defn and body.get("cast"):               # a Cast NPC
+        entry = state.cast.get(body["cast"])
+        if entry is None or not has_stats(entry):
+            bad("That NPC has no saved stats")
+        lone = cast_combatant(state, entry, "n1")
+        name = name or entry["npc"]["full"]
+        defn = {"roster": []}
     if not defn and body.get("adversary"):          # a lone adversary
         adv = body["adversary"]
         if adv not in combat.get("adversaries", {}):
@@ -93,6 +102,8 @@ async def start(request: Request, body: dict):
 
     enc = Encounter(state.rules)
     foes = enc.generate_from_definition(defn, players)
+    if lone is not None:
+        foes = [lone]
     knights = []
     for m in party:
         k = Combatant.from_party(m)
@@ -105,7 +116,7 @@ async def start(request: Request, body: dict):
         _end(state, cs, "abandoned")
 
     names = ", ".join(c.display_name for c in foes)
-    lines = [f"Combat begins: {names}" if body.get("adversary") and not body.get("definition")
+    lines = [f"Combat begins: {names}" if (body.get("adversary") or body.get("cast")) and not body.get("definition")
              else f"Launched '{name}' for {players} players: {names}"]
     if defn.get("description", "").strip():
         lines.append(defn["description"].strip())
@@ -124,6 +135,17 @@ async def start(request: Request, body: dict):
 @router.post("/api/combat/add")
 async def add(request: Request, body: dict):
     state, cs = _active(request)
+    if body.get("cast"):
+        entry = state.cast.get(body["cast"])
+        if entry is None or not has_stats(entry):
+            bad("That NPC has no saved stats")
+        n = sum(1 for c in cs["combatants"] if c.id.startswith("n")) + 1
+        c = cast_combatant(state, entry, f"n{n}")
+        if any(x.display_name == c.display_name for x in cs["combatants"]):
+            c.label = f"{c.label} ({n})"
+        ev = state.record("combat.added", f"Added {c.display_name}", title=c.display_name,
+                          data={"combatant": c.to_dict(), "table_text": f"{c.display_name} joins the fray"})
+        return {"event": ev}
     adv = body.get("adversary", "")
     if adv not in state.combat_data.get("adversaries", {}):
         bad("Unknown adversary")

@@ -242,3 +242,21 @@ def test_start_combat_with_a_single_adversary(client):
     cs = ok(client.get("/api/combat"))["combat"]
     assert cs["name"] == "Bandit" and [c["type"] for c in cs["combatants"]] == ["Bandit"]
     assert client.post("/api/combat/start", json={"adversary": "Nobody"}).status_code == 400
+
+
+def test_fight_a_cast_npc(client):
+    npc = ok(client.post("/api/npc/generate", json={"culture": "Saxon", "gender": "Male",
+                                                    "social_class": "Knight"}))["npc"]
+    entry = ok(client.post("/api/cast", json={"npc": npc}))["entry"]
+    listed = ok(client.get("/api/cast/fightable"))["npcs"]
+    assert listed[0]["cast_id"] == entry["id"] and listed[0]["kind"] == "npc"
+    adv = ok(client.get(f"/api/cast/{entry['id']}/adversary"))["adversary"]
+    assert adv["name"] == npc["full"] and adv["health"]["hit_points"] == npc["derived"]["Hit Points"]
+    ok(client.post("/api/combat/start", json={"cast": entry["id"]}))
+    cs = ok(client.get("/api/combat"))["combat"]
+    assert cs["name"] == npc["full"] and cs["combatants"][0]["npc"]
+    ok(client.post("/api/combat/add", json={"cast": entry["id"]}))
+    names = [c["display_name"] for c in ok(client.get("/api/combat"))["combat"]["combatants"]]
+    assert len(names) == 2 and len(set(names)) == 2
+    t = ok(client.get("/api/table"))["combat"]["combatants"]
+    assert t[0]["npc"] and "cur_hp" not in t[0]

@@ -10,7 +10,7 @@ export default {
   async mount(el, ctx) {
     useCss("combat");
     let cs = null;             // GM view of the combat
-    let encounters = [], advs = [], party = [];
+    let encounters = [], advs = [], party = [], npcs = [];
     let pending = false;       // a re-render waiting for an input to lose focus
     let launchQuery = "", selected = "", players = null, includeParty = true;
     const descOpen = { v: true };
@@ -19,10 +19,11 @@ export default {
     clear(el, body);
 
     async function loadLibrary() {
-      [encounters, advs, party] = await Promise.all([
+      [encounters, advs, party, npcs] = await Promise.all([
         api("/api/encounters").then((r) => r.encounters),
         api("/api/adversaries").then((r) => r.adversaries),
         api("/api/party").then((r) => r.party),
+        api("/api/cast/fightable").then((r) => r.npcs),
       ]);
     }
 
@@ -73,7 +74,7 @@ export default {
               h("label", { class: "check" }, h("input", { type: "checkbox", checked: includeParty, onchange: (e) => { includeParty = e.target.checked; } }),
                 "Knights join the fight"),
               h("button", { class: "btn primary", onclick: () => launch() }, icon("swords"), "Launch encounter"),
-              h("button", { class: "btn", onclick: pickSingle }, icon("dragon"), "Fight a single adversary…"),
+              h("button", { class: "btn", onclick: pickSingle }, icon("dragon"), "Fight a single adversary or NPC…"),
               h("div", { class: "faint small" }, "Build new encounters in the Encounter Creator."))),
           h("div", { class: "panel" }, h("h3", {}, "Encounters"), search, h("div", { style: { height: "8px" } }), list)),
         cs && !cs.active ? h("div", { class: "panel", style: { marginTop: "14px" } },
@@ -83,19 +84,25 @@ export default {
       ];
     }
 
-    async function pickSingle() {
-      await modal("Fight a single adversary", (close) => {
+    // Pick an adversary — or a Cast NPC with saved stats (helm icon, murrey).
+    async function pickFoe(title, onPick) {
+      await modal(title, (close) => {
         const list = h("div", { class: "list", style: { maxHeight: "50vh", overflow: "auto" } });
-        const draw = (q = "") => clear(list, advs.filter((a) => `${a.key} ${a.category} ${a.tier}`.toLowerCase().includes(q.toLowerCase()))
-          .map((a) => h("div", { class: "list-item", onclick: async () => {
-            await post("/api/combat/start", { adversary: a.key, include_party: includeParty });
-            close();
-          } }, h("span", {}, a.key), h("span", { class: "meta" }, `${a.category}${a.tier ? " · " + a.tier : ""} · HP ${a.hp ?? "?"}`))));
-        const search = h("input", { class: "input", placeholder: "Search adversaries…", oninput: (e) => draw(e.target.value) });
+        const all = [...npcs.map((n) => ({ ...n, isNpc: true })), ...advs];
+        const draw = (q = "") => clear(list, all.filter((a) => `${a.key} ${a.category} ${a.tier} ${a.isNpc ? "npc cast" : ""}`.toLowerCase().includes(q.toLowerCase()))
+          .map((a) => h("div", { class: `list-item ${a.isNpc ? "npc-item" : ""}`, onclick: async () => { await onPick(a); close(); } },
+            a.isNpc ? icon("helm", "npc-ico") : null,
+            h("span", {}, a.key),
+            a.isNpc ? h("span", { class: "tag murrey" }, "NPC") : null,
+            h("span", { class: "meta" }, a.isNpc ? `${a.tier} · HP ${a.hp ?? "?"}` : `${a.category}${a.tier ? " · " + a.tier : ""} · HP ${a.hp ?? "?"}`))));
+        const search = h("input", { class: "input", placeholder: "Search adversaries and NPCs…", oninput: (e) => draw(e.target.value) });
         draw();
         return [search, h("div", { style: { height: "8px" } }), list];
       });
     }
+
+    const pickSingle = () => pickFoe("Fight a single adversary or NPC", (a) =>
+      post("/api/combat/start", a.isNpc ? { cast: a.cast_id, include_party: includeParty } : { adversary: a.key, include_party: includeParty }));
 
     async function launch(key = selected) {
       if (!key) return toast("Search, then pick an encounter to launch", "err");
@@ -148,22 +155,12 @@ export default {
     function addMenu(anchor, knights) {
       const items = knights.map((m) => [`${m.name} (knight)`, () => post("/api/combat/add-party", { member_id: m.id }), { icon: "party" }]);
       if (items.length) items.push(null);
-      items.push(["An adversary…", pickAdversary, { icon: "dragon" }]);
+      items.push(["An adversary or NPC…", pickAdversary, { icon: "dragon" }]);
       menu(anchor, items);
     }
 
-    async function pickAdversary() {
-      const { modal } = await import("../lib.js");
-      await modal("Add a combatant", (close) => {
-        const list = h("div", { class: "list", style: { maxHeight: "50vh", overflow: "auto" } });
-        const draw = (q = "") => clear(list, advs.filter((a) => `${a.key} ${a.category} ${a.tier}`.toLowerCase().includes(q.toLowerCase())).slice(0, 80)
-          .map((a) => h("div", { class: "list-item", onclick: async () => { await post("/api/combat/add", { adversary: a.key }); close(); } },
-            h("span", {}, a.key), h("span", { class: "meta" }, `${a.category}${a.tier ? " · " + a.tier : ""} · HP ${a.hp ?? "?"}`))));
-        const search = h("input", { class: "input", placeholder: "Search adversaries…", oninput: (e) => draw(e.target.value) });
-        draw();
-        return [search, h("div", { style: { height: "8px" } }), list];
-      });
-    }
+    const pickAdversary = () => pickFoe("Add a combatant", (a) =>
+      post("/api/combat/add", a.isNpc ? { cast: a.cast_id } : { adversary: a.key }));
 
     async function endCombat() {
       if (await confirmBox("End combat?", "The Table returns to the Chronicle. Knights' Hit Points are saved back to the Party.", "End combat")) {
@@ -193,7 +190,7 @@ export default {
       const isKnight = false;
       const creature = ["beast", "monster", "fae"].includes(c.category);
       const marker = (c.elite ? "★" : "") + (c.named && !isKnight ? "◆" : "") + (creature && !c.named ? "✦" : "");
-      const tone = c.down ? "down" : c.elite ? "elite" : isKnight ? "knight" : c.named ? "named" : c.category;
+      const tone = c.down ? "down" : c.npc ? "npc" : c.elite ? "elite" : c.named ? "named" : c.category;
       const st = STATUS_TAG[c.status];
       const pct = Math.max(0, Math.min(100, (c.cur_hp / c.max_hp) * 100));
 
@@ -207,7 +204,8 @@ export default {
 
       return h("div", { class: `cbt-row t-${tone} ${c.down ? "is-down" : ""}`, "data-id": c.id },
         h("div", { class: "cbt-line" },
-          h("div", { class: "cbt-name" }, marker ? h("span", { class: "marker" }, marker + " ") : null, c.display_name,
+          h("div", { class: "cbt-name" }, c.npc ? icon("helm", "npc-ico") : marker ? h("span", { class: "marker" }, marker + " ") : null, c.display_name,
+            c.npc ? h("span", { class: "tag murrey", style: { marginLeft: "8px" } }, "NPC") : null,
             st ? h("span", { class: `tag ${st[1]}`, style: { marginLeft: "8px" } }, st[0]) : null),
           engIn ? h("div", { class: "cbt-eng" }, h("span", { class: "faint small" }, "fighting"), engIn) : null,
           h("div", { class: "cbt-hp" },

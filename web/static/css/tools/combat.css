@@ -23,6 +23,8 @@
 .cbt-row.t-beast { border-left-color: var(--vert); }
 .cbt-row.t-fae { border-left-color: #5fb3d0; }
 .cbt-row.t-human { border-left-color: #6f6455; }
+.cbt-row.t-npc { border-left-color: var(--murrey); }
+.t-npc .cbt-name { color: #f0b6d2; }
 .cbt-row.is-down { opacity: .55; }
 .cbt-row.is-down .cbt-name { text-decoration: line-through; text-decoration-color: var(--gules); }
 

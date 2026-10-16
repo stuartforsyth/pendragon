@@ -4,6 +4,7 @@
    azure = information/links, purpure = named NPCs. */
 
 :root {
+  --murrey: #d27aa6;     /* Cast NPCs */
   --bg: #121010;
   --bg-2: #171413;
   --panel: #1c1917;
@@ -238,6 +239,10 @@ textarea.input { height: auto; padding: 8px 10px; resize: vertical; line-height:
 .tag.vert { border-color: #2f5e3c; color: #9fd8ae; }
 .tag.azure { border-color: #2e4c70; color: #a9c9ee; }
 .tag.purpure { border-color: #55396e; color: #d2b5ef; }
+.tag.murrey { border-color: #6e3550; color: #f0b6d2; }
+.npc-ico { color: var(--murrey); margin-right: 4px; vertical-align: -3px; }
+.npc-ico svg { width: 17px; height: 17px; }
+.list-item.npc-item { border-left: 3px solid var(--murrey); }
 
 /* click-to-roll values */
 .rollable {

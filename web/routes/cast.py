@@ -6,6 +6,8 @@ import datetime
 from fastapi import APIRouter, Body, Request
 from fastapi.responses import Response
 
+from core.adversary import draft_from_npc, finalise
+from core.combat import Combatant
 from core.npc import format_roster_markdown
 from web.routes.common import bad, st
 from web.routes.npc import _public, decorate
@@ -85,3 +87,55 @@ def export_md(request: Request):
     roster = [{**c["npc"], "notes": c.get("notes", "")} for c in st(request).cast.items]
     return Response(format_roster_markdown(roster), media_type="text/markdown; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="pendragon-cast.md"'})
+
+
+# -- fighting a Cast NPC ---------------------------------------------------------
+
+def has_stats(entry):
+    return bool(entry.get("npc", {}).get("stats"))
+
+
+def cast_adversary(state, entry):
+    """A Cast NPC's saved stats as an adversary stat block (named, human):
+    characteristics, derived health, skills → attacks, traits and passions."""
+    npc = entry["npc"]
+    adv = finalise(draft_from_npc(npc, state.combat_data), state.rules, state.combat_data)
+    adv["name"] = npc["full"]
+    adv["description"] = npc.get("description", "")
+    adv["created_from_npc"] = True
+    return adv
+
+
+def cast_combatant(state, entry, cid):
+    """A Cast NPC as a combatant (marked ``npc`` so it reads distinctly)."""
+    npc = entry["npc"]
+    c = Combatant(npc["full"], cast_adversary(state, entry), npc["full"], hp_jitter=False)
+    c.id = cid
+    c.npc = True
+    c.cast_id = entry["id"]
+    feats = (npc.get("appearance") or {}).get("features") or []
+    c.feature = "; ".join(feats[:3])
+    return c
+
+
+@router.get("/api/cast/fightable")
+def fightable(request: Request):
+    """Cast NPCs with saved stats, in the shape of the adversary list."""
+    out = []
+    for e in st(request).cast.items:
+        if not has_stats(e):
+            continue
+        n = e["npc"]
+        out.append({"cast_id": e["id"], "key": n["full"], "kind": "npc", "category": "human",
+                    "tier": n.get("subtitle", ""), "description": n.get("description", ""),
+                    "hp": (n.get("derived") or {}).get("Hit Points")})
+    return {"npcs": sorted(out, key=lambda x: x["key"].casefold())}
+
+
+@router.get("/api/cast/{entry_id}/adversary")
+def as_adversary(request: Request, entry_id: str):
+    state = st(request)
+    entry = state.cast.get(entry_id)
+    if entry is None or not has_stats(entry):
+        bad("No such NPC with stats", 404)
+    return {"adversary": cast_adversary(state, entry)}

@@ -86,7 +86,7 @@ def table_view(c):
     side = getattr(c, "side", "foe")
     out = {"id": c.id, "name": c.display_name, "side": side, "status": c.status,
            "wound_state": c.wound_state(), "elite": c.elite,
-           "named": getattr(c, "named", False),
+           "named": getattr(c, "named", False), "npc": getattr(c, "npc", False),
            "category": getattr(c, "category", "human"),
            "engaged_with": c.engaged_with}
     if side == "party":

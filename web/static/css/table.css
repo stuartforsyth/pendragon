@@ -208,6 +208,7 @@ body {
 .fighter .eng { font-size: 15px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fighter.elite .nm { color: var(--or); }
 .fighter.named .nm { color: var(--purpure); }
+.fighter.npc .nm { color: #7a2f55; }
 .knights .fighter .nm, .knights .fighter.named .nm { color: var(--azure); }
 .banner .mode .round .rn { font-family: var(--f-prose); font-weight: 600; font-variant-numeric: lining-nums; }
 .fighter .crown { color: var(--or); font-size: 15px; margin-left: 4px; }
