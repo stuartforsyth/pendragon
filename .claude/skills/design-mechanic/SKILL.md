@@ -45,8 +45,19 @@ current app — don't ask what the corpus already answers. Explicitly settle: sc
 user will drop things they run in their own VTT), GM workflow, what is rolled vs chosen,
 state/events, player-visible output, edge cases and rules ambiguities.
 
-After each piece write `pieces/NN-slug.md`: **Decisions** (final, numbered), **Rejected /
-out of scope** with the reason, **Rules cited**, **Open questions** (should be empty before
+**Then hold a UI conversation for the same piece — never skip it, and never leave UI to be
+decided at build time.** Settle, one question at a time with a recommendation: where it lives
+(which GM tool/tab/panel, or the Table); the elements it needs (every input, readout, button,
+list, roll control, status chip, warning); what each shows and when (empty, in-progress,
+done, error states); the primary GM flow in clicks (what is one click, what needs
+confirmation, what is automatic); what the players' Table shows for it and what is hidden;
+how it looks (reuse existing patterns/components in `web/static/js/tools/` and the CSS
+tokens; ask before inventing a new visual idea); and mobile/desktop and keyboard needs. Offer
+a quick ASCII sketch for layout choices (AskUserQuestion previews work well) and settle on
+one. Pieces tagged **paper/VTT** skip the UI conversation.
+
+After each piece write `pieces/NN-slug.md`: **Decisions** (final, numbered), **UI** (location,
+element list, states, GM flow, Table view, sketch), **Rejected / out of scope** with the reason, **Rules cited**, **Open questions** (should be empty before
 moving on), and **Interfaces** to neighbouring pieces. Read the user back a 5-line summary
 and get a yes before the next piece. Later pieces may reopen earlier ones — edit that file
 and note why.
@@ -56,8 +67,8 @@ and note why.
 When every piece file is closed, launch one **Agent** with `model: "opus"` (a fresh agent,
 not a fork). Its brief must name the files to read — `breakdown.md`, all `pieces/*.md`,
 `CLAUDE.md`, `docs/web-app.md` — and say: reconcile the pieces into **one coherent design**
-(data model, event types and replay, `core/` vs `web/` split, API routes, GM UI, Table
-projection and secret filtering, rules coverage, build order); flag contradictions or gaps
+(data model, event types and replay, `core/` vs `web/` split, API routes, GM UI (consistent
+across pieces: shared components, navigation between pieces), Table projection and secret filtering, rules coverage, build order); flag contradictions or gaps
 between pieces rather than papering over them; invent no decisions the user did not make —
 list them as questions. Output `design.md`.
 
@@ -68,7 +79,7 @@ list them as questions. Output `design.md`.
 ## 4 — Spec
 
 Write `spec.md` from the approved design: ordered build slices each shippable on its own,
-with files to touch, event schemas, route signatures, UI behaviour, and **tests per slice**
+with files to touch, event schemas, route signatures, UI elements and behaviour per slice, and **tests per slice**
 (real behaviours, run against copies of the data per CLAUDE.md). **Gate:** user approves.
 
 ## 5 — Build
