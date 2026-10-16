@@ -919,7 +919,7 @@ def save_combat(combat, data_dir):
 
 
 if __name__ == "__main__":  # quick self-test
-    here = os.path.dirname(os.path.abspath(__file__))
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     rules = load_rules(os.path.join(here, "data"))
     if rules is None:
         print("data/rules.json not found.")

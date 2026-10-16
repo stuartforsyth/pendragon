@@ -1,0 +1,78 @@
+import json
+
+from core.combat import Combatant, Encounter, resolve_roster
+from core.encounter_def import preview_lines, roster_threat, to_editable
+
+
+def _foe(rules):
+    e = Encounter(rules)
+    return e.add_one(sorted(e.templates)[0])
+
+
+def test_combatant_round_trips_through_json(rules):
+    c = _foe(rules)
+    c.modifier = -5
+    c2 = Combatant.from_dict(json.loads(json.dumps(c.to_dict())))
+    assert c2.to_dict() == c.to_dict()
+    assert c2.status == "active"
+
+
+def test_major_and_mortal_wounds(rules):
+    c = _foe(rules)
+    _, msg = c.apply_hp(-c.major_wound)
+    assert "Major Wound" in msg and c.status == "unconscious"
+    c = _foe(rules)
+    _, msg = c.apply_hp(-c.max_hp)
+    assert "Mortal Wound" in msg and c.status == "dead"
+
+
+def test_healing_revives_unconscious(rules):
+    c = _foe(rules)
+    c.apply_hp(-c.major_wound)
+    _, msg = c.apply_hp(c.max_hp)
+    assert "revived" in msg and c.status == "active"
+
+
+def test_wound_state_hides_numbers(rules):
+    c = _foe(rules)
+    assert c.wound_state() == "Unhurt"
+    c.cur_hp = c.max_hp - 1
+    assert c.wound_state() == "Wounded"
+    c.cur_hp = c.max_hp // 2
+    assert c.wound_state() == "Badly wounded"
+    c.set_out("fled")
+    assert c.wound_state() == "Fled"
+
+
+def test_party_member_combatant():
+    c = Combatant.from_party({"id": "p1", "name": "Sir Bors", "player": "Ann",
+                              "max_hp": 30, "cur_hp": 25, "major_wound": 14,
+                              "armour": 10, "shield": 6})
+    assert (c.side, c.max_hp, c.cur_hp, c.armor_total()) == ("party", 30, 25, 16)
+
+
+def test_promote_is_deterministic_and_reversible(rules):
+    c = _foe(rules)
+    before = c.to_dict()
+    c.promote({"skill_bonus": 5, "hp_multiplier": 1.5})
+    assert c.elite and c.max_hp >= before["max_hp"]
+    c.demote()
+    assert not c.elite and c.max_hp == before["max_hp"]
+
+
+def test_roster_scaling_and_preview(rules):
+    defn = {"roster": [{"adversary": "A", "count": 1.5, "per_player": True},
+                       {"adversary": "B", "count": 1, "per_player": False}],
+            "leader": {"adversary": "C", "promote": True}}
+    assert resolve_roster(defn, 4) == [("A", 6, False), ("B", 1, False)]
+    lines, total = preview_lines(defn, 4)
+    assert total == 8 and lines[-1].startswith("1× C")
+    glory, hp = roster_threat(defn, 4, {"adversaries": {"A": {"health": {"hit_points": 10}}}})
+    assert hp == 60
+
+
+def test_every_library_encounter_builds(rules):
+    e = Encounter(rules)
+    for name, defn in e.themes.items():
+        e.generate_from_definition(to_editable(defn), 3)
+        assert e.combatants, name
