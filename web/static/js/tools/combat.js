@@ -73,6 +73,7 @@ export default {
               h("label", { class: "check" }, h("input", { type: "checkbox", checked: includeParty, onchange: (e) => { includeParty = e.target.checked; } }),
                 "Knights join the fight"),
               h("button", { class: "btn primary", onclick: () => launch() }, icon("swords"), "Launch encounter"),
+              h("button", { class: "btn", onclick: pickSingle }, icon("dragon"), "Fight a single adversary…"),
               h("div", { class: "faint small" }, "Build new encounters in the Encounter Creator."))),
           h("div", { class: "panel" }, h("h3", {}, "Encounters"), search, h("div", { style: { height: "8px" } }), list)),
         cs && !cs.active ? h("div", { class: "panel", style: { marginTop: "14px" } },
@@ -80,6 +81,20 @@ export default {
             `${cs.name} ended after ${cs.round} round${cs.round === 1 ? "" : "s"} — `,
             `${cs.combatants.filter((c) => c.side !== "party" && c.down).length} of ${cs.combatants.filter((c) => c.side !== "party").length} foes down.`)) : null,
       ];
+    }
+
+    async function pickSingle() {
+      await modal("Fight a single adversary", (close) => {
+        const list = h("div", { class: "list", style: { maxHeight: "50vh", overflow: "auto" } });
+        const draw = (q = "") => clear(list, advs.filter((a) => `${a.key} ${a.category} ${a.tier}`.toLowerCase().includes(q.toLowerCase()))
+          .map((a) => h("div", { class: "list-item", onclick: async () => {
+            await post("/api/combat/start", { adversary: a.key, include_party: includeParty });
+            close();
+          } }, h("span", {}, a.key), h("span", { class: "meta" }, `${a.category}${a.tier ? " · " + a.tier : ""} · HP ${a.hp ?? "?"}`))));
+        const search = h("input", { class: "input", placeholder: "Search adversaries…", oninput: (e) => draw(e.target.value) });
+        draw();
+        return [search, h("div", { style: { height: "8px" } }), list];
+      });
     }
 
     async function launch(key = selected) {

@@ -72,6 +72,12 @@ async def start(request: Request, body: dict):
     combat = state.combat_data
     defn = body.get("definition")
     name = (body.get("name") or "").strip()
+    if not defn and body.get("adversary"):          # a lone adversary
+        adv = body["adversary"]
+        if adv not in combat.get("adversaries", {}):
+            bad("Unknown adversary")
+        defn = {"roster": [{"adversary": adv, "count": 1, "per_player": False}]}
+        name = name or adv
     if not defn:
         key = body.get("encounter", "")
         if key not in combat.get("encounters", {}):
@@ -99,7 +105,8 @@ async def start(request: Request, body: dict):
         _end(state, cs, "abandoned")
 
     names = ", ".join(c.display_name for c in foes)
-    lines = [f"Launched '{name}' for {players} players: {names}"]
+    lines = [f"Combat begins: {names}" if body.get("adversary") and not body.get("definition")
+             else f"Launched '{name}' for {players} players: {names}"]
     if defn.get("description", "").strip():
         lines.append(defn["description"].strip())
     descriptions = _descriptions(foes)

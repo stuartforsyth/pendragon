@@ -235,3 +235,10 @@ def test_enemy_failed_attack_wording(client):
     r = ok(client.post("/api/combat/attack", json={"event": roll["id"], "target": knight["id"], "knight": "higher"}))
     assert r["result"] == "knight" and not r["knight_shield"]
     assert "(higher roll)" not in r["event"]["text"]
+
+
+def test_start_combat_with_a_single_adversary(client):
+    ok(client.post("/api/combat/start", json={"adversary": "Bandit"}))
+    cs = ok(client.get("/api/combat"))["combat"]
+    assert cs["name"] == "Bandit" and [c["type"] for c in cs["combatants"]] == ["Bandit"]
+    assert client.post("/api/combat/start", json={"adversary": "Nobody"}).status_code == 400
