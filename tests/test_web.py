@@ -260,3 +260,17 @@ def test_fight_a_cast_npc(client):
     assert len(names) == 2 and len(set(names)) == 2
     t = ok(client.get("/api/table"))["combat"]["combatants"]
     assert t[0]["npc"] and "cur_hp" not in t[0]
+
+
+def test_clear_table_and_session_start(client):
+    ok(client.post("/api/roll/dice", json={"expr": "d20"}))
+    assert ok(client.get("/api/table"))["feed"]
+    ev = ok(client.post("/api/table/clear"))["event"]
+    assert ok(client.get("/api/table"))["feed"] == []
+    assert any(e["type"] == "roll.dice" for e in ok(client.get("/api/session"))["events"])  # log keeps it
+    ok(client.post("/api/narrate", json={"text": "After the clear"}))
+    assert [c["type"] for c in ok(client.get("/api/table"))["feed"]] == ["narrate"]
+    ok(client.post(f"/api/events/{ev['id']}/strike"))                 # undo the clear
+    assert len(ok(client.get("/api/table"))["feed"]) == 2
+    ok(client.post("/api/session/start", json={"title": "Fresh"}))
+    assert ok(client.get("/api/table"))["feed"] == []

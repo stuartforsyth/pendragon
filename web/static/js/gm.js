@@ -125,6 +125,7 @@ const KIND = (t) => t.startsWith("roll.") ? ["roll", "d20"]
   : t === "note" ? ["note", "note"]
   : t === "rule.shown" ? ["rule", "book"]
   : t.startsWith("session.") ? ["session", "flag"]
+  : t === "table.cleared" ? ["meta", "present"]
   : t.startsWith("meta.") ? ["meta", "undo"] : ["other", "scroll"];
 
 const FILTERS = [["all", "All"], ["roll", "Rolls"], ["combat", "Combat"], ["npc", "NPCs"], ["narrate", "Story"]];
@@ -448,6 +449,7 @@ async function boot() {
   buildRail();
   buildLog();
   $("openTable").replaceChildren(icon("present"), "Open Table");
+  $("clearTable").onclick = async () => { await post("/api/table/clear"); toast("Table cleared", "ok"); };
   $("openTable").onclick = () => window.open("/table", "pendragon-table", "width=1280,height=760");
   $("toggleLog").replaceChildren(icon("panel"));
   $("toggleLog").onclick = () => $("shell").classList.toggle("log-collapsed");

@@ -156,6 +156,14 @@ def table_feed(request: Request):
     return st(request).table_payload()
 
 
+@router.post("/api/table/clear")
+async def clear_table(request: Request):
+    """Wipe the Table back to a blank page. Nothing is deleted — the log keeps
+    everything, and striking this entry brings the old Table back."""
+    ev = st(request).record("table.cleared", "Table cleared", visibility="gm")
+    return {"event": ev}
+
+
 @router.post("/api/table/mode")
 async def table_mode(request: Request, body: dict):
     mode = body.get("mode")

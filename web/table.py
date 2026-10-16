@@ -61,10 +61,17 @@ def card(ev, fl):
             "data": data}
 
 
+# The Table only shows what happened since it was last cleared: a (non-struck)
+# "table.cleared" event, or the start of the session.
+CUTOFF_TYPES = ("table.cleared", "session.started")
+
+
 def build(session, combat, pinned_mode="auto"):
     fl = flags(session.events)
     feed = []
     for ev in reversed(session.events):
+        if ev["type"] in CUTOFF_TYPES and not fl.get(ev["id"], {}).get("struck"):
+            break
         c = card(ev, fl)
         if c is not None:
             feed.append(c)
