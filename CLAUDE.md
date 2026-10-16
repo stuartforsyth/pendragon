@@ -30,7 +30,7 @@ symlink** to the user's ttrpg-parser project
 owns the corpus, its format (`CONVENTIONS.md` there), the extraction skills
 (`ttrpgextract`, `ttrpgvalidate`) and the index builder. **Never write to
 `rules_corpus/` or anywhere under `/home/stuart/code/ttrpg-parser/`** — read
-only. The app reads `rules_corpus/index.jsonl` (`web/rules_index.py`).
+only, with one exception: the **issue queue** below. The app reads `rules_corpus/index.jsonl` (`web/rules_index.py`).
 
 When you need to clarify, confirm, or apply a Pendragon rule (in code, in answers,
 or when designing a feature):
@@ -50,9 +50,16 @@ or when designing a feature):
 3. **Do not answer Pendragon rules from memory** when the corpus or a PDF can
    settle it — cite the corpus `id`/pages.
 
-If a PDF lookup turns up a rule the corpus lacks or gets wrong, answer from the
-PDF and **tell the user** so they can extract/fix it in ttrpg-parser — don't
-copy it into this repo.
+### Reporting corpus problems — the issue queue
+
+If the corpus is wrong, missing a rule, self-contradictory, or malformed, answer
+the question from the PDF, then **file an issue** so ttrpg-parser's next
+`/ttrpgextract` run fixes it in the master corpus: add one new file
+`/home/stuart/code/ttrpg-parser/Pendragon by Chaosium/rules-issues/YYYY-MM-DD-slug.md`
+in the format in that folder's `README.md` (`reported-by: pendragon-names`;
+check existing open issues first to avoid duplicates). That new file is the
+*only* thing you may write there — never edit the corpus or other issue files,
+and never copy a fix into this repo.
 
 ## Data files
 
