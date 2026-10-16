@@ -439,7 +439,10 @@ class Rules:
                 return desc, npos, nneg, special
         return "Plain", 1, 1, None
 
-    def _draw_features(self, polarity, n):
+    # Facial-hair features only make sense for men.
+    _MALE_ONLY = re.compile(r"beard|mustache|moustache|whisker|stubble", re.I)
+
+    def _draw_features(self, polarity, n, gender=None):
         """Return up to n (category, feature) pairs, preferring distinct categories.
 
         Eye-colour features (e.g. 'blue eyes') are skipped: eye colour is rolled
@@ -448,7 +451,8 @@ class Rules:
         if n <= 0:
             return []
         buckets = [(cat, feat) for cat, d in self.features.items()
-                   for feat in d.get(polarity, []) if "eyes" not in feat.lower()]
+                   for feat in d.get(polarity, []) if "eyes" not in feat.lower()
+                   and not (gender == "Female" and self._MALE_ONLY.search(feat))]
         random.shuffle(buckets)
         chosen, used_cat, seen = [], set(), set()
         for cat, feat in buckets:  # prefer distinct categories first
@@ -467,14 +471,14 @@ class Rules:
         return chosen[:n]
 
     def roll_appearance(self, app, siz=None, str_=None, culture="", religion="",
-                        include_negative=True):
+                        include_negative=True, gender=None):
         """Roll a full appearance. ``include_negative=False`` omits unflattering
         features and battle scars (e.g. for a refined noble) while keeping the
         flattering details and cultural tattoos."""
         desc, npos, nneg, special = self._app_row(app)
-        details = list(self._draw_features("positive", npos))
+        details = list(self._draw_features("positive", npos, gender))
         if include_negative:
-            details += self._draw_features("negative", nneg)
+            details += self._draw_features("negative", nneg, gender)
         if special:
             details.append((None, special.lower()))
         # Period marks (scars, and woad/animal/deity tattoos for pagans/Saxons)

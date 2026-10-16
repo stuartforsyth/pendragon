@@ -314,6 +314,17 @@ def _int(v, default=0):
         return default
 
 
+_DICE = re.compile(r"\d*[dD]\d+(\s*[+-]\s*\d+)?")
+
+
+def _characteristic(v):
+    """A whole number, or a dice expression kept as-is — battle-card foes list
+    e.g. APP '1D6+5', rolled per combatant when the encounter is launched."""
+    if isinstance(v, str) and _DICE.fullmatch(v.strip()):
+        return v.strip().upper()
+    return _int(v, 0)
+
+
 def finalise(draft, rules, combat):
     """Turn an editor draft into a saved adversary stat block.
 
@@ -329,11 +340,12 @@ def finalise(draft, rules, combat):
     adv["tier"] = adv["tier"] or "trained"
     adv["promotion_title"] = str(draft.get("promotion_title") or "").strip() or "Champion"
     ch = draft.get("characteristics", {})
-    adv["characteristics"] = {k: _int(ch.get(k), 0) for k in CHAR_ORDER}
+    adv["characteristics"] = {k: _characteristic(ch.get(k)) for k in CHAR_ORDER}
+    numeric = {k: v if isinstance(v, int) else 0 for k, v in adv["characteristics"].items()}
     other_in = draft.get("other", {}) or {}
     health_in = draft.get("health", {}) or {}
     if category == "human":
-        d = rules.derive_stats(adv["characteristics"])
+        d = rules.derive_stats(numeric)
         adv["health"] = {"hit_points": d["Hit Points"], "knockdown": d["Knockdown"],
                          "major_wound": d["Major Wound"], "unconscious": d["Unconscious"]}
         arm = draft.get("armour", {}) or {}

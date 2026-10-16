@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Table — Pendragon</title>
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=UnifrakturMaguntia&display=swap">
+  <link rel="stylesheet" href="/static/css/table.css">
+</head>
+<body>
+  <div class="stage">
+    <header class="banner">
+      <svg class="device" viewBox="0 0 54 62" aria-hidden="true">
+        <path d="M27 2 3 10v18c0 15 10 25 24 32 14-7 24-17 24-32V10Z" fill="#8e2219" stroke="#b08a36" stroke-width="2.5"/>
+        <path d="M27 6v50" stroke="#d2a645" stroke-width="1" opacity=".5"/>
+        <path d="M17 26c4-7 9-9 15-7l4-4 2 6c2 2 2 6 0 8l-6 2-4 8-2-6-6 2Z" fill="#d2a645"/>
+      </svg>
+      <div class="titles"><h1 id="title">Pendragon</h1><div class="rule"></div></div>
+      <div class="mode" id="mode"></div>
+    </header>
+    <main id="view"></main>
+  </div>
+  <div class="offline" id="offline">Reconnecting…</div>
+  <script type="module" src="/static/js/table.js"></script>
+</body>
+</html>

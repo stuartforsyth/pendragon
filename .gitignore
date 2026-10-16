@@ -17,3 +17,10 @@ tmp/
 
 # Python virtualenv
 .venv/
+
+# Web app: session files, the party/cast libraries (user content), run state
+sessions/
+data/party.json
+data/cast.json
+data/*.tmp
+.run/

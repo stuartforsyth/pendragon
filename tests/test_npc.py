@@ -35,3 +35,16 @@ def test_trait_pairs_balance(rules):
     a, b = rules.trait_pairs[0]
     out = normalise_traits(rules, {a: 15, b: 3}, {a: 15})
     assert out == {a: 15, b: 5}
+
+
+def test_women_never_get_facial_hair(rules):
+    import re
+    for _ in range(400):
+        a = rules.roll_appearance(18, gender="Female")
+        assert not any(re.search("beard|mustache|moustache", f, re.I) for f in a["features"])
+
+
+def test_finalise_keeps_dice_characteristics(rules):
+    adv = finalise({"name": "Conroi", "characteristics": {"SIZ": 12, "DEX": 10, "STR": 12,
+                    "CON": 12, "APP": "1d6+5"}}, rules, rules.combat)
+    assert adv["characteristics"]["APP"] == "1D6+5" and adv["health"]["hit_points"] > 0

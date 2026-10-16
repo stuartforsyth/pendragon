@@ -1,0 +1,21 @@
+.npc-options .opt-grid { display: grid; grid-template-columns: 150px 1.3fr 1.6fr 1.2fr; gap: 18px; }
+.npc-options .opt-group .label { margin-bottom: 7px; }
+@media (max-width: 1300px) { .npc-options .opt-grid { grid-template-columns: 1fr 1fr; } }
+
+.npc-layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 14px; margin-top: 14px; align-items: start; }
+@media (max-width: 1250px) { .npc-layout { grid-template-columns: 1fr; } }
+.npc-recent { position: sticky; top: 14px; max-height: calc(100vh - 110px); overflow: auto; }
+.npc-recent .nm-line { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.npc-card { padding: 22px 24px; }
+.npc-top { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; }
+.npc-card .readaloud { margin-bottom: 4px; }
+.npc-card .derived { margin-top: 8px; color: var(--ink-2); font-size: 14px; }
+.npc-card .derived b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.trait-pair { padding: 2px 0; }
+.lore { margin: 0; padding-left: 18px; }
+.ideals { display: flex; flex-direction: column; gap: 3px; }
+.ideal .mark { display: inline-block; width: 18px; color: var(--gules); }
+.ideal.met .mark { color: var(--vert); }
+.linkish { color: var(--azure); cursor: pointer; text-decoration: underline dotted; }
+.faint-sheet .v { color: var(--ink-2); }

@@ -1,11 +1,49 @@
 # Pendragon GM Tools
 
-A Tkinter, stdlib-only desktop app for running *King Arthur Pendragon* (6th
-Edition, Chaosium). What started as a name generator has grown into a small
-GM toolkit: four tabs covering NPC generation, a live combat tracker, a
-stat-block/encounter editor, and a queryable rules corpus behind the scenes.
+A GM toolkit for running *King Arthur Pendragon* (6th Edition, Chaosium) at a
+virtual table. It runs as a small local **web app**: a dark GM console for you,
+and a separate parchment **Table screen** you share on Discord, where every
+roll, NPC, narration and battle plays out for the players. Everything that
+happens is recorded in a **session log**, saved as one file per session.
 
-![Tkinter](https://img.shields.io/badge/GUI-Tkinter-blue) ![Python 3](https://img.shields.io/badge/Python-3-green) ![stdlib only](https://img.shields.io/badge/dependencies-stdlib--only-lightgrey)
+![FastAPI](https://img.shields.io/badge/server-FastAPI-teal) ![Python 3](https://img.shields.io/badge/Python-3-green)
+
+## The web app
+
+```bash
+./launch.sh      # first run sets up .venv; opens http://127.0.0.1:8020/
+./stop.sh
+```
+
+(Windows: `launch.bat`. Dev mode with auto-reload: `.venv/bin/python -m web --reload`.)
+
+- **GM console** (`/`) — a tool rail (NPCs, Cast, Combat, Party,
+  Adversaries, Encounters, Rules, Sessions), the active tool, and the live
+  **session log** with a **dice tray** docked beneath it: free notation
+  (`3d6+2`), Pendragon checks (critical / fumble / critical bonus),
+  opposed rolls, **Narrate** (read-aloud text, scene titles, images) and
+  private **Notes**.
+- **Table screen** (`/table`) — press **Open Table** and share that window
+  with Discord's Go Live. It shows the newest event as an illuminated
+  spotlight (dice medallions, read-aloud prose, NPC introductions, rules) and
+  switches to a heraldic **battle board** while a combat runs. Players see
+  foes' wound states (Unhurt → Wounded → Badly wounded…), never their numbers.
+- **Secret rolls** — toggle *Secret* in the dice tray: the Table shows a wax
+  seal; reveal it later from the log.
+- **Undo** — the log is append-only; *strike* any entry to undo it (combat
+  state is rebuilt by replaying the events that still count).
+- **Sessions** — *Start session* records everything to
+  `sessions/<date>-<name>.json`, autosaved after every event; reopen one to
+  carry on later; export a **Chronicle** as Markdown or a web page.
+- **Party** — the player knights join every combat automatically and set
+  encounter scaling. **Cast** — NPCs kept across sessions with private notes
+  (import old desktop roster files there).
+
+Design decisions and architecture: [`docs/web-app.md`](docs/web-app.md).
+
+The original Tkinter desktop app (`./pendragon.py`) still runs on the same
+`core/` logic during the transition; the sections below describe the
+features both share.
 
 ## The four tabs
 
@@ -159,19 +197,16 @@ the detailed design of these two tabs.
 
 ## Requirements
 
-- Python 3 with Tkinter (`tkinter` ships with most Python installs; on some
-  distros install `python3-tk`).
-- A running graphical (X11/Wayland) session.
+- Python 3. `launch.sh` installs the web app's packages (`requirements.txt`:
+  FastAPI, uvicorn, Jinja2, pypdf, markdown-it-py, PyYAML) into `.venv`.
 - The `Names by Culture.md` data file (included).
-- Optional: `pypdf` (`pip install pypdf`) to export a filled Cymric character
-  sheet PDF. Optional: `PyYAML` (`requirements.txt`) only if you're
-  rebuilding the rules-corpus search index (`build_rules_index.py`) — not
-  needed to run the app itself.
+- The character-sheet PDF export needs the fillable sheet in `rulebooks/`.
+- Tests: `.venv/bin/pip install -r requirements-dev.txt && .venv/bin/python -m pytest`.
 
-## Usage
+## Desktop app (legacy)
 
-Run from the project folder so it can find the data files (or use
-`run.sh` / `run.bat`, which `cd` there for you):
+The Tk app needs Tkinter (`python3-tk` on some distros) and a graphical
+session. Run from the project folder (or use `run.sh` / `run.bat`):
 
 ```bash
 ./pendragon.py
@@ -225,6 +260,9 @@ automatically.
   numbers), for Q&A/browsing/RAG. `data/rules_index.jsonl` is its generated
   full-text index — regenerate with `python build_rules_index.py`, never
   hand-edit it.
+- `sessions/` (git-ignored) — one JSON file per play session: the full event
+  log. `data/party.json` and `data/cast.json` (git-ignored) hold the player
+  knights and kept NPCs.
 - [`rules/`](rules/) — the older human-readable Markdown docs the generator
   used to parse directly; kept as reference, no longer read by the app
   (superseded by `data/rules.json` and `rules_corpus/`).

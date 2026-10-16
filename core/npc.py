@@ -109,7 +109,8 @@ class Generator:
         r["appearance"] = self.rules.roll_appearance(
             stats["APP"], stats["SIZ"], stats["STR"],
             r.get("culture", ""), r.get("religion", ""),
-            include_negative=r.get("include_negative_appearance", True))
+            include_negative=r.get("include_negative_appearance", True),
+            gender=r.get("gender"))
 
     def _resolve_class(self, gender, requested):
         """Reconcile gender and a requested class before anything else.
@@ -286,7 +287,8 @@ class Generator:
             r["appearance"] = self.rules.roll_appearance(
                 s["APP"], s["SIZ"], s["STR"],
                 r.get("culture", ""), r.get("religion", ""),
-                include_negative=r.get("include_negative_appearance", True))
+                include_negative=r.get("include_negative_appearance", True),
+            gender=r.get("gender"))
         elif field == "Personality Traits":
             r["traits"] = self.rules.roll_traits(r["religion"])
             r["manner"] = self.rules.compose_manner(r["traits"])
