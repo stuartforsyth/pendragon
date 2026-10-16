@@ -76,3 +76,12 @@ def test_sessions_list_and_resume_switches(client):
     second = next(s for s in listing["sessions"] if s["id"] == b["id"])
     assert second["ended"]
     assert client.post("/api/session/resume", json={"id": "../etc"}).status_code == 404
+
+
+def test_pin_rules(client):
+    rid = ok(client.get("/api/rules", params={"q": "knockdown"}))["results"][0]["id"]
+    assert ok(client.post(f"/api/rules/{rid}/pin", json={"pinned": True}))["pinned"]
+    assert [p["id"] for p in ok(client.get("/api/rules/pins"))["pins"]] == [rid]
+    assert not ok(client.post(f"/api/rules/{rid}/pin", json={"pinned": False}))["pinned"]
+    assert ok(client.get("/api/rules/pins"))["pins"] == []
+    assert client.post("/api/rules/nope/pin", json={}).status_code == 404

@@ -16,6 +16,7 @@ export default {
     let results = [];
     let sel = -1;
     let current = null;
+    let pins = [];
 
     const q = h("input", { class: "input rules-q", placeholder: "Search the rules — e.g. major wound, knockdown, ransom…  (press / )",
       oninput: debounce(() => search(), 180),
@@ -28,6 +29,7 @@ export default {
     const list = h("div", { class: "rules-list list-scroll" });
     const reader = h("div", { class: "rules-reader" });
     const count = h("div", { class: "faint small", style: { margin: "8px 2px 6px" } });
+    const pinBox = h("div", { class: "rule-pins" });
 
     clear(el,
       h("div", { class: "tool-head" },
@@ -35,7 +37,7 @@ export default {
           h("p", { class: "lede" }, "The rules corpus — Core Rulebook and GM Handbook — at your fingertips. ",
             h("span", { class: "faint" }, "↑↓ to move, Enter to read, Ctrl+Enter to show on the Table.")))),
       h("div", { class: "split rules-split" },
-        h("div", { class: "panel rules-side" }, h("div", { class: "rules-search" }, icon("search"), q), count, list),
+        h("div", { class: "panel rules-side" }, pinBox, h("div", { class: "rules-search" }, icon("search"), q), count, list),
         reader));
 
     document.addEventListener("keydown", (e) => {
@@ -94,11 +96,31 @@ export default {
     async function open(id) {
       current = (await api(`/api/rules/${enc(id)}`)).rule;
       list.querySelectorAll(".rule-item").forEach((x) => x.classList.toggle("reading", results[Number(x.dataset.i)]?.id === id));
+      pinBox.querySelectorAll(".pin-item").forEach((x, i) => x.classList.toggle("reading", pins[i]?.id === id));
       renderReader();
     }
 
-    async function showOnTable() {
-      const id = current?.id || results[sel]?.id;
+    // Pinned rules: the ones you expect to need this game, one click away.
+    async function loadPins() {
+      pins = (await api("/api/rules/pins")).pins;
+      clear(pinBox, pins.length ? [
+        h("div", { class: "label" }, icon("pin"), " Pinned"),
+        pins.map((p) => h("div", { class: `list-item pin-item ${current?.id === p.id ? "reading" : ""}`, onclick: () => open(p.id) },
+          h("span", { class: "rule-title", style: { minWidth: 0, flex: 1 } }, p.title),
+          h("button", { class: "btn ghost sm icon", title: "Show on Table",
+            onclick: (e) => { e.stopPropagation(); showOnTable(p.id); } }, icon("present")))),
+      ] : null);
+    }
+
+    async function togglePin() {
+      const pinned = !pins.some((p) => p.id === current.id);
+      await post(`/api/rules/${enc(current.id)}/pin`, { pinned });
+      await loadPins();
+      renderReader();
+    }
+
+    async function showOnTable(pinnedId) {
+      const id = (typeof pinnedId === "string" && pinnedId) || current?.id || results[sel]?.id;
       if (!id) return;
       await post(`/api/rules/${enc(id)}/show`);
       toast("Shown on the Table", "ok");
@@ -123,13 +145,16 @@ export default {
               (r.tags || []).slice(0, 8).map((t) => h("button", { class: "tag rule-tag", title: `Search “${t}”`,
                 onclick: () => { q.value = t.replace(/-/g, " "); search(); } }, t)))),
           h("div", { class: "toolbar" },
-            h("button", { class: "btn primary", onclick: showOnTable }, icon("present"), "Show on Table"),
+            h("button", { class: "btn primary", onclick: () => showOnTable() }, icon("present"), "Show on Table"),
+            h("button", { class: `btn ${pins.some((p) => p.id === r.id) ? "on" : ""}`, title: "Pin for quick access",
+              onclick: togglePin }, icon("pin"), pins.some((p) => p.id === r.id) ? "Pinned" : "Pin"),
             h("button", { class: "btn icon", title: "Copy citation", onclick: () => copyText(cite, "Citation copied") }, icon("copy")))),
         body));
       el.closest(".main")?.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     renderReader();
+    await loadPins();
     await search();
     return { show: () => q.focus() };
   },

@@ -43,3 +43,9 @@
 .rule-body th, .rule-body td { border: 1px solid var(--line-2); padding: 6px 10px; text-align: left; vertical-align: top; }
 .rule-body th { background: var(--panel-3); color: var(--or-bright); font-weight: 700; }
 .rule-body tr:nth-child(even) td { background: rgba(255, 255, 255, .02); }
+
+.rule-pins:not(:empty) { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.rule-pins .label { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; color: var(--or); }
+.rule-pins .label svg { width: 14px; height: 14px; }
+.pin-item { padding: 5px 8px; }
+.pin-item.reading { background: #2b2416; }

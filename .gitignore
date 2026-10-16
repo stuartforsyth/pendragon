@@ -22,5 +22,6 @@ tmp/
 sessions/
 data/party.json
 data/cast.json
+data/pinned_rules.json
 data/*.tmp
 .run/
