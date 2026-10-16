@@ -118,7 +118,7 @@ async function route() {
 // ------------------------------------------------------------------ session & log
 const KIND = (t) => t.startsWith("roll.") ? ["roll", "d20"]
   : t === "combat.check" ? ["roll", "d20"]
-  : t === "combat.blow" ? ["combat", "swords"]
+  : t === "combat.blow" || t === "combat.exchange" ? ["combat", "swords"]
   : t.startsWith("combat.") ? ["combat", "swords"]
   : t.startsWith("npc.") ? ["npc", "helm"]
   : t === "narrate" ? ["narrate", "feather"]

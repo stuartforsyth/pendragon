@@ -90,3 +90,18 @@ misses anything) and the combat view; the Table refetches `/api/table`.
   rolled. The wound is applied (Major/Mortal Wounds follow), knockdown is
   flagged (> Knockdown: DEX roll; > twice: automatic), and the whole
   breakdown is shown to the players. Strike the log entry to undo it.
+
+## Exchanges (Table 7.1)
+
+**Fight** on a combatant runs one combat round (`POST /api/combat/exchange`,
+`core.combat.resolve_exchange`, checked cell by cell against Core p.133 in
+`tests/test_exchange.py`). The app rolls for anyone with attacks; for a player
+knight the GM enters the skill (pre-filled from the Party sheet's values) and
+the player's d20. The four results on each side become: winner strikes the
+loser (+4D6 on a critical; the loser gets shield/parry only on a partial
+success, i.e. a lower success), a tie (equal successes, or critical vs
+critical — both strike, both get shield/parry, no +4D6), or both lose (nobody
+hurt). Fumblers drop a sword or break other weapons; swords break
+non-sword, non-dagger weapons on a tie, and any weapon when the loser fumbles
+and the sword-wielder criticals. Strikes by app-rolled weapons are applied
+at once; a knight's strike asks for the player's damage dice.

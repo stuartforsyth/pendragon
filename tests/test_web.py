@@ -208,3 +208,38 @@ def test_combat_rolls_are_never_secret(client):
     ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 0, "masked": True}))
     card = ok(client.get("/api/table"))["feed"][0]
     assert card["type"] == "roll.check" and "value" in card["data"]
+
+
+def test_exchange_foe_wins_strikes_automatically(client):
+    knight, foe = _start_with_knight(client)
+    foe_skill = foe["attacks"][0]["value"]
+    # knight fails (rolls 19 against 15); foe rolls 1 -> foe wins, knight gets armour only
+    r = ok(client.post("/api/combat/exchange", json={
+        "a": {"cid": foe["id"], "attack": 0, "roll": 1},
+        "b": {"cid": knight["id"], "skill": 15, "roll": 19, "weapon": "Sword"}}))
+    assert r["event"]["data"]["winner"] == "a" and len(r["blows"]) == 1 and not r["pending"]
+    b = r["blows"][0]["data"]["blow"]
+    assert b["shield_blocked"] == 0 and b["armour"] == 10 and not b["critical"]
+    assert foe_skill  # the foe's own skill was used
+
+
+def test_exchange_knight_wins_leaves_damage_pending(client):
+    knight, foe = _start_with_knight(client)
+    v = foe["attacks"][0]["value"]
+    r = ok(client.post("/api/combat/exchange", json={
+        "a": {"cid": foe["id"], "attack": 0, "roll": 1},
+        "b": {"cid": knight["id"], "skill": 18, "roll": 18, "weapon": "Sword"}}))   # knight critical
+    assert r["event"]["data"]["winner"] == "b" and not r["blows"]
+    p = r["pending"][0]
+    assert p["critical"] and p["shield"] == (1 <= v)   # foe's 1 succeeded -> partial -> shield
+    card = ok(client.get("/api/table"))["feed"][0]
+    assert card["type"] == "combat.exchange" and card["data"]["verdict"]
+
+
+def test_exchange_tie_both_strike(client):
+    knight, foe = _start_with_knight(client)
+    r = ok(client.post("/api/combat/exchange", json={
+        "a": {"cid": foe["id"], "attack": 0, "roll": 5},
+        "b": {"cid": knight["id"], "skill": 15, "roll": 5, "weapon": "Sword"}}))
+    assert len(r["blows"]) == 1 and len(r["pending"]) == 1
+    assert r["blows"][0]["data"]["blow"]["shield_blocked"] == 6 and r["pending"][0]["shield"]

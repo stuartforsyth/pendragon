@@ -117,9 +117,9 @@ export default {
         h("div", { class: "section-label" }, "The Foe"),
         h("div", { class: "cbt-list" }, foes.length ? foes.map(row) : h("div", { class: "empty" }, "No foes — add some.")),
         h("div", { class: "cbt-help faint small" },
-          "Click any blue value to roll it — characteristics, weapon skills, skills — and it goes to the log and the Table. ",
-          "Click a red damage value (or Hit on the target) to resolve a blow: normal or critical (+4D6), rebated, reckless, armour only or armour + shield/parry; ",
-          "the wound, Major/Mortal Wounds and knockdown are worked out and applied. For a knight's blow, enter the damage the player rolled. ",
+          "Fight runs one combat round per Table 7.1: the app rolls the foe, you enter the knight's skill and the player's d20, and it works out who strikes whom — ",
+          "with or without +4D6 and shield/parry — rolls and applies the foe's damage, and asks for the player's damage when the knight hits. ",
+          "Click any blue value to roll it on its own; click a red damage value or Hit for a single blow outside an exchange (missiles, ambushes). ",
           "Apply is for plain HP changes (healing, a fall). Mod: a situational modifier on every characteristic and skill roll (not damage). Strike any log entry to undo it."),
       ];
     }
@@ -187,8 +187,10 @@ export default {
             h("div", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`), h("span", { class: "faint small" }, " HP"),
               !isKnight ? h("span", { class: "faint small ws" }, ` · ${c.wound_state}`) : null),
             h("div", { class: "hp-bar" }, h("i", { style: { width: `${pct}%` } }))),
-          h("button", { class: "btn sm hit-btn", title: `Resolve a blow against ${c.display_name} — rolls damage, applies armour/shield, knockdown and wounds`,
-            onclick: () => blowDialog({ target: c }) }, icon("swords"), "Hit"),
+          h("button", { class: "btn sm fight-btn", title: `Fight a round: both sides roll, Table 7.1 decides who strikes whom`,
+            disabled: c.down, onclick: () => fightDialog(c) }, icon("swords"), "Fight"),
+          h("button", { class: "btn sm hit-btn", title: `Apply a single blow to ${c.display_name} (missiles, ambushes, anything outside an exchange)`,
+            onclick: () => blowDialog({ target: c }) }, "Hit"),
           hpIn,
           h("button", { class: "btn sm", title: "Apply a plain HP change (healing, a fall…)", onclick: () => applyHp(c, hpIn) }, "Apply"),
           h("div", { class: "cbt-mod" }, h("span", { class: "faint small" }, "Mod"), modIn),
@@ -225,6 +227,143 @@ export default {
     }
 
     const byName = (n) => cs.combatants.find((o) => o.display_name === n);
+
+    // ------------------------------------------------------------ the fight (exchange) dialog
+    // Core p.133: both combatants roll their modified Combat Skill; Table 7.1
+    // turns the pair of results into who strikes whom, with or without +4D6
+    // and shield/parry. The app rolls for anyone with attacks; for a player
+    // knight the GM enters the skill and the d20 the player rolled.
+    function outcomeOf(value, roll) {
+      if (!roll) return null;
+      if (value >= 20) return roll >= 20 - (value - 20) ? "critical" : "success";
+      if (roll === 20) return "fumble";
+      if (roll === value) return "critical";
+      return roll < value ? "success" : "failure";
+    }
+    const OUT = { critical: "Critical", success: "Success", failure: "Failure", fumble: "Fumble" };
+
+    async function fightDialog(c) {
+      const opp = byName(c.engaged_with) || (c.engaged_by?.length ? byName(c.engaged_by[0]) : null);
+      const side = (x) => {
+        const member = x?.party_id ? party.find((m) => m.id === x.party_id) : null;
+        const values = member?.values || {};
+        const guess = Object.keys(values).find((k) => weapons[k] || /sword|spear|lance|axe|mace|bow|dagger|hafted|charge/i.test(k)) || "";
+        return { cid: x?.id || "", attack: x?.attacks?.length ? 0 : null, roll: "", weapon: guess, skill: guess ? values[guess] : "" };
+      };
+      const st = { a: side(c), b: side(opp), rebated: false };
+      const find = (id) => cs.combatants.find((o) => o.id === id);
+      const living = cs.combatants.filter((o) => !o.down);
+
+      await modal("Fight — one combat round", (close) => {
+        const box = h("div", { class: "fight" });
+        const sidePanel = (k) => {
+          const sd = st[k], x = find(sd.cid);
+          const member = x?.party_id ? party.find((m) => m.id === x.party_id) : null;
+          const auto = x && sd.attack !== null && x.attacks?.length;
+          const mod = x?.modifier || 0;
+          const value = auto ? x.attacks[sd.attack].value + mod : (sd.skill === "" ? null : Number(sd.skill) + mod);
+          const out = value !== null && sd.roll !== "" ? outcomeOf(value, Number(sd.roll)) : null;
+          const valueEls = [];
+          if (x && auto) {
+            valueEls.push(h("label", { class: "field" }, h("span", {}, "Weapon"),
+              h("select", { class: "input", onchange: (e) => { sd.attack = e.target.value === "" ? null : Number(e.target.value); draw(); } },
+                x.attacks.map((a, i) => h("option", { value: i, selected: i === sd.attack }, `${a.weapon} ${skillDisplay(a.value)} — ${a.damage}`)),
+                h("option", { value: "", selected: sd.attack === null }, "Other (enter skill)"))));
+            valueEls.push(h("label", { class: "field" }, h("span", {}, "d20 roll"),
+              h("input", { class: "input", type: "number", min: 1, max: 20, placeholder: "app rolls", value: sd.roll,
+                oninput: (e) => { sd.roll = e.target.value; drawOutcome(); } })));
+          } else if (x) {
+            const names = Object.keys(member?.values || {});
+            valueEls.push(h("label", { class: "field" }, h("span", {}, "Weapon / skill"),
+              h("input", { class: "input", list: `fw-${k}`, value: sd.weapon, placeholder: "Sword",
+                onchange: (e) => { sd.weapon = e.target.value; if (member?.values?.[sd.weapon] != null) sd.skill = member.values[sd.weapon]; draw(); } }),
+              h("datalist", { id: `fw-${k}` }, [...names, ...Object.keys(weapons)].map((n) => h("option", { value: n })))));
+            valueEls.push(h("div", { class: "row" },
+              h("label", { class: "field", style: { flex: 1 } }, h("span", {}, "Skill"),
+                h("input", { class: "input", type: "number", value: sd.skill, placeholder: "16", oninput: (e) => { sd.skill = e.target.value; drawOutcome(); } })),
+              h("label", { class: "field", style: { flex: 1 } }, h("span", {}, "Player's d20"),
+                h("input", { class: "input", type: "number", min: 1, max: 20, value: sd.roll, placeholder: "1–20", oninput: (e) => { sd.roll = e.target.value; drawOutcome(); } }))));
+          }
+          const outEl = h("div", { class: `fight-out ${out ? "o-" + out : ""}` },
+            out ? `${OUT[out]} (${sd.roll} vs ${skillDisplay(value)})` : auto && sd.roll === "" ? `the app rolls d20 vs ${skillDisplay(value)}` : "");
+          outEl.dataset.side = k;
+          return h("div", { class: "panel fight-side" },
+            h("label", { class: "field" }, h("span", {}, k === "a" ? "This side" : "Opponent"),
+              h("select", { class: "input", onchange: (e) => { st[k] = side(find(e.target.value)); draw(); } },
+                h("option", { value: "" }, "— choose —"),
+                living.map((o) => h("option", { value: o.id, selected: o.id === sd.cid }, o.display_name)))),
+            ...valueEls,
+            mod ? h("div", { class: "faint small" }, `Situational modifier ${mod > 0 ? "+" : ""}${mod} applied`) : null,
+            outEl);
+        };
+        const drawOutcome = () => {
+          for (const k of ["a", "b"]) {
+            const el = box.querySelector(`.fight-out[data-side="${k}"]`);
+            if (!el) continue;
+            const sd = st[k], x = find(sd.cid);
+            const auto = x && sd.attack !== null && x.attacks?.length;
+            const value = auto ? x.attacks[sd.attack].value + (x.modifier || 0) : (sd.skill === "" ? null : Number(sd.skill) + (x?.modifier || 0));
+            const out = value !== null && sd.roll !== "" ? outcomeOf(value, Number(sd.roll)) : null;
+            el.className = `fight-out ${out ? "o-" + out : ""}`;
+            el.textContent = out ? `${OUT[out]} (${sd.roll} vs ${skillDisplay(value)})` : auto && sd.roll === "" ? `the app rolls d20 vs ${skillDisplay(value)}` : "";
+          }
+        };
+        const draw = () => clear(box,
+          h("div", { class: "fight-grid" }, sidePanel("a"), h("div", { class: "fight-vs" }, "⚔"), sidePanel("b")),
+          h("label", { class: "check", style: { marginTop: "12px" } }, h("input", { type: "checkbox", checked: st.rebated, onchange: (e) => { st.rebated = e.target.checked; } }),
+            "Rebated weapons (tournament) — damage halved after any +4D6; knockdown uses the full roll"),
+          h("div", { class: "faint small", style: { marginTop: "8px" } },
+            "Table 7.1: the higher success wins; a lower success is a partial success (takes damage with shield/parry); equal rolls tie (both strike, both get shield/parry); ",
+            "a critical beats any success (+4D6); critical vs critical is a tie; both failing means nobody is hurt; fumblers drop or break their weapon."),
+          h("div", { class: "foot" }, h("button", { class: "btn ghost", onclick: () => close() }, "Cancel"),
+            h("button", { class: "btn primary", onclick: resolve }, icon("swords"), "Resolve")));
+        const resolve = async () => {
+          const spec = (k) => {
+            const sd = st[k], x = find(sd.cid);
+            const o = { cid: sd.cid, roll: sd.roll === "" ? null : Number(sd.roll) };
+            if (x?.attacks?.length && sd.attack !== null) o.attack = sd.attack; else { o.skill = sd.skill; o.weapon = sd.weapon; }
+            return o;
+          };
+          if (!st.a.cid || !st.b.cid) return toast("Choose both combatants", "err");
+          const r = await post("/api/combat/exchange", { a: spec("a"), b: spec("b"), rebated: st.rebated });
+          ctx.showLastRoll(r.blows.at(-1) || r.event);
+          showResult(r);
+        };
+        const showResult = (r) => {
+          const d = r.event.data;
+          const pend = r.pending.map((p) => {
+            const inp = h("input", { class: "input", type: "number", min: 0, placeholder: "damage rolled" });
+            const btn = h("button", { class: "btn primary sm", onclick: async () => {
+              if (inp.value === "") return inp.focus();
+              const res = await post("/api/combat/blow", { attacker: p.attacker, target: p.target, damage: inp.value,
+                critical: p.critical, shield: p.shield, rebated: p.rebated, weapon: p.weapon });
+              ctx.showLastRoll(res.event);
+              btn.replaceWith(h("span", { class: "tag vert" }, `${res.event.data.blow.wound} damage applied`));
+              inp.disabled = true;
+            } }, "Apply");
+            inp.addEventListener("keydown", (e) => e.key === "Enter" && btn.click());
+            setTimeout(() => inp.focus(), 0);
+            return h("div", { class: "panel pending" },
+              h("b", {}, `${p.attacker_name} strikes ${p.target_name}`),
+              h("div", { class: "faint small" }, (p.critical ? "CRITICAL — enter the normal damage the player rolled; the app adds +4D6. " : "Enter the damage the player rolled. ")
+                + (p.shield ? `${p.target_name} gets armour + shield/parry.` : `${p.target_name} gets armour only.`)),
+              h("div", { class: "row", style: { marginTop: "6px" } }, inp, btn));
+          });
+          clear(box,
+            h("div", { class: "fight-result" },
+              h("div", { class: "fight-grid" },
+                ...["a", "b"].map((k) => h("div", { class: `panel fight-side ${d.winner === k ? "won" : ""}` },
+                  h("b", {}, d[k].name), h("div", {}, `${d[k].weapon} ${d[k].shown} · rolled `, h("b", {}, d[k].roll)),
+                  h("div", { class: `fight-out o-${d[k].outcome}` }, `${OUT[d[k].outcome]} — ${d[k].result}`))).flatMap((el, i) => i ? [h("div", { class: "fight-vs" }, "⚔"), el] : [el])),
+              h("div", { class: "verdict-line" }, d.verdict),
+              r.blows.map((b) => h("div", { class: "panel done-blow" }, h("b", {}, b.title), h("div", { class: "small" }, b.text))),
+              pend),
+            h("div", { class: "foot" }, h("button", { class: "btn primary", onclick: () => close() }, "Done")));
+        };
+        draw();
+        return box;
+      }, { wide: true });
+    }
 
     // ------------------------------------------------------------ the blow dialog
     // Table 7.1: the winner rolls damage (+4D6 on a critical); the loser's

@@ -19,6 +19,7 @@ FEED_LIMIT = 40
 _SAFE_DATA = {
     "roll.dice": ("expr", "terms", "total", "label"),
     "roll.check": ("label", "outcome", "roll", "kind", "actor", "shown", "value"),
+    "combat.exchange": ("a", "b", "winner", "strikes", "weapons", "verdict"),
     "combat.blow": ("attacker", "weapon", "target", "blow", "breakdown", "major", "mortal"),
     "roll.opposed": ("a", "b", "winner"),
     "roll.damage": ("label", "total", "critical", "rebated", "actor", "expr", "breakdown"),

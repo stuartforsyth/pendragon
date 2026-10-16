@@ -5,8 +5,8 @@ the Table that never shows a foe's numbers), and records it."""
 from fastapi import APIRouter, Request
 
 from core.combat import (CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_breakdown,
-                         resolve_blow, roll_ransom, surrender_check)
-from core.dice import NotationError, roll_notation
+                         resolve_blow, resolve_exchange, roll_ransom, surrender_check)
+from core.dice import NotationError, roll_notation, skill_display
 from core.encounter_def import to_editable
 from web.routes.common import bad, st, to_int
 from web.routes.rolls import record_check, record_damage
@@ -361,6 +361,10 @@ async def blow(request: Request, body: dict):
     critical/reckless dice, rebating, armour and shield/parry are applied and
     the wound lands on the target. Every number is shown to the players."""
     state, cs = _active(request)
+    return {"event": record_blow(state, cs, body)}
+
+
+def record_blow(state, cs, body):
     attacker = _combatant(cs, body["attacker"]) if body.get("attacker") else None
     target = _combatant(cs, body["target"]) if body.get("target") else None
     weapon, expr = (body.get("weapon") or "").strip(), None
@@ -440,5 +444,100 @@ async def blow(request: Request, body: dict):
             "blow": b, "breakdown": breakdown, "shield_broken": b["shield_broken"],
             "major": bool(target and "Major" in msg), "mortal": bool(target and "Mortal" in msg),
             "table_text": table}
-    ev = state.record("combat.blow", text, title=title, data=data)
-    return {"event": ev}
+    return state.record("combat.blow", text, title=title, data=data)
+
+
+# -- an exchange: both sides roll, Table 7.1 decides who strikes whom --------
+
+def _side(state, cs, spec, label):
+    """A side's combatant, weapon, effective skill and (optional) die roll.
+    With an ``attack`` index the app knows the skill; otherwise (a player
+    knight) the GM enters the ``skill`` value the player rolled against."""
+    c = _combatant(cs, spec.get("cid"))
+    atk, weapon = None, (spec.get("weapon") or "").strip()
+    if spec.get("attack") not in (None, ""):
+        try:
+            atk = c.attacks[int(spec["attack"])]
+        except (TypeError, ValueError, IndexError):
+            bad(f"Unknown attack for {c.display_name}")
+        weapon, base = atk["weapon"], atk["value"]
+    else:
+        if spec.get("skill") in (None, ""):
+            bad(f"Enter {c.display_name}'s skill value")
+        base = to_int(spec["skill"], f"{label} skill")
+    roll = spec.get("roll")
+    if roll not in (None, ""):
+        roll = to_int(roll, f"{label} roll")
+        if not 1 <= roll <= 20:
+            bad("A d20 roll is 1–20")
+    else:
+        roll = None
+    return {"c": c, "atk": atk, "weapon": weapon or "weapon", "base": base,
+            "value": base + c.modifier, "roll": roll}
+
+
+@router.post("/api/combat/exchange")
+async def exchange(request: Request, body: dict):
+    """Resolve one melee exchange per Table 7.1 (Core p.133).
+
+    Each side either uses one of its attacks (the app rolls the d20 unless a
+    roll is given) or — for a player knight — the GM enters the skill value
+    and the d20 the player rolled. The result is logged; every strike whose
+    damage the app can roll is resolved at once (core.combat.resolve_blow),
+    and strikes needing a player's damage dice come back as ``pending``.
+    """
+    state, cs = _active(request)
+    A = _side(state, cs, body.get("a") or {}, "A")
+    B = _side(state, cs, body.get("b") or {}, "B")
+    if A["c"].id == B["c"].id:
+        bad("A combatant can't fight themselves")
+    wd = state.combat_data.get("weapons", {})
+    ex = resolve_exchange(A["value"], B["value"], A["roll"], B["roll"],
+                          (A["weapon"], wd.get(A["weapon"], {})), (B["weapon"], wd.get(B["weapon"], {})))
+    sides = {"a": A, "b": B}
+
+    def part(k):
+        s, r = sides[k], ex[k]
+        mod = f" {s['c'].modifier:+d}" if s["c"].modifier else ""
+        return (f"{s['c'].display_name} ({s['weapon']} {skill_display(s['base'])}{mod}) "
+                f"rolls {r['roll']} — {r['outcome'].upper()}")
+
+    if ex["winner"]:
+        w, l = ex["winner"], "b" if ex["winner"] == "a" else "a"
+        st = ex["strikes"][0]
+        verdict = (f"{sides[w]['c'].display_name} WINS"
+                   + (" with a CRITICAL (+4D6)" if st["critical"] else "")
+                   + f"; {sides[l]['c'].display_name} "
+                   + ("gets shield/parry (partial success)" if st["shield"] else "gets armour only"))
+    elif ex["a"]["result"] == "tie":
+        verdict = "TIE — both strike; each gets armour + shield/parry"
+    else:
+        verdict = "both lose — nobody is hurt"
+    for wpn in ex["weapons"]:
+        verdict += f"; {sides[wpn['side']]['c'].display_name} {wpn['what']} their {wpn['weapon']}"
+    text = f"{part('a')} vs {part('b')} → {verdict}"
+    for k in ("a", "b"):
+        ex[k].update(name=sides[k]["c"].display_name, weapon=sides[k]["weapon"],
+                     value=sides[k]["value"], shown=skill_display(sides[k]["value"]))
+    ev = state.record("combat.exchange", text,
+                      title=f"{A['c'].display_name} vs {B['c'].display_name}",
+                      data={"a": ex["a"], "b": ex["b"], "winner": ex["winner"],
+                            "strikes": ex["strikes"], "weapons": ex["weapons"],
+                            "verdict": verdict, "cids": [A["c"].id, B["c"].id]})
+
+    blows, pending = [], []
+    for strike in ex["strikes"]:
+        s = sides[strike["by"]]
+        t = sides["b" if strike["by"] == "a" else "a"]
+        auto = s["atk"] is not None and any(ch.isdigit() for ch in s["atk"]["damage"])
+        req = {"attacker": s["c"].id, "target": t["c"].id, "critical": strike["critical"],
+               "shield": strike["shield"], "rebated": bool(body.get("rebated")),
+               "weapon": s["weapon"]}
+        if auto:
+            req["attack"] = int((body.get(strike["by"]) or {}).get("attack"))
+            cs = state.combat_state()           # earlier blows this exchange count
+            blows.append(record_blow(state, cs, req))
+        else:
+            pending.append({**req, "attacker_name": s["c"].display_name,
+                            "target_name": t["c"].display_name})
+    return {"event": ev, "blows": blows, "pending": pending}

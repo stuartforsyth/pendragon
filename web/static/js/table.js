@@ -132,6 +132,16 @@ function hero(c, fresh) {
       h("div", { class: "blowsteps" }, steps.join("  ·  ")),
       outcome || extras.length ? h("div", { class: "blowfx" }, [outcome, ...extras].filter(Boolean).join("  ·  ")) : null);
   }
+  if (t === "combat.exchange" && d.a) {
+    const side = (k) => { const s = d[k]; return h("div", { class: `side ${d.winner === k ? "win" : d.winner ? "lose" : ""}` },
+      h("div", { class: "nm" }, s.name), h("div", { class: "res" }, `${s.weapon} ${s.shown}`),
+      h("div", { class: "rl" }, s.roll), h("div", { class: "res" }, OUT[s.outcome])); };
+    const banner = d.winner ? `${d[d.winner].name} wins` : d.a.result === "tie" ? "Both strike!" : "Both miss";
+    return h("div", { class: "hero" }, h("div", { class: "kicker" }, "The exchange"),
+      h("div", { class: "opposed" }, side("a"), h("div", { class: "mid" }, "⚔"), side("b")),
+      h("div", { class: "verdict" }, h("span", { class: `ribbon ${d.winner && d.strikes?.[0]?.critical ? "critical" : d.winner ? "success" : "failure"}` }, banner)),
+      h("p", { class: "linehero", style: { fontSize: "22px", marginTop: "14px" } }, d.verdict));
+  }
   if (t === "roll.opposed" && d.a) {
     const side = (s) => h("div", { class: `side ${s.result === "win" ? "win" : s.result === "loss" ? "lose" : ""}` },
       h("div", { class: "nm" }, s.label), h("div", { class: "rl" }, s.roll),
@@ -154,7 +164,7 @@ function hero(c, fresh) {
 }
 
 // ---------------------------------------------------------------- mini cards
-const MINI_ICON = (t) => t === "combat.blow" ? "swords" : t.startsWith("roll.") || t === "combat.check" ? "d20" : t === "sealed" ? "lock"
+const MINI_ICON = (t) => t === "combat.blow" || t === "combat.exchange" ? "swords" : t.startsWith("roll.") || t === "combat.check" ? "d20" : t === "sealed" ? "lock"
   : t.startsWith("combat.") ? "swords" : t.startsWith("npc.") ? "helm" : t === "narrate" ? "feather"
   : t === "rule.shown" ? "book" : t === "party.hp" ? "heart" : "scroll";
 
@@ -163,6 +173,7 @@ function mini(c) {
   let res = null;
   if (c.type === "roll.check" && d.outcome) res = h("span", { class: "res", style: { color: { critical: "#b08a36", success: "#2f6b3e", failure: "#8e2219", fumble: "#1b1612" }[d.outcome] } }, `${d.roll} ${OUT[d.outcome]}`);
   if (c.type === "roll.dice" || c.type === "roll.damage") res = h("span", { class: "res" }, d.total);
+  if (c.type === "combat.exchange" && d.verdict) text = d.verdict;
   if (c.type === "combat.blow" && d.blow) res = h("span", { class: "res", style: { color: "#8e2219" } }, `${d.blow.wound} dmg`);
   let text = c.text;
   if (c.type.startsWith("npc.") && d.npc) text = d.npc.subtitle;
@@ -214,12 +225,12 @@ function battle(p) {
   if (!cs) return chronicle(p);
   const knights = cs.combatants.filter((c) => c.side === "party");
   const foes = cs.combatants.filter((c) => c.side !== "party");
-  const latestRoll = p.feed.find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow");
+  const latestRoll = p.feed.find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow" || c.type === "combat.exchange");
   const others = p.feed.filter((c) => c !== latestRoll).slice(0, 7);
   let latest = null;
   if (latestRoll) {
     const d = latestRoll.data || {};
-    const n = latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? d.blow?.wound
+    const n = latestRoll.type === "combat.exchange" ? "⚔" : latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? d.blow?.wound
       : d.total ?? (latestRoll.type === "sealed" ? "?" : d.roll ?? "");
     const num = h("div", { class: "bign" }, n);
     if (latestRoll.id !== last.heroId && typeof n === "number") tumble(num, n);
@@ -228,6 +239,7 @@ function battle(p) {
       h("div", { class: "rollline" }, num, h("div", { style: { minWidth: 0 } },
         h("div", { class: "lt" }, latestRoll.title || (latestRoll.type === "sealed" ? "A secret roll" : "Roll")),
         d.outcome ? [h("span", { class: `ribbon ${d.outcome}` }, OUT[d.outcome]), d.shown ? h("div", { class: "lx" }, `against ${d.shown}`) : null]
+          : latestRoll.type === "combat.exchange" ? h("div", { class: "lx" }, `${d.a.name} ${d.a.roll} ${OUT[d.a.outcome]} vs ${d.b.name} ${d.b.roll} ${OUT[d.b.outcome]} — ${d.verdict}`)
           : latestRoll.type === "combat.blow" ? h("div", { class: "lx" }, `${d.target ? "on " + d.target + " · " : ""}${d.blow.full} rolled${d.blow.rebated ? ", rebated" : ""}${d.blow.critical ? " · CRITICAL" : ""}${d.mortal ? " · Slain!" : d.major ? " · Major Wound!" : ""}${d.blow.knockdown === "automatic" ? " · Knocked down!" : d.blow.knockdown === "check" ? " · Knockdown check!" : ""}`)
           : h("div", { class: "lx" }, latestRoll.text))));
   }
