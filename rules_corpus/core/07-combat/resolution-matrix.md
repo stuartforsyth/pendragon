@@ -3,7 +3,7 @@ id: core.combat.resolution-matrix
 system: Pendragon 6th Edition
 book: core
 chapter: "7 — Combat"
-pages: [133]
+pages: [132, 133]
 tags: [combat, resolution, table, opposed, critical, fumble, damage]
 title: "Table 7.1 — Combat Action Resolution Results"
 see_also: [core.combat.combat-round, core.combat.winners-outcome, core.combat.protection]
@@ -18,5 +18,13 @@ Both combatants roll their modified Combat Skill (opposed). Cross-reference the 
 | **Partial** | Opp wins: char suffers +4D6 − Armor + Shield/Parry | Opp wins: char suffers Damage − Armor + Shield/Parry | n/a | n/a | n/a |
 | **Fail** | Opp wins: char suffers +4D6 − Armor (no S/P) | Opp wins: char suffers Damage − Armor (no S/P) | n/a | Both lose: neither suffers Damage | Both lose: neither suffers Damage; **opp drops/breaks weapon** |
 | **Fumble** | Opp wins: char suffers +4D6 − Armor (no S/P) **& char drops/breaks weapon** | Opp wins: char suffers Damage − Armor (no S/P) **& char drops/breaks weapon** | n/a | Both lose: neither suffers Damage; **char drops/breaks weapon** | Both lose: neither suffers Damage; **both drop/break weapon** |
+
+### Reading the table
+
+- **Success vs success** is decided by the rolls (core.game-system.resolution): the **higher** successful roll wins and the lower one is a **Partial Success** (it still gets Shield/Parry Protection); **equal** rolls are a **Tie** — both strike, each subtracting Armor + Shield/Parry.
+- A **critical beats any non-critical** success: the other side's success counts as a Partial Success (Shield/Parry still applies) and the winner adds +4D6.
+- **Critical vs critical** is a Tie; the cell gives "both suffer Damage minus Armor and Shield/Parry" with no +4D6 (all criticals are equal and cancel).
+- Where one side **fails or fumbles** and the other succeeds, the loser gets **no** Shield/Parry Protection; a fumbling loser also drops/breaks their weapon.
+- If **both fail**, nobody takes damage; any fumbler still drops/breaks their weapon (both, if both fumbled).
 
 The winner then resolves **Step Three: Winner's Outcome** — rolling Damage dice equal to their Damage Characteristic (a critical adds +4D6).
