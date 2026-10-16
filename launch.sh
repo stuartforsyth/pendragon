@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Launch the Pendragon GM web app: sets up the venv (first run only), starts the
 # server detached on http://127.0.0.1:8020 and opens the GM console.
-# Stop it with ./stop.sh.  Foreground/dev mode: .venv/bin/python -m web --reload
+# Re-running it restarts the server (picking up code changes). Stop with ./stop.sh.  Foreground/dev mode: .venv/bin/python -m web --reload
 set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
@@ -16,14 +16,16 @@ fi
 
 mkdir -p .run
 PIDFILE=".run/server.pid"
+# Always (re)start, so the server runs the current code after an update.
 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-  echo "Pendragon server already running (PID $(cat "$PIDFILE"))."
-else
-  nohup .venv/bin/python -m web --port "$PORT" > .run/server.log 2>&1 &
-  echo $! > "$PIDFILE"
-  disown
-  echo "Started Pendragon server (PID $(cat "$PIDFILE"))."
+  echo "Restarting the Pendragon server (was PID $(cat "$PIDFILE"))..."
+  kill "$(cat "$PIDFILE")"
+  for _ in $(seq 1 20); do kill -0 "$(cat "$PIDFILE")" 2>/dev/null || break; sleep 0.1; done
 fi
+nohup .venv/bin/python -m web --port "$PORT" > .run/server.log 2>&1 &
+echo $! > "$PIDFILE"
+disown
+echo "Started Pendragon server (PID $(cat "$PIDFILE"))."
 
 echo -n "Waiting for the server"
 for _ in $(seq 1 40); do
