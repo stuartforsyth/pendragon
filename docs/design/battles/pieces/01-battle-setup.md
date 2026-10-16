@@ -12,3 +12,14 @@
 - Forced retire only when the conroi is left with no engageable option at its Morale after the turn's Intensity/Battle rolls (RAW step 4: the *selected* Encounter's minimum).
 - Rest is decided at the start of a turn: voluntary (too injured) or forced (nothing engageable).
 - Mid-fight retreat: not built (immersion). GM plays it out at the table, ends the fight normally, and marks the conroi retired at the start of the next turn — same outcome as RAW.
+
+## Decisions (accepted 2026-10-17)
+1. Battle → Days → optional per-day turn scripts. Turn-script modifiers are text the GM applies (no automation in v1).
+2. Each new day resets the engagement (Morale to start, Passions usable again, per-day Participation Glory) — labelled "scenario rule" (Sword Campaign).
+3. Battles pause/resume across sessions by full snapshot (`battle.resumed`), allowed anywhere incl. mid-fight. Library holds the template; the session holds the live copy.
+4. Mounted state persists within a battle (default mounted only at start); adversaries get an explicit `mounted` flag. Detail → piece 6.
+5. "Random fight" draws from any encounter with optional tag filter; separate from the battle deck (piece 3).
+6. Rest/retire: start-of-turn decision (voluntary or forced only when no engageable option after the turn's rolls); rest Morale +1D6 entered by GM, capped at start; manual Morale adjust = logged GM override. Mid-fight retreat not built.
+
+## Notes for later pieces
+- Piece 8 (Table): current Morale is a major visual on the players' board, shifting from green/clean to red/bloody as it drops.
