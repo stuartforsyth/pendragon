@@ -45,6 +45,8 @@ def reduce(events, promotion_cfg=None):
         c = next((x for x in state["combatants"] if x.id == d.get("cid")), None)
         if c is None:
             continue
+        if getattr(c, "side", "foe") == "party" and t in ("combat.hp", "combat.blow"):
+            continue                    # knights' health is the players' business
         if t == "combat.hp":
             c.apply_hp(int(d.get("delta", 0)))
         elif t == "combat.blow":
@@ -88,7 +90,7 @@ def table_view(c):
            "category": getattr(c, "category", "human"),
            "engaged_with": c.engaged_with}
     if side == "party":
-        out.update(cur_hp=c.cur_hp, max_hp=c.max_hp, player=getattr(c, "player", ""))
+        out.update(player=getattr(c, "player", ""))
     return out
 
 

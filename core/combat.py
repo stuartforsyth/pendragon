@@ -160,6 +160,8 @@ class Combatant:
 
     @property
     def status(self):
+        if getattr(self, "side", "foe") == "party":   # knights: only the GM's marker
+            return {"unconscious": "unconscious", "fled": "fled"}.get(self._out, "active")
         if self.cur_hp <= 0 or self._out == "dead":
             return "dead"
         if self._out == "fled":            # left the field — no longer tracked
@@ -212,6 +214,8 @@ class Combatant:
         Constitution a Major Wound (unconscious) — Core Ch.11,
         ``core.injury-health.states-of-health-and-wounds``.
         """
+        if getattr(self, "side", "foe") == "party":
+            raise ValueError("player knights' Hit Points are kept by the players")
         old = self.cur_hp
         self.cur_hp = min(old + delta, self.max_hp)
         msg = ""
@@ -238,6 +242,8 @@ class Combatant:
     def wound_state(self):
         """A player-facing description of health that never reveals numbers."""
         status = self.status
+        if getattr(self, "side", "foe") == "party":
+            return {"unconscious": "Down", "fled": "Out of the fight"}.get(status, "")
         if status == "dead":
             return "Slain"
         if status == "fled":
@@ -267,30 +273,15 @@ class Combatant:
 
     @classmethod
     def from_party(cls, member):
-        """A player knight as a combatant (lightweight: tracking, not a sheet)."""
-        hp = int(member.get("max_hp") or 0) or 1
-        con = int(member.get("major_wound") or 0) or max(1, hp // 2)
-        template = {
-            "kind": "named", "category": "human",
-            "characteristics": {k: member.get("characteristics", {}).get(k, 0)
-                                for k in ("SIZ", "DEX", "STR", "CON", "APP")},
-            "attacks": [], "skills": {}, "traits": {},
-            # Knockdown = SIZ (core.combat.knockdown); 0 = unknown, so no check.
-            "health": {"hit_points": hp, "knockdown": int(member.get("knockdown") or 0),
-                       "major_wound": con,
-                       "unconscious": int(member.get("unconscious") or 0) or max(1, _rhu(hp / 4))},
-            "other": {"armor_points": int(member.get("armour") or 0),
-                      "shield": int(member.get("shield") or 0),
-                      "movement": int(member.get("move") or 0)},
-            "armour_desc": member.get("armour_desc", ""),
-            "notes": member.get("notes", ""),
-        }
-        c = cls(member.get("name", "Knight"), template, member.get("name", "Knight"),
-                hp_jitter=False)
-        c.characteristics["APP"] = template["characteristics"]["APP"]
-        cur = member.get("cur_hp")
-        if cur is not None and str(cur) != "":
-            c.cur_hp = min(int(cur), c.max_hp)
+        """A player knight in a fight: a name to fight against, nothing more.
+        Players keep their knights' Hit Points, armour and wounds on their own
+        sheets, so the app never tracks a knight's health."""
+        name = member.get("name", "Knight")
+        template = {"kind": "named", "category": "human",
+                    "characteristics": {k: 0 for k in CHAR_ORDER}, "attacks": [],
+                    "health": {"hit_points": 1, "knockdown": 0, "major_wound": 0, "unconscious": 0},
+                    "other": {}, "notes": member.get("notes", "")}
+        c = cls(name, template, name, hp_jitter=False)
         c.side = "party"
         c.party_id = member.get("id")
         c.player = member.get("player", "")

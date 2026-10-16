@@ -48,13 +48,12 @@ def test_cast_import_export_and_remove(client):
     assert client.post("/api/cast/import", json=[{"nope": 1}]).status_code == 400
 
 
-def test_party_edit_values_and_hp_change(client):
-    m = ok(client.post("/api/party", json={"name": "Sir Kay", "max_hp": 30, "values": {"Sword": 15}}))["member"]
-    assert m["cur_hp"] == 30 and m["active"] is True
-    ok(client.patch(f"/api/party/{m['id']}", json={"active": False, "cur_hp": 20}))
-    r = ok(client.post(f"/api/party/{m['id']}/hp", json={"delta": 15, "reason": "rest"}))
-    assert r["member"]["cur_hp"] == 30            # healing caps at max
-    assert "rest" in r["event"]["text"]
+def test_party_is_a_plain_roster(client):
+    m = ok(client.post("/api/party", json={"name": "Sir Kay", "player": "Sam", "max_hp": 30}))["member"]
+    assert m["active"] is True and "max_hp" not in m and "cur_hp" not in m
+    ok(client.patch(f"/api/party/{m['id']}", json={"active": False, "notes": "seneschal"}))
+    assert ok(client.get("/api/party"))["party"][0]["notes"] == "seneschal"
+    assert client.post(f"/api/party/{m['id']}/hp", json={"delta": 1}).status_code in (404, 405)
     assert client.post("/api/party", json={"player": "nobody"}).status_code == 400
 
 

@@ -84,18 +84,21 @@ def test_table_hides_foe_numbers(client):
     assert "Hit Points" not in t["feed"][0]["text"]
 
 
-def test_party_joins_combat_and_hp_carries_back(client):
-    m = ok(client.post("/api/party", json={"name": "Sir Bors", "player": "Ann",
-                                           "max_hp": 30, "major_wound": 14}))["member"]
+def test_knights_join_combat_without_health(client):
+    ok(client.post("/api/party", json={"name": "Sir Bors", "player": "Ann"}))
     ok(client.post("/api/combat/start", json={"encounter": "Bandit ambush"}))
     cs = ok(client.get("/api/combat"))["combat"]
     assert cs["players"] == 1
     knight = next(c for c in cs["combatants"] if c["side"] == "party")
-    ok(client.post(f"/api/combat/{knight['id']}/hp", json={"delta": -4}))
+    assert client.post(f"/api/combat/{knight['id']}/hp", json={"delta": -4}).status_code == 400
+    assert client.post(f"/api/combat/{knight['id']}/status", json={"out": "dead"}).status_code == 400
+    ok(client.post(f"/api/combat/{knight['id']}/status", json={"out": "unconscious"}))
+    t = next(c for c in ok(client.get("/api/table"))["combat"]["combatants"] if c["side"] == "party")
+    assert t["wound_state"] == "Down" and "cur_hp" not in t
+    ok(client.post(f"/api/combat/{knight['id']}/status", json={"out": None}))
     ok(client.post("/api/combat/end"))
-    assert ok(client.get("/api/party"))["party"][0]["cur_hp"] == 26
+    assert "cur_hp" not in ok(client.get("/api/party"))["party"][0]
     assert ok(client.get("/api/table"))["mode"] == "chronicle"
-    assert m["id"]
 
 
 def test_combat_rolls_and_round(client):
@@ -159,8 +162,7 @@ def test_bad_dice(client):
 
 
 def _start_with_knight(client):
-    ok(client.post("/api/party", json={"name": "Sir Bors", "max_hp": 30, "major_wound": 14,
-                                       "knockdown": 14, "armour": 10, "shield": 6}))
+    ok(client.post("/api/party", json={"name": "Sir Bors", "player": "Ann"}))
     ok(client.post("/api/combat/start", json={"encounter": "Bandit ambush"}))
     cs = ok(client.get("/api/combat"))["combat"]["combatants"]
     knight = next(c for c in cs if c["side"] == "party")
@@ -168,19 +170,18 @@ def _start_with_knight(client):
     return knight, foe
 
 
-def test_blow_from_foe_weapon_lands_on_knight(client):
+def test_blow_on_knight_is_reported_not_applied(client):
     knight, foe = _start_with_knight(client)
     ev = ok(client.post("/api/combat/blow", json={"attacker": foe["id"], "attack": 0,
                                                   "target": knight["id"], "critical": True}))["event"]
     b = ev["data"]["blow"]
-    assert b["armour"] == 10 and b["shield_blocked"] == 0 and len(b["terms"]) == 2
+    assert ev["data"]["to_knight"] and len(b["terms"]) == 2 and b["damage"] == b["full"]
+    assert f"for {b['damage']} damage" in ev["text"] and "armour only" in ev["text"]
+    assert "slain" not in ev["text"].lower() and "Hit Points" not in ev["text"]
     after = next(c for c in ok(client.get("/api/combat"))["combat"]["combatants"] if c["id"] == knight["id"])
-    assert after["cur_hp"] == knight["cur_hp"] - b["wound"]
+    assert after["status"] == "active"
     card = ok(client.get("/api/table"))["feed"][0]
-    assert card["type"] == "combat.blow" and card["data"]["blow"]["full"] == b["full"]
-    ok(client.post(f"/api/events/{ev['id']}/strike"))       # undo
-    undone = next(c for c in ok(client.get("/api/combat"))["combat"]["combatants"] if c["id"] == knight["id"])
-    assert undone["cur_hp"] == knight["cur_hp"]
+    assert card["type"] == "combat.blow" and card["data"]["to_knight"]
 
 
 def test_player_rolled_blow_on_foe_rebated_with_shield(client):
@@ -212,14 +213,25 @@ def test_combat_rolls_are_never_secret(client):
 
 def test_enemy_attack_on_knight(client):
     knight, foe = _start_with_knight(client)
-    hp = knight["cur_hp"]
-    for _ in range(30):                     # until the enemy's attack succeeds
+    for _ in range(50):                     # until the enemy's attack succeeds
         roll = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 0}))["event"]
         if roll["data"]["outcome"] == "success":
             break
     r = ok(client.post("/api/combat/attack", json={"event": roll["id"], "target": knight["id"], "knight": "failure"}))
-    assert r["result"] == "foe" and r["blow"]["data"]["blow"]["shield_blocked"] == 0
-    after = next(c for c in ok(client.get("/api/combat"))["combat"]["combatants"] if c["id"] == knight["id"])
-    assert after["cur_hp"] == hp - r["blow"]["data"]["blow"]["wound"]
+    assert r["result"] == "foe" and r["blow"]["data"]["to_knight"]
+    assert "armour only" in r["blow"]["text"] and "slain" not in r["blow"]["text"].lower()
+    r = ok(client.post("/api/combat/attack", json={"event": roll["id"], "target": knight["id"], "knight": "lower"}))
+    assert r["result"] == "foe" and "shield/parry apply" in r["blow"]["text"]
     r = ok(client.post("/api/combat/attack", json={"event": roll["id"], "target": knight["id"], "knight": "higher"}))
     assert r["result"] == "knight" and r["blow"] is None and r["knight_shield"]
+
+
+def test_enemy_failed_attack_wording(client):
+    knight, foe = _start_with_knight(client)
+    for _ in range(80):
+        roll = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 0}))["event"]
+        if roll["data"]["outcome"] == "failure":
+            break
+    r = ok(client.post("/api/combat/attack", json={"event": roll["id"], "target": knight["id"], "knight": "higher"}))
+    assert r["result"] == "knight" and not r["knight_shield"]
+    assert "(higher roll)" not in r["event"]["text"]

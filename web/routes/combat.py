@@ -59,11 +59,7 @@ def _active_party(state):
 
 
 def _end(state, cs, reason="ended"):
-    """Close the combat and carry the knights' Hit Points back to the Party."""
-    for c in cs["combatants"]:
-        pid = getattr(c, "party_id", None)
-        if pid and state.party.get(pid):
-            state.party.update(pid, {"cur_hp": c.cur_hp})
+    """Close the combat."""
     state.record("combat.ended", f"Combat {reason}: {cs['name']}", title=cs["name"],
                  data={"name": cs["name"]})
 
@@ -184,6 +180,8 @@ async def combat_note(request: Request, body: dict):
 async def hp(request: Request, cid: str, body: dict):
     state, cs = _active(request)
     c = _combatant(cs, cid)
+    if not _is_foe(c):
+        bad("Players keep their knights' Hit Points on their own sheets")
     delta = to_int(body.get("delta"), "delta")
     if not delta:
         bad("Enter damage as a negative number or healing as a positive one")
@@ -222,6 +220,14 @@ async def status(request: Request, cid: str, body: dict):
     out = body.get("out")
     if out not in _STATUS_TEXT:
         bad("Unknown status")
+    if not _is_foe(c):                   # a knight: just the GM's down / out marker
+        if out not in (None, "unconscious", "fled"):
+            bad("A knight can only be marked down or out of the fight")
+        line = {None: "{n} is back in the fight", "unconscious": "{n} is down",
+                "fled": "{n} is out of the fight"}[out].format(n=c.display_name)
+        ev = state.record("combat.status", line, title=c.display_name,
+                          data={"cid": cid, "out": out, "table_text": line})
+        return {"event": ev}
     if c.status == "fled" and out is None:
         log, table = "{n} resumes the fight — active again", "{n} returns to the fight"
     else:
@@ -400,6 +406,9 @@ def record_blow(state, cs, body):
     unarmed = bool(attacker and not wdef and weapon.lower() in ("fist", "punch", "unarmed", "brawling"))
     through = "strikes through shields" in (wdef.get("advantage", "").lower())
 
+    if target is not None and not _is_foe(target):
+        return _report_blow_on_knight(state, attacker, target, weapon, expr, rolled, extra, body)
+
     shield_value = body.get("shield_value")
     shield_value = (to_int(shield_value, "shield") if shield_value not in (None, "")
                     else (target.shield if target else 0))
@@ -448,6 +457,26 @@ def record_blow(state, cs, body):
     return state.record("combat.blow", text, title=title, data=data)
 
 
+def _report_blow_on_knight(state, attacker, knight, weapon, expr, rolled, extra, body):
+    """An enemy's blow on a player knight: roll and report its damage (+4D6 on
+    a critical) and which protection applies. Nothing is applied — players
+    keep their knights' Hit Points on paper."""
+    b = resolve_blow(expr=expr, rolled=rolled, critical=bool(body.get("critical")),
+                     reckless=bool(body.get("reckless")), extra=extra,
+                     rebated=bool(body.get("rebated")))
+    shield = bool(body.get("shield"))
+    who = attacker.display_name if attacker else ""
+    head = f"{who}’s {weapon or 'blow'}" if who else (weapon or "A blow")
+    crit = "CRITICAL " if b["critical"] else ""
+    protect = "armour + shield/parry apply" if shield else "armour only, no shield/parry"
+    text = f"{head} {crit}hits {knight.display_name} for {b['damage']} damage ({blow_breakdown(b).rsplit(' → ', 1)[0]}) — {protect}"
+    return state.record("combat.blow", text, title=f"{who + ' → ' if who else ''}{knight.display_name}",
+                        data={"cid": knight.id, "delta": 0, "attacker": who, "weapon": weapon or "",
+                              "target": knight.display_name, "blow": b, "to_knight": True,
+                              "knight_shield": shield, "breakdown": blow_breakdown(b),
+                              "table_text": text})
+
+
 # -- an enemy attacks a knight: Table 7.1 from the two results ----------------
 
 @router.post("/api/combat/attack")
@@ -461,12 +490,17 @@ async def attack(request: Request, body: dict):
         bad("Roll the enemy's attack first")
     foe = _combatant(cs, roll["data"]["cid"])
     knight = _combatant(cs, body.get("target"))
+    if _is_foe(knight):
+        bad("Choose a player knight")
     try:
         r = resolve_attack(roll["data"]["outcome"], body.get("knight"))
     except ValueError as exc:
         bad(str(exc))
-    k_text = {"critical": "critical", "higher": "success (higher)", "equal": "success (equal)",
-              "lower": "success (lower)", "failure": "failure", "fumble": "fumble"}[body["knight"]]
+    both = roll["data"]["outcome"] == "success"
+    k_text = {"critical": "critical", "higher": "success (higher roll)" if both else "success",
+              "equal": "success (equal roll)" if both else "success",
+              "lower": "success (lower roll)" if both else "success",
+              "failure": "failure", "fumble": "fumble"}[body["knight"]]
     verdict = {"foe": f"{foe.display_name} wins", "knight": f"{knight.display_name} wins",
                "tie": "tie — both strike", "none": "both miss"}[r["result"]]
     if r["result"] in ("knight", "tie"):

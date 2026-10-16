@@ -110,18 +110,20 @@ function hero(c, fresh) {
   }
   if (t === "combat.blow" && d.blow) {
     const b = d.blow;
-    const num = h("div", { class: "n" }, b.wound);
-    if (fresh) tumble(num, b.wound);
+    const shown = d.to_knight ? b.damage : b.wound;
+    const num = h("div", { class: "n" }, shown);
+    if (fresh) tumble(num, shown);
     const faces = h("div", { class: "dicefaces" }, b.terms.flatMap((term, i) => term.rolls.length
       ? term.rolls.map((r, j) => h("div", { class: `face ${term.label !== "damage" ? "bonus" : ""}`, title: term.label, style: { animationDelay: `${(i * 6 + j) * 50}ms` } }, r))
       : [h("div", { class: "face const" }, term.total)]));
     const steps = [`${b.full} rolled`];
     if (b.rebated) steps.push(`rebated ½ → ${b.damage}`);
+    if (d.to_knight) steps.push(d.knight_shield ? "armour + shield/parry apply" : "armour only");
     if (b.armour) steps.push(`− ${b.armour} armour`);
     if (b.shield_roll != null) steps.push(`− ${b.shield_blocked} shield (1D6)`);
     else if (b.shield_blocked) steps.push(`− ${b.shield_blocked} shield`);
-    const outcome = d.mortal ? "Slain!" : d.major ? "Major Wound!" : b.wound ? "" : "Turned aside";
-    const extras = [b.knockdown === "automatic" ? "Knocked down!" : b.knockdown === "check" ? "Knockdown — DEX roll!" : "",
+    const outcome = d.to_knight ? "" : d.mortal ? "Slain!" : d.major ? "Major Wound!" : b.wound ? "" : "Turned aside";
+    const extras = d.to_knight ? [] : [b.knockdown === "automatic" ? "Knocked down!" : b.knockdown === "check" ? "Knockdown — DEX roll!" : "",
       b.shield_broken ? "Shield broken!" : ""].filter(Boolean);
     return h("div", { class: `hero rollhero ${b.critical ? "critical-glow" : ""}` },
       h("div", { class: "who" }, d.attacker ? `${d.attacker} — ${d.weapon}` : d.weapon),
@@ -156,14 +158,14 @@ function hero(c, fresh) {
 // ---------------------------------------------------------------- mini cards
 const MINI_ICON = (t) => t === "combat.blow" || t === "combat.attack" ? "swords" : t.startsWith("roll.") || t === "combat.check" ? "d20" : t === "sealed" ? "lock"
   : t.startsWith("combat.") ? "swords" : t.startsWith("npc.") ? "helm" : t === "narrate" ? "feather"
-  : t === "rule.shown" ? "book" : t === "party.hp" ? "heart" : "scroll";
+  : t === "rule.shown" ? "book" : "scroll";
 
 function mini(c) {
   const d = c.data || {};
   let res = null;
   if (c.type === "roll.check" && d.outcome) res = h("span", { class: "res", style: { color: { critical: "#b08a36", success: "#2f6b3e", failure: "#8e2219", fumble: "#1b1612" }[d.outcome] } }, `${d.roll} ${OUT[d.outcome]}`);
   if (c.type === "roll.dice" || c.type === "roll.damage") res = h("span", { class: "res" }, d.total);
-  if (c.type === "combat.blow" && d.blow) res = h("span", { class: "res", style: { color: "#8e2219" } }, `${d.blow.wound} dmg`);
+  if (c.type === "combat.blow" && d.blow) res = h("span", { class: "res", style: { color: "#8e2219" } }, `${d.to_knight ? d.blow.damage : d.blow.wound} dmg`);
   let text = c.text;
   if (c.type.startsWith("npc.") && d.npc) text = d.npc.subtitle;
   if (c.type === "narrate") text = d.style === "scene" ? "" : d.text || "An image";
@@ -194,17 +196,13 @@ function chronicle(p) {
 
 function fighter(f) {
   const prev = last.states[f.id];
-  const hit = prev && prev !== `${f.wound_state}/${f.cur_hp ?? ""}`;
-  last.states[f.id] = `${f.wound_state}/${f.cur_hp ?? ""}`;
-  const stCls = `s-${f.wound_state.toLowerCase().replace(/\s+/g, "-")}`;
-  const hp = f.side === "party" && f.max_hp ? [
-    h("div", { class: "hp" }, h("i", { style: { width: `${Math.max(0, Math.min(100, (f.cur_hp / f.max_hp) * 100))}%` } })),
-  ] : null;
+  const hit = prev && prev !== f.wound_state;
+  last.states[f.id] = f.wound_state;
+  const stCls = `s-${(f.side === "party" ? ({ unconscious: "unconscious", fled: "fled" }[f.status] || "unhurt") : f.wound_state).toLowerCase().replace(/\s+/g, "-")}`;
   return h("div", { class: `card fighter ${stCls} ${f.elite ? "elite" : ""} ${f.named ? "named" : ""} ${hit ? "hit" : ""}` },
     shield(f),
     h("div", { class: "nm" }, f.name, f.elite ? h("span", { class: "crown" }, "♛") : null),
-    h("div", { class: "st" }, f.side === "party" ? h("span", { class: "hp-num" }, `${f.cur_hp} / ${f.max_hp} HP · `) : null, f.wound_state),
-    f.side === "party" ? h("div", {}, hp) : null,
+    h("div", { class: "st" }, f.side === "party" ? (f.wound_state || (f.player ? `played by ${f.player}` : "")) : f.wound_state),
     f.engaged_with ? h("div", { class: "eng" }, `⚔ fighting ${f.engaged_with}`)
       : f.engaged_by?.length ? h("div", { class: "eng" }, `⚔ fought by ${f.engaged_by.join(", ")}`) : null);
 }
@@ -219,7 +217,7 @@ function battle(p) {
   let latest = null;
   if (latestRoll) {
     const d = latestRoll.data || {};
-    const n = latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? d.blow?.wound
+    const n = latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? (d.to_knight ? d.blow?.damage : d.blow?.wound)
       : d.total ?? (latestRoll.type === "sealed" ? "?" : d.roll ?? "");
     const num = h("div", { class: "bign" }, n);
     if (latestRoll.id !== last.heroId && typeof n === "number") tumble(num, n);

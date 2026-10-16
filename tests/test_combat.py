@@ -1,3 +1,4 @@
+import pytest
 import json
 
 from core.combat import Combatant, Encounter, resolve_roster
@@ -44,11 +45,15 @@ def test_wound_state_hides_numbers(rules):
     assert c.wound_state() == "Fled"
 
 
-def test_party_member_combatant():
-    c = Combatant.from_party({"id": "p1", "name": "Sir Bors", "player": "Ann",
-                              "max_hp": 30, "cur_hp": 25, "major_wound": 14,
-                              "armour": 10, "shield": 6})
-    assert (c.side, c.max_hp, c.cur_hp, c.armor_total()) == ("party", 30, 25, 16)
+def test_party_member_has_no_health():
+    c = Combatant.from_party({"id": "p1", "name": "Sir Bors", "player": "Ann"})
+    assert (c.side, c.status, c.wound_state()) == ("party", "active", "")
+    with pytest.raises(ValueError):
+        c.apply_hp(-50)                     # players keep knights' HP on paper
+    c.set_out("unconscious")
+    assert (c.status, c.wound_state()) == ("unconscious", "Down")
+    c.set_out("fled")
+    assert c.wound_state() == "Out of the fight"
 
 
 def test_promote_is_deterministic_and_reversible(rules):

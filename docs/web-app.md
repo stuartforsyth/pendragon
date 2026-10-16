@@ -74,23 +74,26 @@ misses anything) and the combat view; the Table refetches `/api/table`.
 
 ## Combat (kept deliberately simple)
 
-The app doesn't track player-knight rolls or damage dice — the players roll
-their own.
+Player knights are run on paper: the app never tracks their Hit Points,
+armour, wounds or death. It only tracks the enemies.
 
-- **A knight hits an enemy**: *Hit* on the enemy, enter the total damage the
-  player rolled (critical dice included). The enemy's armour comes off
-  automatically (tick *shield* if they got a partial success or tie); the
-  wound, Major/Mortal Wound and knockdown (> Knockdown: DEX roll; > twice:
-  automatic) are worked out and applied.
+- **Knights** are names in the fight. The GM can mark one **Down** or **Out of
+  the fight** (and back). The Party tool is just the roster: name, player,
+  notes, active.
 - **An enemy attacks a knight**: click the enemy's weapon skill. The app rolls
   it; the GM clicks the knight's result — critical, success (beat / equal /
   under the enemy's roll, only asked when both succeed), fail, fumble — and
   Table 7.1 (Core p.133, `core.combat.resolve_attack`, every cell tested)
-  decides: if the enemy hits, its damage is rolled (+4D6 on its critical;
-  the knight keeps shield/parry only on a partial success or tie) and applied.
-  If the knight wins, they roll damage and the GM uses *Hit*.
-- **Who's fighting whom**: each enemy has a dropdown of the player knights;
-  knights show who is fighting them. The Table shows "fighting X" /
-  "fought by X, Y".
-- All combat rolls are public and show their target value; the dice tray's
-  Secret toggle is the only way to hide a roll.
+  decides. If the enemy hits, the app rolls its damage (+4D6 on its critical)
+  and **reports** it with the protection that applies (armour only, or armour
+  + shield/parry on a partial success or tie). Nothing is applied to the
+  knight.
+- **A knight hits an enemy**: *Hit* on the enemy (it opens automatically when
+  the knight wins or ties the attack above, with the shield box set). Enter
+  the total damage the player rolled; the enemy's armour (and shield, if
+  ticked) comes off and the enemy's wound, Major/Mortal Wound and knockdown
+  are worked out and applied.
+- **Who's fighting whom**: each enemy has a dropdown of the knights; knights
+  show "fought by …". The Table shows the same.
+- All combat rolls are public; the dice tray's Secret toggle is the only way
+  to hide a roll.

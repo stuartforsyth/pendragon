@@ -108,7 +108,7 @@ export default {
             h("button", { class: "btn danger", onclick: endCombat }, icon("flag"), "End")),
           h("div", { class: "row", style: { marginTop: "10px" } },
             h("span", { class: "tag gules" }, `${up} of ${foes.length} foes standing`),
-            knights.length ? h("span", { class: "tag azure" }, `${knights.filter((k) => !k.down).length} of ${knights.length} knights standing`) : null,
+            knights.length ? h("span", { class: "tag azure" }, `${knights.filter((k) => !k.down).length} of ${knights.length} knights in the fight`) : null,
             note)),
         descriptions(),
         knights.length ? [h("div", { class: "section-label" }, "The Knights"), h("div", { class: "cbt-list" }, knights.map(row))] : null,
@@ -159,8 +159,23 @@ export default {
     // ------------------------------------------------------------ a combatant row
     const STATUS_TAG = { active: null, unconscious: ["Unconscious", "purpure"], dead: ["Slain", "gules"], fled: ["Fled — not tracked", ""] };
 
+    function knightRow(c) {
+      const tag = { unconscious: ["Down", "gules"], fled: ["Out of the fight", ""] }[c.status];
+      const mark = (out) => post(`/api/combat/${c.id}/status`, { out });
+      return h("div", { class: `cbt-row t-knight ${c.down ? "is-down" : ""}`, "data-id": c.id },
+        h("div", { class: "cbt-line" },
+          h("div", { class: "cbt-name" }, c.display_name,
+            c.player ? h("span", { class: "faint small", style: { fontWeight: 400, marginLeft: "8px" } }, c.player) : null,
+            tag ? h("span", { class: `tag ${tag[1]}`, style: { marginLeft: "8px" } }, tag[0]) : null),
+          c.down ? h("button", { class: "btn sm", onclick: () => mark(null) }, "Back in the fight")
+            : [h("button", { class: "btn sm", onclick: () => mark("unconscious") }, "Down"),
+               h("button", { class: "btn sm", onclick: () => mark("fled") }, "Out of the fight")]),
+        c.engaged_by?.length ? h("div", { class: "cbt-engby" }, icon("swords"), " Fought by ", c.engaged_by.join(", ")) : null);
+    }
+
     function row(c) {
-      const isKnight = c.side === "party";
+      if (c.side === "party") return knightRow(c);
+      const isKnight = false;
       const creature = ["beast", "monster", "fae"].includes(c.category);
       const marker = (c.elite ? "★" : "") + (c.named && !isKnight ? "◆" : "") + (creature && !c.named ? "✦" : "");
       const tone = c.down ? "down" : c.elite ? "elite" : isKnight ? "knight" : c.named ? "named" : c.category;
@@ -226,6 +241,7 @@ export default {
         if (r.blow) ctx.showLastRoll(r.blow);
         toast(r.event.data.verdict, "ok");
         close();
+        if (r.result === "knight" || r.result === "tie") hitDialog(c, r.knight_shield);
       };
       await modal(`${c.display_name} attacks`, (close) => [
         h("div", { class: "attack-roll" }, `${d.label} ${d.shown}: rolled `, h("b", {}, d.roll), " — ",
@@ -249,10 +265,10 @@ export default {
     }
 
     // ------------------------------------------------------------ a knight hits an enemy
-    async function hitDialog(c) {
+    async function hitDialog(c, shieldDefault = false) {
       await modal(`Hit ${c.display_name}`, (close) => {
         const dmg = h("input", { class: "input", type: "number", min: 0, placeholder: "damage the player rolled" });
-        const shield = h("input", { type: "checkbox" });
+        const shield = h("input", { type: "checkbox", checked: shieldDefault });
         const apply = async () => {
           if (dmg.value === "") return dmg.focus();
           const r = await post("/api/combat/blow", { target: c.id, damage: dmg.value, shield: shield.checked });

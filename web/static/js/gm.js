@@ -124,7 +124,6 @@ const KIND = (t) => t.startsWith("roll.") ? ["roll", "d20"]
   : t === "narrate" ? ["narrate", "feather"]
   : t === "note" ? ["note", "note"]
   : t === "rule.shown" ? ["rule", "book"]
-  : t === "party.hp" ? ["combat", "heart"]
   : t.startsWith("session.") ? ["session", "flag"]
   : t.startsWith("meta.") ? ["meta", "undo"] : ["other", "scroll"];
 
@@ -165,7 +164,8 @@ function resultBits(ev) {
   }
   if (ev.type === "roll.dice" || ev.type === "roll.damage") return h("span", { class: "result-pill o-critical" }, d.total);
   if (ev.type === "roll.opposed") return h("span", { class: "result-pill o-critical" }, d.verdict);
-  if (ev.type === "combat.blow") return h("span", { class: `result-pill ${d.blow?.wound ? "o-fumble" : "o-success"}` }, `${d.blow?.wound ?? 0} dmg`);
+  if (ev.type === "combat.blow") { const n = d.to_knight ? d.blow?.damage : d.blow?.wound;
+    return h("span", { class: `result-pill ${n ? "o-fumble" : "o-success"}` }, `${n ?? 0} dmg`); }
   return null;
 }
 
@@ -317,7 +317,7 @@ function showLastRoll(ev) {
   const d = ev.data || {};
   let big = "", detail = ev.text;
   if (ev.type === "roll.dice" || ev.type === "roll.damage") big = d.total;
-  else if (ev.type === "combat.blow") big = d.blow?.wound ?? "";
+  else if (ev.type === "combat.blow") big = (d.to_knight ? d.blow?.damage : d.blow?.wound) ?? "";
   else if (ev.type === "roll.check") big = d.roll;
   else if (ev.type === "roll.opposed") big = d.winner ? "⚔" : "=";
   const cls = d.outcome ? `o-${d.outcome}` : "";
