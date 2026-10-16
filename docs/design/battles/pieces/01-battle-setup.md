@@ -11,3 +11,4 @@
 - Dice: the GM enters players' rolls (screenshare); the app enforces integrity (e.g. rest Morale +1D6 entered, capped at starting Morale). Player-side VTT dice = later design phase.
 - Forced retire only when the conroi is left with no engageable option at its Morale after the turn's Intensity/Battle rolls (RAW step 4: the *selected* Encounter's minimum).
 - Rest is decided at the start of a turn: voluntary (too injured) or forced (nothing engageable).
+- Mid-fight retreat: not built (immersion). GM plays it out at the table, ends the fight normally, and marks the conroi retired at the start of the next turn — same outcome as RAW.
