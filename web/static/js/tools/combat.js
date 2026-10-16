@@ -173,13 +173,13 @@ export default {
         title: "Situational modifier — Enter",
         onkeydown: (e) => { if (e.key === "Enter") e.target.blur(); },
         onchange: (e) => post(`/api/combat/${c.id}/modifier`, { value: e.target.value.trim() || 0 }) });
-      const engIn = engageSelect(c);
+      const engIn = isKnight ? null : engageSelect(c);
 
       return h("div", { class: `cbt-row t-${tone} ${c.down ? "is-down" : ""}`, "data-id": c.id },
         h("div", { class: "cbt-line" },
           h("div", { class: "cbt-name" }, marker ? h("span", { class: "marker" }, marker + " ") : null, c.display_name,
             st ? h("span", { class: `tag ${st[1]}`, style: { marginLeft: "8px" } }, st[0]) : null),
-          h("div", { class: "cbt-eng" }, h("span", { class: "faint small" }, "fighting"), engIn),
+          engIn ? h("div", { class: "cbt-eng" }, h("span", { class: "faint small" }, "fighting"), engIn) : null,
           h("div", { class: "cbt-hp" },
             h("div", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`), h("span", { class: "faint small" }, " HP"),
               !isKnight ? h("span", { class: "faint small ws" }, ` · ${c.wound_state}`) : null),
@@ -195,30 +195,16 @@ export default {
         flavour(c));
     }
 
-    // Who a combatant can be set to fight: foes pick from the knights, knights
-    // from the foes (anyone else stays reachable through "Other…").
+    // An enemy is set to fight one of the player knights (shown on both rows
+    // and on the Table); knights have no selector of their own.
     function engageSelect(c) {
-      const others = cs.combatants.filter((o) => o.id !== c.id && o.side !== c.side && o.status !== "dead");
-      const names = others.map((o) => o.display_name);
+      const knights = cs.combatants.filter((o) => o.side === "party").map((o) => o.display_name);
       const cur = c.engaged_with || "";
-      const sel = h("select", { class: `input eng-in ${cur ? "set" : ""}`, title: "Who is this combatant fighting?",
-        onchange: async (e) => {
-          let v = e.target.value;
-          if (v === "__other") {
-            v = await modal("Fighting whom?", (close) => {
-              const inp = h("input", { class: "input", value: cur, onkeydown: (ev) => ev.key === "Enter" && close(inp.value) });
-              return [inp, h("div", { class: "foot" }, h("button", { class: "btn ghost", onclick: () => close() }, "Cancel"),
-                h("button", { class: "btn primary", onclick: () => close(inp.value) }, "Set"))];
-            });
-            if (v === undefined) { e.target.value = cur; return; }
-          }
-          await post(`/api/combat/${c.id}/engage`, { with: v });
-        } },
+      return h("select", { class: `input eng-in ${cur ? "set" : ""}`, title: "Which knight is this enemy fighting?",
+        onchange: (e) => post(`/api/combat/${c.id}/engage`, { with: e.target.value }) },
         h("option", { value: "" }, "— nobody —"),
-        names.map((n) => h("option", { value: n, selected: n === cur }, n)),
-        cur && !names.includes(cur) ? h("option", { value: cur, selected: true }, cur) : null,
-        h("option", { value: "__other" }, "Other…"));
-      return sel;
+        knights.map((n) => h("option", { value: n, selected: n === cur }, n)),
+        cur && !knights.includes(cur) ? h("option", { value: cur, selected: true }, cur) : null);
     }
 
     const byName = (n) => cs.combatants.find((o) => o.display_name === n);

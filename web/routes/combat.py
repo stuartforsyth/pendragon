@@ -47,7 +47,7 @@ def _descriptions(combatants):
         parts = []
         if c.description.strip():
             parts.append(c.description.strip())
-        if c.notes.strip():
+        if c.notes.strip() and c.notes.strip() != c.description.strip():
             parts.append(f"Mechanics: {c.notes.strip()}")
         if parts:
             out.append({"type": c.type, "text": "   ·   ".join(parts)})

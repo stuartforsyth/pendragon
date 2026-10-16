@@ -89,7 +89,8 @@ their own.
   decides: if the enemy hits, its damage is rolled (+4D6 on its critical;
   the knight keeps shield/parry only on a partial success or tie) and applied.
   If the knight wins, they roll damage and the GM uses *Hit*.
-- **Fighting dropdowns**: foes pick knights, knights pick foes; the Table shows
-  "fighting X" / "fought by X, Y".
+- **Who's fighting whom**: each enemy has a dropdown of the player knights;
+  knights show who is fighting them. The Table shows "fighting X" /
+  "fought by X, Y".
 - All combat rolls are public and show their target value; the dice tray's
   Secret toggle is the only way to hide a roll.
