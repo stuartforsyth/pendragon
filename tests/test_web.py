@@ -156,3 +156,55 @@ def test_chronicle_export(client):
 
 def test_bad_dice(client):
     assert client.post("/api/roll/dice", json={"expr": "lots"}).status_code == 400
+
+
+def _start_with_knight(client):
+    ok(client.post("/api/party", json={"name": "Sir Bors", "max_hp": 30, "major_wound": 14,
+                                       "knockdown": 14, "armour": 10, "shield": 6}))
+    ok(client.post("/api/combat/start", json={"encounter": "Bandit ambush"}))
+    cs = ok(client.get("/api/combat"))["combat"]["combatants"]
+    knight = next(c for c in cs if c["side"] == "party")
+    foe = next(c for c in cs if c["side"] == "foe")
+    return knight, foe
+
+
+def test_blow_from_foe_weapon_lands_on_knight(client):
+    knight, foe = _start_with_knight(client)
+    ev = ok(client.post("/api/combat/blow", json={"attacker": foe["id"], "attack": 0,
+                                                  "target": knight["id"], "critical": True}))["event"]
+    b = ev["data"]["blow"]
+    assert b["armour"] == 10 and b["shield_blocked"] == 0 and len(b["terms"]) == 2
+    after = next(c for c in ok(client.get("/api/combat"))["combat"]["combatants"] if c["id"] == knight["id"])
+    assert after["cur_hp"] == knight["cur_hp"] - b["wound"]
+    card = ok(client.get("/api/table"))["feed"][0]
+    assert card["type"] == "combat.blow" and card["data"]["blow"]["full"] == b["full"]
+    ok(client.post(f"/api/events/{ev['id']}/strike"))       # undo
+    undone = next(c for c in ok(client.get("/api/combat"))["combat"]["combatants"] if c["id"] == knight["id"])
+    assert undone["cur_hp"] == knight["cur_hp"]
+
+
+def test_player_rolled_blow_on_foe_rebated_with_shield(client):
+    knight, foe = _start_with_knight(client)
+    ev = ok(client.post("/api/combat/blow", json={"attacker": knight["id"], "weapon": "Sword",
+                                                  "damage": 30, "rebated": True, "shield": True,
+                                                  "target": foe["id"]}))["event"]
+    b = ev["data"]["blow"]
+    assert b["full"] == 30 and b["damage"] == 15
+    assert b["wound"] == max(0, 15 - foe["armor_points"] - foe["shield"])
+    assert b["knockdown"] in ("check", "automatic")
+    assert "Hit Points" not in ev["data"]["table_text"]          # foe HP stays hidden
+
+
+def test_engaged_by_is_reported(client):
+    knight, foe = _start_with_knight(client)
+    ok(client.post(f"/api/combat/{foe['id']}/engage", json={"with": knight["display_name"]}))
+    t = ok(client.get("/api/table"))["combat"]["combatants"]
+    k = next(c for c in t if c["side"] == "party")
+    assert k["engaged_by"] == [foe["display_name"]]
+
+
+def test_combat_rolls_are_never_secret(client):
+    knight, foe = _start_with_knight(client)
+    ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 0, "masked": True}))
+    card = ok(client.get("/api/table"))["feed"][0]
+    assert card["type"] == "roll.check" and "value" in card["data"]

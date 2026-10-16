@@ -35,7 +35,7 @@
 .t-beast .cbt-name { color: #9fd8ae; }
 .cbt-name .marker { color: var(--or); }
 .cbt-eng { display: flex; align-items: center; gap: 6px; }
-.eng-in { width: 130px; height: 30px; }
+
 .cbt-hp { width: 150px; }
 .hp-text { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hp-text b { font-size: 17px; }
@@ -52,3 +52,13 @@
 .cbt-stats .thresholds { font-size: 13px; }
 .cbt-flavour { margin-top: 4px; font-size: 13px; color: var(--ink-dim); font-style: italic; }
 .cbt-help { margin-top: 18px; max-width: 90ch; }
+
+.eng-in { width: 170px; height: 30px; padding: 0 6px; }
+.eng-in.set { border-color: var(--or-deep); color: var(--or-bright); }
+.hit-btn { border-color: #6d3530; color: #f3c2bb; }
+.hit-btn:hover { background: #3a1d1a; }
+.cbt-engby { margin-top: 4px; font-size: 13px; color: var(--or); display: flex; align-items: center; gap: 4px; }
+.cbt-engby svg { width: 14px; height: 14px; }
+.blow .section-label { margin: 14px 0 6px; }
+.blow-dmg { height: 34px; display: flex; align-items: center; gap: 6px; font-weight: 800; color: #f3c2bb; font-size: 17px; }
+.blow-target { margin-top: 14px; padding: 8px 10px; border-radius: var(--r); background: var(--sable); border: 1px solid var(--line); }

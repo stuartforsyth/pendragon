@@ -201,7 +201,7 @@ body {
   display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 0 12px; align-items: center;
   padding: 10px 12px; transition: opacity .4s, filter .4s; animation: rise .45s ease-out backwards;
 }
-.fighter .shield { width: 44px; height: 50px; grid-row: span 3; }
+.fighter .shield { width: 44px; height: 50px; grid-row: span 4; align-self: start; }
 .fighter .nm { font-family: var(--f-caps); font-weight: 700; font-size: 19px; line-height: 1.2; color: var(--ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fighter .st { font-size: 18px; font-style: italic; color: var(--ink-2); }
@@ -250,3 +250,8 @@ body {
   body { font-size: 18px; }
   .stage { padding: 14px 16px; }
 }
+
+/* blows */
+.face.bonus { border-color: var(--or); background: #fff3d6; box-shadow: 0 2px 0 var(--or); }
+.blowsteps { margin-top: 12px; font-family: var(--f-caps); font-size: 19px; letter-spacing: .06em; color: var(--ink-2); text-align: center; }
+.blowfx { margin-top: 8px; font-family: var(--f-display); font-size: 30px; color: var(--gules); text-align: center; }

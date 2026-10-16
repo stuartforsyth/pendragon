@@ -19,8 +19,7 @@ def _shown(value, modifier, characteristic):
 
 
 def record_check(state, *, label, value, kind="skill", actor="", modifier=0,
-                 masked=False, show_label=False, hide_value_on_table=False,
-                 extra=None):
+                 masked=False, show_label=False, extra=None):
     """Roll d20 against a value (with an optional situational modifier) and log it."""
     characteristic = kind == "characteristic"
     eff = value + modifier
@@ -33,8 +32,6 @@ def record_check(state, *, label, value, kind="skill", actor="", modifier=0,
     data = {"label": label, "value": value, "modifier": modifier, "effective": eff,
             "shown": shown, "roll": roll, "outcome": outcome, "kind": kind,
             "actor": actor, "show_label": show_label, **(extra or {})}
-    if hide_value_on_table:
-        data["table_text"] = f"{who}{label}: {roll} — {outcome.upper()}"
     return state.record("roll.check", text, title=title, data=data, masked=masked)
 
 

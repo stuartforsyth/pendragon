@@ -275,7 +275,8 @@ class Combatant:
             "characteristics": {k: member.get("characteristics", {}).get(k, 0)
                                 for k in ("SIZ", "DEX", "STR", "CON", "APP")},
             "attacks": [], "skills": {}, "traits": {},
-            "health": {"hit_points": hp, "knockdown": member.get("knockdown") or hp,
+            # Knockdown = SIZ (core.combat.knockdown); 0 = unknown, so no check.
+            "health": {"hit_points": hp, "knockdown": int(member.get("knockdown") or 0),
                        "major_wound": con,
                        "unconscious": int(member.get("unconscious") or 0) or max(1, _rhu(hp / 4))},
             "other": {"armor_points": int(member.get("armour") or 0),
@@ -466,3 +467,97 @@ def roll_ransom(c, roll=None):
     if row:
         return roll, f"{c.log_name} ransom (1D6={roll}): {row['type']} — {row['amount']}"
     return roll, f"{c.log_name} ransom (1D6={roll}): none"
+
+
+# ---------------------------------------------------------------------------
+# Resolving a blow (Core Ch.7–8): damage → rebate → protection → wound
+# ---------------------------------------------------------------------------
+
+def _dice_term(label, expr, roll_fn):
+    r = roll_fn(expr)
+    rolls = [x for t in r["terms"] if "rolls" in t for x in t["rolls"]]
+    return {"label": label, "expr": r["expr"], "rolls": rolls, "total": r["total"]}
+
+
+def resolve_blow(*, expr=None, rolled=None, critical=False, unarmed=False,
+                 reckless=False, extra="", rebated=False, armour=0, shield=0,
+                 shield_applies=False, through_shields=False, knockdown=0,
+                 roll_fn=None, d6=None):
+    """Work out one blow. Rules (rules corpus):
+
+    - critical: weapons add a flat +4D6, an unarmed punch +2D6
+      (core.combat.resolution-matrix, core.combat.brawling);
+    - reckless attack: +2D6, or +6D6 on a critical (replacing the +4D6), and
+      neither side gets Shield/Parry Protection (core.combat.action-attack);
+    - rebated: add the critical dice first, then halve the whole total
+      (rounded up); knockdown uses the full, unhalved roll
+      (core.weapons.rebated-damage-and-criticals);
+    - protection: armour always; shield/parry only when the defender rolled a
+      partial success or tie (core.combat.protection, Table 7.1);
+    - axes strike through shields: the shield stops only 1D6 (never more than
+      its value) and a 1 breaks it (core.weapons.melee-weapons);
+    - knockdown: full damage > Knockdown → DEX roll; > twice → automatic
+      (core.combat.knockdown).
+
+    ``expr`` rolls the base damage; ``rolled`` is a total rolled elsewhere (a
+    player's own dice). Returns a dict describing every step.
+    """
+    if roll_fn is None:
+        from core.dice import roll_notation as roll_fn
+    terms = []
+    if expr:
+        terms.append(_dice_term("damage", expr, roll_fn))
+    else:
+        terms.append({"label": "damage", "expr": "rolled", "rolls": [], "total": int(rolled or 0)})
+    if reckless:
+        terms.append(_dice_term("reckless", "6D6" if critical else "2D6", roll_fn))
+    elif critical:
+        terms.append(_dice_term("critical", "2D6" if unarmed else "4D6", roll_fn))
+    if extra:
+        terms.append(_dice_term("extra", extra, roll_fn))
+    full = sum(t["total"] for t in terms)
+    damage = (full + 1) // 2 if rebated else full
+
+    blocked, shield_roll, shield_broken = 0, None, False
+    if shield_applies and not reckless and shield > 0:
+        if through_shields:
+            shield_roll = random.randint(1, 6) if d6 is None else d6
+            blocked = min(shield_roll, shield)
+            shield_broken = shield_roll == 1
+        else:
+            blocked = shield
+    wound = max(0, damage - armour - blocked)
+
+    kd = None
+    if knockdown and full > 2 * knockdown:
+        kd = "automatic"
+    elif knockdown and full > knockdown:
+        kd = "check"
+    return {"terms": terms, "full": full, "rebated": rebated, "damage": damage,
+            "armour": armour, "shield_blocked": blocked, "shield_roll": shield_roll,
+            "shield_broken": shield_broken, "wound": wound, "knockdown": kd,
+            "knockdown_value": knockdown, "critical": critical, "reckless": reckless}
+
+
+def blow_breakdown(b):
+    """'4D6 [3, 5, 2, 6] + crit 4D6 [...] = 30 · rebated ½ → 15 · −10 armour · −6 shield → 0'"""
+    parts = []
+    for i, t in enumerate(b["terms"]):
+        lead = "+ " if i else ""
+        if t["expr"] == "rolled":
+            parts.append(f"{lead}rolled {t['total']}")
+            continue
+        name = "" if t["label"] == "damage" else f"{t['label']} "
+        parts.append(f"{lead}{name}{t['expr']} [{', '.join(map(str, t['rolls']))}]")
+    s = " ".join(parts) + f" = {b['full']}"
+    if b["rebated"]:
+        s += f" · rebated ½ → {b['damage']}"
+    if b["armour"]:
+        s += f" · −{b['armour']} armour"
+    if b["shield_roll"] is not None:
+        s += f" · shield stops 1D6={b['shield_roll']} → −{b['shield_blocked']}"
+        if b["shield_broken"]:
+            s += " (SHIELD BROKEN)"
+    elif b["shield_blocked"]:
+        s += f" · −{b['shield_blocked']} shield/parry"
+    return s + f" → {b['wound']} damage"

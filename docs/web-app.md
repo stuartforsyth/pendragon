@@ -71,3 +71,22 @@ web/
 The server publishes a tiny SSE message on every change. GM consoles fetch
 `/api/session/events?after=<last id>` (the log is append-only, so this never
 misses anything) and the combat view; the Table refetches `/api/table`.
+
+## Combat rolls and blows (follow-up)
+
+- **All combat rolls are public** — characteristic, weapon-skill and skill
+  rolls show their target value on the Table, and click-to-roll never uses
+  the Secret toggle (that belongs to the dice tray only).
+- **Who's fighting whom**: each combatant's *fighting* dropdown lists the
+  other side (foes pick knights, knights pick foes, plus "Other…"). The Table
+  shows "fighting X" on a combatant and "fought by X, Y" on its opponent.
+- **Blows** (`POST /api/combat/blow`, `core.combat.resolve_blow`): clicking a
+  weapon's damage (or *Hit* on the target) resolves one blow per Table 7.1 —
+  the attacker's result (success / critical: +4D6, +2D6 unarmed), the
+  defender's (failed → armour only; partial/tie → armour + shield/parry),
+  rebated (crit dice first, then halve; knockdown on the full roll), reckless
+  (+2D6 / +6D6, no shield/parry), axes through shields (1D6, a 1 breaks it),
+  maces vs mail, extra dice. A knight's blow takes the damage the player
+  rolled. The wound is applied (Major/Mortal Wounds follow), knockdown is
+  flagged (> Knockdown: DEX roll; > twice: automatic), and the whole
+  breakdown is shown to the players. Strike the log entry to undo it.

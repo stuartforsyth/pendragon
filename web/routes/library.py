@@ -45,7 +45,10 @@ def adversary_meta(request: Request):
     state = st(request)
     combat, rules = state.combat_data, state.rules
     return {
-        "weapons": {k: {"skill": v.get("skill", k)} for k, v in combat.get("weapons", {}).items()},
+        "weapons": {k: {"skill": v.get("skill", k), "vs_mail": v.get("vs_mail", ""),
+                        "through_shields": "strikes through shields" in v.get("advantage", "").lower(),
+                        "advantage": v.get("advantage", "")}
+                    for k, v in combat.get("weapons", {}).items()},
         "armour_pieces": {k: v.get("protection", 0) for k, v in combat.get("armour_pieces", {}).items()},
         "helmets": {k: v.get("protection", 0) for k, v in combat.get("helmets", {}).items()},
         "shields": {k: v.get("protection", 0) for k, v in combat.get("shields", {}).items()},

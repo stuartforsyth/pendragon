@@ -43,8 +43,9 @@ const ctx = {
   get events() { return S.events; },
 
   async rollCheck({ label, value, kind = "skill", actor = "", modifier = 0, masked }) {
+    // Click-to-roll from a statblock is always public; Secret is the dice tray's own toggle.
     const r = await post("/api/roll/check", { label, value, kind, actor, modifier,
-      masked: masked ?? tray.masked, show_label: tray.showLabel });
+      masked: masked ?? false, show_label: tray.showLabel });
     showLastRoll(r.event);
     return r.event;
   },
@@ -53,8 +54,7 @@ const ctx = {
   async rollDamage({ label, expr, actor = "", path = "/api/roll/damage", extra = {} }) {
     const choice = await damageChooser(`${actor ? actor + " — " : ""}${label} (${expr})`);
     if (!choice) return null;
-    const r = await post(path, { label, expr, actor, ...extra, ...choice,
-      masked: tray.masked, show_label: tray.showLabel });
+    const r = await post(path, { label, expr, actor, ...extra, ...choice });
     showLastRoll(r.event);
     return r.event;
   },
@@ -118,6 +118,7 @@ async function route() {
 // ------------------------------------------------------------------ session & log
 const KIND = (t) => t.startsWith("roll.") ? ["roll", "d20"]
   : t === "combat.check" ? ["roll", "d20"]
+  : t === "combat.blow" ? ["combat", "swords"]
   : t.startsWith("combat.") ? ["combat", "swords"]
   : t.startsWith("npc.") ? ["npc", "helm"]
   : t === "narrate" ? ["narrate", "feather"]
@@ -164,6 +165,7 @@ function resultBits(ev) {
   }
   if (ev.type === "roll.dice" || ev.type === "roll.damage") return h("span", { class: "result-pill o-critical" }, d.total);
   if (ev.type === "roll.opposed") return h("span", { class: "result-pill o-critical" }, d.verdict);
+  if (ev.type === "combat.blow") return h("span", { class: `result-pill ${d.blow?.wound ? "o-fumble" : "o-success"}` }, `${d.blow?.wound ?? 0} dmg`);
   return null;
 }
 
@@ -315,6 +317,7 @@ function showLastRoll(ev) {
   const d = ev.data || {};
   let big = "", detail = ev.text;
   if (ev.type === "roll.dice" || ev.type === "roll.damage") big = d.total;
+  else if (ev.type === "combat.blow") big = d.blow?.wound ?? "";
   else if (ev.type === "roll.check") big = d.roll;
   else if (ev.type === "roll.opposed") big = d.winner ? "⚔" : "=";
   const cls = d.outcome ? `o-${d.outcome}` : "";

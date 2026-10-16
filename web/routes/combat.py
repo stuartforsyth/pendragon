@@ -4,7 +4,9 @@ the Table that never shows a foe's numbers), and records it."""
 
 from fastapi import APIRouter, Request
 
-from core.combat import CHAR_FULL, CHAR_ORDER, Combatant, Encounter, roll_ransom, surrender_check
+from core.combat import (CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_breakdown,
+                         resolve_blow, roll_ransom, surrender_check)
+from core.dice import NotationError, roll_notation
 from core.encounter_def import to_editable
 from web.routes.common import bad, st, to_int
 from web.routes.rolls import record_check, record_damage
@@ -294,10 +296,8 @@ async def roll(request: Request, cid: str, body: dict):
     state, cs = _active(request)
     c = _combatant(cs, cid)
     what, key = body.get("what"), body.get("key")
-    masked = bool(body.get("masked"))
-    foe = _is_foe(c)
-    common = dict(actor=c.log_name, masked=masked, hide_value_on_table=foe,
-                  extra={"cid": cid})
+    masked = False      # combat rolls are always public — players see every roll
+    common = dict(actor=c.log_name, masked=masked, extra={"cid": cid})
     if what == "char":
         if key not in CHAR_ORDER:
             bad("Unknown characteristic")
@@ -345,4 +345,100 @@ async def ransom(request: Request, cid: str):
     roll_, line = roll_ransom(c)
     ev = state.record("combat.check", line, title=f"{c.display_name} — Ransom",
                       data={"cid": cid, "roll": roll_, "label": "Ransom"})
+    return {"event": ev}
+
+
+# -- blows: damage → rebate → protection → wound ------------------------------
+
+def _weapon_def(state, name):
+    return state.combat_data.get("weapons", {}).get(name or "", {})
+
+
+@router.post("/api/combat/blow")
+async def blow(request: Request, body: dict):
+    """Resolve one blow (Core Ch.7 Table 7.1, Ch.8). The attacker's weapon
+    damage is rolled here — or a total the player rolled is entered — then
+    critical/reckless dice, rebating, armour and shield/parry are applied and
+    the wound lands on the target. Every number is shown to the players."""
+    state, cs = _active(request)
+    attacker = _combatant(cs, body["attacker"]) if body.get("attacker") else None
+    target = _combatant(cs, body["target"]) if body.get("target") else None
+    weapon, expr = (body.get("weapon") or "").strip(), None
+    if attacker is not None and body.get("attack") not in (None, ""):
+        try:
+            atk = attacker.attacks[int(body["attack"])]
+        except (TypeError, ValueError, IndexError):
+            bad("Unknown attack")
+        weapon = atk["weapon"]
+        expr = atk["damage"]
+    rolled = body.get("damage")
+    if rolled not in (None, ""):
+        rolled, expr = to_int(rolled, "damage"), None      # a typed total wins
+        if rolled < 0:
+            bad("Damage can't be negative")
+    elif expr:
+        try:
+            roll_notation(expr)
+        except NotationError:
+            bad(f"'{expr}' isn't dice — enter the damage rolled (e.g. a lance uses the horse's damage)")
+    else:
+        bad("Pick a weapon or enter the damage rolled")
+    extra = (body.get("extra") or "").strip()
+    wdef = _weapon_def(state, weapon)
+    if body.get("vs_mail") and wdef.get("vs_mail"):
+        extra = (extra + "+1D6") if extra else "1D6"     # Mace +1D6; Great Mace +3D6 replaces +2D6
+    if extra:
+        try:
+            roll_notation(extra)
+        except NotationError:
+            bad(f"Can't read the extra damage '{extra}'")
+    unarmed = bool(attacker and not wdef and weapon.lower() in ("fist", "punch", "unarmed", "brawling"))
+    through = "strikes through shields" in (wdef.get("advantage", "").lower())
+
+    shield_value = body.get("shield_value")
+    shield_value = (to_int(shield_value, "shield") if shield_value not in (None, "")
+                    else (target.shield if target else 0))
+    b = resolve_blow(
+        expr=expr, rolled=rolled, critical=bool(body.get("critical")), unarmed=unarmed,
+        reckless=bool(body.get("reckless")), extra=extra, rebated=bool(body.get("rebated")),
+        armour=target.armor_points if target else 0, shield=shield_value,
+        shield_applies=bool(body.get("shield")), through_shields=through,
+        knockdown=(target.knockdown if target else 0))
+    if not target:
+        b["armour"] = 0
+
+    who = attacker.display_name if attacker else (body.get("attacker_name") or "").strip()
+    what = weapon or "blow"
+    hit = ("CRITICAL " if b["critical"] else "") + ("reckless " if b["reckless"] else "")
+    head = f"{who + '’s ' if who else ''}{what}"
+    breakdown = blow_breakdown(b)
+    if target:
+        tgt = Combatant.from_dict(target.to_dict())      # a copy, just for the text
+        old, msg = tgt.apply_hp(-b["wound"]) if b["wound"] else (tgt.cur_hp, "")
+        consequences = []
+        if b["knockdown"] == "automatic":
+            consequences.append(f"KNOCKED DOWN ({b['full']} > twice Knockdown {target.knockdown})")
+        elif b["knockdown"] == "check":
+            consequences.append(f"Knockdown check — DEX roll ({b['full']} > Knockdown {target.knockdown})")
+        if b["shield_broken"]:
+            consequences.append("shield broken")
+        tail = (" — " + "; ".join(consequences)) if consequences else ""
+        text = (f"{head} {hit}hits {target.log_name}: {breakdown}. "
+                f"{old} → {tgt.cur_hp} Hit Points{msg}{tail}")
+        if _is_foe(target):
+            state_txt = ("slain!" if "Mortal" in msg else "a Major Wound — falls unconscious!" if "Major" in msg
+                         else tgt.wound_state())
+            table = f"{head} {hit}hits {target.display_name}: {breakdown}. {target.display_name}: {state_txt}{tail}"
+        else:
+            table = text
+        title = f"{who + ' → ' if who else ''}{target.display_name}"
+    else:
+        text = table = f"{head} {hit}damage: {breakdown}"
+        title = head
+    data = {"cid": target.id if target else None, "delta": -b["wound"],
+            "attacker": who, "weapon": what, "target": target.display_name if target else "",
+            "blow": b, "breakdown": breakdown, "shield_broken": b["shield_broken"],
+            "major": bool(target and "Major" in msg), "mortal": bool(target and "Mortal" in msg),
+            "table_text": table}
+    ev = state.record("combat.blow", text, title=title, data=data)
     return {"event": ev}

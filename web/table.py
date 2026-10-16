@@ -18,9 +18,10 @@ FEED_LIMIT = 40
 # data keys that are safe to pass to the table per event type
 _SAFE_DATA = {
     "roll.dice": ("expr", "terms", "total", "label"),
-    "roll.check": ("label", "outcome", "roll", "kind", "actor"),
+    "roll.check": ("label", "outcome", "roll", "kind", "actor", "shown", "value"),
+    "combat.blow": ("attacker", "weapon", "target", "blow", "breakdown", "major", "mortal"),
     "roll.opposed": ("a", "b", "winner"),
-    "roll.damage": ("label", "total", "critical", "rebated", "actor"),
+    "roll.damage": ("label", "total", "critical", "rebated", "actor", "expr", "breakdown"),
     "narrate": ("text", "style", "image_url"),
     "rule.shown": ("rule_id", "title", "html", "pages", "book"),
     "combat.started": ("name",),

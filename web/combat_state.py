@@ -12,7 +12,7 @@ from core.combat import Combatant
 COMBAT_STATE_TYPES = {
     "combat.started", "combat.added", "combat.hp", "combat.status",
     "combat.promote", "combat.modifier", "combat.engage", "combat.removed",
-    "combat.round", "combat.ended",
+    "combat.round", "combat.ended", "combat.blow",
 }
 
 
@@ -47,6 +47,11 @@ def reduce(events, promotion_cfg=None):
             continue
         if t == "combat.hp":
             c.apply_hp(int(d.get("delta", 0)))
+        elif t == "combat.blow":
+            if d.get("delta"):
+                c.apply_hp(int(d["delta"]))
+            if d.get("shield_broken"):
+                c.shield = 0
         elif t == "combat.status":
             c.set_out(d.get("out"))
         elif t == "combat.promote":
@@ -91,7 +96,13 @@ def serialise(state, view):
     if state is None:
         return None
     fn = gm_view if view == "gm" else table_view
+    rows = [fn(c) for c in state["combatants"]]
+    for r in rows:   # who is fighting each combatant (the reverse of engaged_with)
+        r["engaged_by"] = [o["display_name"] if view == "gm" else o["name"] for o in rows
+                           if o is not r and o.get("engaged_with") and
+                           o["engaged_with"] == (r["display_name"] if view == "gm" else r["name"])
+                           and o["status"] == "active"]
     return {"active": state["active"], "name": state["name"], "round": state["round"],
             "players": state.get("players", 0),
             "descriptions": state.get("descriptions", []) if view == "gm" else [],
-            "combatants": [fn(c) for c in state["combatants"]]}
+            "combatants": rows}

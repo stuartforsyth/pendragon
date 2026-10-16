@@ -3,7 +3,7 @@
 // promotion, surrender and ransom. Every change is an event; strike one in the
 // log to undo it.
 
-import { h, clear, api, post, icon, menu, toast, useCss, confirmBox, skillDisplay,
+import { h, clear, api, post, icon, menu, modal, toast, useCss, confirmBox, skillDisplay,
   CHAR_FULL, CHAR_ORDER, debounce } from "../lib.js";
 
 export default {
@@ -11,6 +11,7 @@ export default {
     useCss("combat");
     let cs = null;             // GM view of the combat
     let encounters = [], advs = [], party = [];
+    let weapons = {};          // weapon name -> {vs_mail, through_shields, advantage}
     let pending = false;       // a re-render waiting for an input to lose focus
     let launchQuery = "", selected = "", players = null, includeParty = true;
     const descOpen = { v: true };
@@ -19,10 +20,11 @@ export default {
     clear(el, body);
 
     async function loadLibrary() {
-      [encounters, advs, party] = await Promise.all([
+      [encounters, advs, party, weapons] = await Promise.all([
         api("/api/encounters").then((r) => r.encounters),
         api("/api/adversaries").then((r) => r.adversaries),
         api("/api/party").then((r) => r.party),
+        api("/api/adversaries/meta").then((r) => r.weapons),
       ]);
     }
 
@@ -115,8 +117,10 @@ export default {
         h("div", { class: "section-label" }, "The Foe"),
         h("div", { class: "cbt-list" }, foes.length ? foes.map(row) : h("div", { class: "empty" }, "No foes — add some.")),
         h("div", { class: "cbt-help faint small" },
-          "HP: type damage as a negative (−8) or healing as a positive, then Enter. A single blow ≥ Constitution is a Major Wound; ≥ total Hit Points is a Mortal Wound. ",
-          "Mod: a situational modifier applied to every characteristic and skill roll for that combatant (not damage). Strike any log entry to undo it."),
+          "Click any blue value to roll it — characteristics, weapon skills, skills — and it goes to the log and the Table. ",
+          "Click a red damage value (or Hit on the target) to resolve a blow: normal or critical (+4D6), rebated, reckless, armour only or armour + shield/parry; ",
+          "the wound, Major/Mortal Wounds and knockdown are worked out and applied. For a knight's blow, enter the damage the player rolled. ",
+          "Apply is for plain HP changes (healing, a fall). Mod: a situational modifier on every characteristic and skill roll (not damage). Strike any log entry to undo it."),
       ];
     }
 
@@ -172,25 +176,137 @@ export default {
         title: "Situational modifier — Enter",
         onkeydown: (e) => { if (e.key === "Enter") e.target.blur(); },
         onchange: (e) => post(`/api/combat/${c.id}/modifier`, { value: e.target.value.trim() || 0 }) });
-      const engIn = h("input", { class: "input eng-in", placeholder: "who?", value: c.engaged_with || "",
-        onkeydown: (e) => { if (e.key === "Enter") e.target.blur(); },
-        onchange: (e) => post(`/api/combat/${c.id}/engage`, { with: e.target.value }) });
+      const engIn = engageSelect(c);
 
       return h("div", { class: `cbt-row t-${tone} ${c.down ? "is-down" : ""}`, "data-id": c.id },
         h("div", { class: "cbt-line" },
           h("div", { class: "cbt-name" }, marker ? h("span", { class: "marker" }, marker + " ") : null, c.display_name,
             st ? h("span", { class: `tag ${st[1]}`, style: { marginLeft: "8px" } }, st[0]) : null),
-          h("div", { class: "cbt-eng" }, h("span", { class: "faint small" }, "engages"), engIn),
+          h("div", { class: "cbt-eng" }, h("span", { class: "faint small" }, "fighting"), engIn),
           h("div", { class: "cbt-hp" },
             h("div", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`), h("span", { class: "faint small" }, " HP"),
               !isKnight ? h("span", { class: "faint small ws" }, ` · ${c.wound_state}`) : null),
             h("div", { class: "hp-bar" }, h("i", { style: { width: `${pct}%` } }))),
+          h("button", { class: "btn sm hit-btn", title: `Resolve a blow against ${c.display_name} — rolls damage, applies armour/shield, knockdown and wounds`,
+            onclick: () => blowDialog({ target: c }) }, icon("swords"), "Hit"),
           hpIn,
-          h("button", { class: "btn sm", onclick: () => applyHp(c, hpIn) }, "Apply"),
+          h("button", { class: "btn sm", title: "Apply a plain HP change (healing, a fall…)", onclick: () => applyHp(c, hpIn) }, "Apply"),
           h("div", { class: "cbt-mod" }, h("span", { class: "faint small" }, "Mod"), modIn),
           h("button", { class: "btn sm icon", title: "Actions", onclick: (e) => actions(e.currentTarget, c) }, icon("dots"))),
         statLine(c, isKnight),
+        c.engaged_by?.length ? h("div", { class: "cbt-engby" }, icon("swords"), " Fought by ", c.engaged_by.join(", ")) : null,
         flavour(c));
+    }
+
+    // Who a combatant can be set to fight: foes pick from the knights, knights
+    // from the foes (anyone else stays reachable through "Other…").
+    function engageSelect(c) {
+      const others = cs.combatants.filter((o) => o.id !== c.id && o.side !== c.side && o.status !== "dead");
+      const names = others.map((o) => o.display_name);
+      const cur = c.engaged_with || "";
+      const sel = h("select", { class: `input eng-in ${cur ? "set" : ""}`, title: "Who is this combatant fighting?",
+        onchange: async (e) => {
+          let v = e.target.value;
+          if (v === "__other") {
+            v = await modal("Fighting whom?", (close) => {
+              const inp = h("input", { class: "input", value: cur, onkeydown: (ev) => ev.key === "Enter" && close(inp.value) });
+              return [inp, h("div", { class: "foot" }, h("button", { class: "btn ghost", onclick: () => close() }, "Cancel"),
+                h("button", { class: "btn primary", onclick: () => close(inp.value) }, "Set"))];
+            });
+            if (v === undefined) { e.target.value = cur; return; }
+          }
+          await post(`/api/combat/${c.id}/engage`, { with: v });
+        } },
+        h("option", { value: "" }, "— nobody —"),
+        names.map((n) => h("option", { value: n, selected: n === cur }, n)),
+        cur && !names.includes(cur) ? h("option", { value: cur, selected: true }, cur) : null,
+        h("option", { value: "__other" }, "Other…"));
+      return sel;
+    }
+
+    const byName = (n) => cs.combatants.find((o) => o.display_name === n);
+
+    // ------------------------------------------------------------ the blow dialog
+    // Table 7.1: the winner rolls damage (+4D6 on a critical); the loser's
+    // armour always protects, shield/parry only on a partial success or tie.
+    async function blowDialog({ attacker = null, attack = null, target = null }) {
+      if (!target && attacker) target = byName(attacker.engaged_with) || null;
+      if (!attacker && target) attacker = byName(target.engaged_with) || (target.engaged_by?.length ? byName(target.engaged_by[0]) : null);
+      const living = cs.combatants.filter((o) => o.status !== "dead");
+      const st = { attacker: attacker?.id || "", attack: attack ?? (attacker?.attacks?.length ? 0 : null), target: target?.id || "",
+        critical: false, reckless: false, rebated: false, shield: false, vs_mail: false, damage: "", weapon: "", extra: "" };
+      const find = (id) => cs.combatants.find((o) => o.id === id);
+
+      await modal("Resolve a blow", (close) => {
+        const box = h("div", { class: "blow" });
+        const draw = () => {
+          const a = find(st.attacker), t = find(st.target);
+          const atk = a && st.attack !== null ? a.attacks?.[st.attack] : null;
+          const wname = atk ? atk.weapon : st.weapon;
+          const w = weapons[wname] || {};
+          const needsNumber = !atk || !/\d/.test(atk.damage);
+          if (/jousting/i.test(wname) && !st._rebTouched) st.rebated = true;
+          const opt = (v, label, on) => h("option", { value: v, selected: on }, label);
+          const toggle = (key, label, hint) => h("label", { class: "check" },
+            h("input", { type: "checkbox", checked: st[key], onchange: (e) => { st[key] = e.target.checked; if (key === "rebated") st._rebTouched = true; draw(); } }),
+            h("span", {}, label, hint ? h("span", { class: "faint small" }, ` — ${hint}`) : null));
+          const prot = t ? `${t.armor_points} armour${t.shield ? ` + ${t.shield} shield` : ", no shield"}` : "no target";
+          clear(box,
+            h("div", { class: "grid grid-2" },
+              h("label", { class: "field" }, h("span", {}, "Attacker (winner)"),
+                h("select", { class: "input", onchange: (e) => { st.attacker = e.target.value; const na = find(st.attacker);
+                  st.attack = na?.attacks?.length ? 0 : null; if (!st.target && na) st.target = byName(na.engaged_with)?.id || ""; draw(); } },
+                  opt("", "— a player / other —", !st.attacker), living.map((o) => opt(o.id, o.display_name, o.id === st.attacker)))),
+              h("label", { class: "field" }, h("span", {}, "Target (loser)"),
+                h("select", { class: "input", onchange: (e) => { st.target = e.target.value; draw(); } },
+                  opt("", "— no target, just roll —", !st.target), living.map((o) => opt(o.id, o.display_name, o.id === st.target))))),
+            h("div", { class: "grid grid-2", style: { marginTop: "10px" } },
+              a?.attacks?.length ? h("label", { class: "field" }, h("span", {}, "Weapon"),
+                h("select", { class: "input", onchange: (e) => { st.attack = e.target.value === "" ? null : Number(e.target.value); draw(); } },
+                  a.attacks.map((x, i) => opt(i, `${x.weapon} — ${x.damage}`, i === st.attack)), opt("", "Other (enter damage)", st.attack === null)))
+                : h("label", { class: "field" }, h("span", {}, "Weapon (optional)"),
+                  h("input", { class: "input", list: "blow-weapons", value: st.weapon, placeholder: "e.g. Sword", oninput: (e) => { st.weapon = e.target.value; },
+                    onchange: draw }), h("datalist", { id: "blow-weapons" }, Object.keys(weapons).map((n) => h("option", { value: n })))),
+              needsNumber ? h("label", { class: "field" }, h("span", {}, "Damage rolled (the player's dice)"),
+                h("input", { class: "input", type: "number", min: 0, value: st.damage, placeholder: "e.g. 19",
+                  oninput: (e) => { st.damage = e.target.value; } }))
+                : h("div", { class: "field" }, h("span", {}, "Damage"), h("div", { class: "blow-dmg" }, atk.damage, h("span", { class: "faint small" }, " — rolled by the app")))),
+            h("div", { class: "section-label" }, "Attacker's result"),
+            h("div", { class: "chips" },
+              h("button", { class: `chip ${!st.critical ? "on" : ""}`, onclick: () => { st.critical = false; draw(); } }, "Success"),
+              h("button", { class: `chip ${st.critical ? "on" : ""}`, onclick: () => { st.critical = true; draw(); } },
+                st.reckless ? "Critical (+6D6 reckless)" : "Critical (+4D6)")),
+            needsNumber && st.critical ? h("div", { class: "faint small", style: { marginTop: "4px" } }, "Enter the normal damage the player rolled — the app adds the critical dice.") : null,
+            h("div", { class: "section-label" }, "Defender's result"),
+            h("div", { class: "chips" },
+              h("button", { class: `chip ${!st.shield ? "on" : ""}`, onclick: () => { st.shield = false; draw(); } }, "Failed / fumbled — armour only"),
+              h("button", { class: `chip ${st.shield ? "on" : ""}`, onclick: () => { st.shield = true; draw(); } }, "Partial success / tie — armour + shield/parry")),
+            st.shield && t ? h("div", { class: "row", style: { marginTop: "6px" } }, h("span", { class: "faint small" }, "Shield / parry value"),
+              h("input", { class: "input num", type: "number", value: st.shield_value ?? t.shield, oninput: (e) => { st.shield_value = e.target.value; } }),
+              h("span", { class: "faint small" }, "(e.g. a sword's Parry +3 when there's no shield)")) : null,
+            w.through_shields && st.shield ? h("div", { class: "faint small", style: { marginTop: "4px" } }, `${wname} strikes through shields: the shield stops only 1D6, and a 1 breaks it.`) : null,
+            h("div", { class: "section-label" }, "Options"),
+            h("div", { class: "stack", style: { gap: "6px" } },
+              toggle("rebated", "Rebated / blunted weapon", "crit dice first, then halve; knockdown uses the full roll"),
+              toggle("reckless", "Reckless Attack", "+2D6 (+6D6 on a critical); no shield or parry for anyone"),
+              w.vs_mail ? toggle("vs_mail", `Against mail (${w.vs_mail})`, null) : null,
+              h("div", { class: "row" }, h("span", { class: "faint small" }, "Extra dice"),
+                h("input", { class: "input", style: { width: "120px" }, value: st.extra, placeholder: "e.g. 1d6", oninput: (e) => { st.extra = e.target.value; } }))),
+            h("div", { class: "blow-target faint small" }, t ? `${t.display_name}: ${prot} · Knockdown ${t.knockdown || "?"} · Major Wound ${t.major_wound}` : "No target — the damage is just rolled and shown."),
+            h("div", { class: "foot" }, h("button", { class: "btn ghost", onclick: () => close() }, "Cancel"),
+              h("button", { class: "btn primary", onclick: async () => {
+                const body = { attacker: st.attacker || null, target: st.target || null, critical: st.critical, reckless: st.reckless,
+                  rebated: st.rebated, shield: st.shield, vs_mail: st.vs_mail, extra: st.extra, weapon: wname,
+                  shield_value: st.shield_value ?? null };
+                if (atk && !needsNumber) body.attack = st.attack; else body.damage = st.damage;
+                const r = await post("/api/combat/blow", body);
+                ctx.showLastRoll(r.event);
+                close();
+              } }, icon("swords"), t ? "Roll & apply" : "Roll damage")));
+        };
+        draw();
+        return box;
+      }, { wide: true });
     }
 
     async function applyHp(c, input) {
@@ -202,7 +318,7 @@ export default {
     }
 
     function statLine(c, isKnight) {
-      const roll = (body) => post(`/api/combat/${c.id}/roll`, { ...body, masked: ctx.masked }).then((r) => ctx.showLastRoll(r.event));
+      const roll = (body) => post(`/api/combat/${c.id}/roll`, body).then((r) => ctx.showLastRoll(r.event));
       const hasChars = CHAR_ORDER.some((k) => c.characteristics?.[k]);
       const parts = [];
       if (hasChars) {
@@ -213,8 +329,8 @@ export default {
       if (c.attacks?.length) {
         parts.push(h("span", { class: "grp" }, c.attacks.map((a, i) => h("span", { class: "pair" }, h("span", { class: "nm" }, a.weapon), " ",
           h("span", { class: `rollable ${a.value >= 16 ? "famous" : ""} ${c.down ? "down" : ""}`, title: `Roll ${a.weapon}`, onclick: () => roll({ what: "attack", key: i }) }, skillDisplay(a.value)),
-          h("span", { class: `rollable dmg ${c.down ? "down" : ""}`, title: `${a.weapon} damage`,
-            onclick: () => ctx.rollDamage({ label: a.weapon, expr: a.damage, actor: c.log_name, path: `/api/combat/${c.id}/roll`, extra: { what: "damage", key: i } }) }, a.damage)))));
+          h("span", { class: `rollable dmg ${c.down ? "down" : ""}`, title: `${a.weapon} damage — resolve a blow (critical, rebated, armour, shield)`,
+            onclick: () => blowDialog({ attacker: c, attack: i }) }, a.damage)))));
       }
       const skills = Object.entries(c.skills || {});
       if (skills.length) {
