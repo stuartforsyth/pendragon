@@ -11,3 +11,12 @@
 ## Notes
 - Visual: when an Encounter is set, a physical-looking card is "played" on the players' board (→ piece 8).
 - Selection flow under redesign (see below).
+
+## Battle-card data audit (2026-10-17, read-only, vs battlecards.pdf)
+- examplecombat.json: all numbers on the 12 foe cards match the PDF (stats, attacks, HP/KD/MW/Unc, armor+shield, Morale Min/Loss, Glory, KV, ransom, counts).
+- Missing: cards' own flavour/rules text (only one-line paraphrases); weapon footnotes (−1D6 shield protection, +1D6 vs mail, spear negates height penalty, inferior sword breaks on ties); 1D6 weapon tables (Saxons, Kerns); special rules (Knifemen horse-first, Saxon shield wall pairing, Kerns max 3 attackers, Archers Valorous-or-flee, Malahaut shield penalty pre-applied, Javeliniers/Archers missile reference).
+- Wrong: Irish Kerns armor 4 / shield 0 should be armor 0 + shield 4 (Targe, "unarmored"); Archers "a third injured" → "seriously injured".
+- Mounted: Gorre, Lothian, Malahaut, Cornwall, Breton, Northern Prickers. On foot: Pikemen, Javeliniers, Knifemen, Saxons, Kerns, Archers.
+- The 5 Opportunity cards are absent from the app data.
+- User's combat.json: Knights of Lothian replaced by a hand-edited version that lost battle_card, morale_minimum, per_player, ransom, morale_loss, KV and Glory (0 vs 50), HP 30 vs 31. User "Bodyguards" differ slightly from the card.
+- Code bug: per-player counts use Python round() (banker's rounding) in core/combat.py:78, 82, 397 — 1.5× for 3 knights gives 4 instead of 5 (cards say "rounded normally").
