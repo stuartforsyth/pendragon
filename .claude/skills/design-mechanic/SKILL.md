@@ -56,8 +56,30 @@ tokens; ask before inventing a new visual idea); and mobile/desktop and keyboard
 a quick ASCII sketch for layout choices (AskUserQuestion previews work well) and settle on
 one. Pieces tagged **paper/VTT** skip the UI conversation.
 
+**Review every decision the user makes — you are a design partner, not a scribe.** After each
+answer (rules, workflow or UI), before recording it, run a quick critical review and say the
+result out loud:
+
+1. **Rules check.** Does the decision break a rule of the game or add something the rules do
+   not contain? Check the corpus (cite id/pages; PDFs for gaps). Classify it as **RAW**
+   (as written), **house rule** (deliberate departure or addition), or **conflict** (breaks
+   the rules by accident). Never let a house rule slip in unlabelled: name it, say what the
+   book does instead, and ask whether it is intended. Record house rules in the piece file
+   under **House rules** with the book rule they replace, so the design, spec and UI can
+   label them.
+2. **Better-way check.** Is there a simpler, safer or more useful way to get the same
+   outcome? Consider: fewer clicks or fewer states; what the GM does mid-session under
+   pressure; consistency with existing tools and the event-sourced model (undo, replay,
+   deterministic deltas); whether it makes the Table leak secrets or clutter; edge cases it
+   mishandles; cost versus value (the user may be better served by *assist* than *app*).
+3. **Challenge, with a recommendation.** If a decision is weak, say so plainly and propose the
+   alternative with the trade-off; don't just ask "are you sure". Don't defer to the user
+   because they decided it — and equally don't relitigate a decision after they have heard
+   the challenge and chosen to keep it: record it, with the concern noted, and move on.
+   Agreement is allowed to be the whole review when the decision is sound — say why in a line.
+
 After each piece write `pieces/NN-slug.md`: **Decisions** (final, numbered), **UI** (location,
-element list, states, GM flow, Table view, sketch), **Rejected / out of scope** with the reason, **Rules cited**, **Open questions** (should be empty before
+element list, states, GM flow, Table view, sketch), **House rules** (departures from the book, each with the rule it replaces), **Rejected / out of scope** with the reason, **Rules cited**, **Open questions** (should be empty before
 moving on), and **Interfaces** to neighbouring pieces. Read the user back a 5-line summary
 and get a yes before the next piece. Later pieces may reopen earlier ones — edit that file
 and note why.
@@ -69,7 +91,8 @@ not a fork). Its brief must name the files to read — `breakdown.md`, all `piec
 `CLAUDE.md`, `docs/web-app.md` — and say: reconcile the pieces into **one coherent design**
 (data model, event types and replay, `core/` vs `web/` split, API routes, GM UI (consistent
 across pieces: shared components, navigation between pieces), Table projection and secret filtering, rules coverage, build order); flag contradictions or gaps
-between pieces rather than papering over them; invent no decisions the user did not make —
+between pieces rather than papering over them; independently review the whole for rules
+violations, unlabelled house rules and better alternatives, and report them; invent no decisions the user did not make —
 list them as questions. Output `design.md`.
 
 **Gate:** relay the design's summary and its open questions to the user. Resolve questions
