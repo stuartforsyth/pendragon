@@ -1,6 +1,7 @@
 // GM console shell: tool rail + router, the live session log, the dice tray,
 // session controls, and the ctx object every tool receives.
 
+import { liveStream } from "./stream.js";
 import { h, clear, api, post, toast, modal, menu, icon, time, debounce, download,
   OUTCOME_LABEL, skillDisplay, copyText } from "./lib.js";
 
@@ -477,16 +478,17 @@ async function checkBoot() {
   } catch { /* still down: the stream retries */ }
 }
 function connect() {
-  const es = new EventSource("/api/stream");
   const refresh = debounce(fetchNew, 40);
-  es.onopen = () => { checkBoot(); $("conn").classList.remove("down"); $("conn").textContent = "live"; refresh(); };
-  es.onerror = () => { $("conn").classList.add("down"); $("conn").textContent = "reconnecting"; };
-  es.onmessage = (m) => {
-    const msg = JSON.parse(m.data);
-    if (msg.reason === "event") refresh();
-    else if (msg.reason === "session") loadSession().then(() => notify(S.events, true));
-    else if (msg.reason === "library") for (const t of Object.values(S.tools)) t.inst?.onLibrary?.();
-  };
+  liveStream({
+    open: () => { checkBoot(); $("conn").classList.remove("down"); $("conn").textContent = "live"; refresh(); },
+    error: () => { $("conn").classList.add("down"); $("conn").textContent = "reconnecting"; },
+    message: (data) => {
+      const msg = JSON.parse(data);
+      if (msg.reason === "event") refresh();
+      else if (msg.reason === "session") loadSession().then(() => notify(S.events, true));
+      else if (msg.reason === "library") for (const t of Object.values(S.tools)) t.inst?.onLibrary?.();
+    },
+  });
 }
 
 // ------------------------------------------------------------------ boot

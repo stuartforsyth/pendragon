@@ -2,6 +2,7 @@
 // only what players may see (see web/table.py); this file just makes it sing.
 
 import { h, clear, icon, debounce } from "./lib.js";
+import { liveStream } from "./stream.js";
 import { knightCard, moraleGauge, cardFrame, deckSpread, knightShield as knightShieldEl } from "./board.js";
 
 const $ = (id) => document.getElementById(id);
@@ -406,11 +407,12 @@ async function checkBoot() {
 }
 
 function connect() {
-  const es = new EventSource("/api/stream");
   const go = debounce(refresh, 60);
-  es.onopen = () => { checkBoot(); $("offline").classList.remove("on"); go(); };
-  es.onerror = () => $("offline").classList.add("on");
-  es.onmessage = () => go();
+  liveStream({
+    open: () => { checkBoot(); $("offline").classList.remove("on"); go(); },
+    error: () => $("offline").classList.add("on"),
+    message: () => go(),
+  });
 }
 
 $("view").style.cssText = "min-height:0;display:grid";

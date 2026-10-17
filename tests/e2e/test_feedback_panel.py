@@ -21,3 +21,22 @@ def test_feedback_tab_send_and_list(page, app_url):
     page.keyboard.press("Escape")
     expect(page.locator("#fb-panel.open")).to_have_count(0)
 
+
+
+def test_many_tabs_share_one_live_connection(browser, app_url):
+    """Browsers allow 6 connections per site across all tabs: with one live
+    stream per tab, the 7th tab never loaded. Tabs now share one stream."""
+    ctx = browser.new_context()
+    try:
+        tabs = []
+        for _ in range(8):
+            pg = ctx.new_page()
+            pg.goto(app_url + "/#/npc", timeout=8000)
+            tabs.append(pg)
+        last = ctx.new_page()
+        last.goto(app_url + "/#/battles", timeout=8000)
+        expect(last.locator(".bt-item").first).to_be_visible(timeout=8000)
+        tabs[0].request.post(app_url + "/api/roll/dice", data={"expr": "1d6", "label": "shared stream"})
+        tabs[5].wait_for_function("() => document.querySelector('#log').innerText.includes('shared stream')", timeout=5000)
+    finally:
+        ctx.close()
