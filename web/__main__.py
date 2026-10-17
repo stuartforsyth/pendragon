@@ -12,7 +12,7 @@ def main():
     p.add_argument("--reload", action="store_true")
     a = p.parse_args()
     uvicorn.run("web.app:create_app", factory=True, host=a.host, port=a.port,
-                reload=a.reload)
+                reload=a.reload, timeout_graceful_shutdown=2)   # open tabs' live streams mustn't block a restart
 
 
 if __name__ == "__main__":

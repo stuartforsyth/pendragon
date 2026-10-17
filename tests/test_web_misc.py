@@ -96,3 +96,7 @@ def test_feedback_queue_records_where_it_came_from(client):
     assert FB.mark(data, [1], "done", "Fixed") == [1]
     mine = ok(client.get("/api/feedback"))["items"]
     assert mine[0]["status"] == "done" and mine[0]["note"] == "Fixed"
+
+
+def test_healthz_reports_a_boot_id(client):
+    assert len(client.get("/healthz").json()["boot"]) == 8

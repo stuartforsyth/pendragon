@@ -2,6 +2,7 @@
 JSON API both of them drive. Launch with ./launch.sh (or ``python -m web``)."""
 
 import os
+import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -46,8 +47,10 @@ def create_app(root=ROOT, sessions_dir=None, data_dir=None):
     def table_screen(request: Request):
         return templates.TemplateResponse(request, "table.html", {})
 
+    boot = uuid.uuid4().hex[:8]            # changes on every server start
+
     @app.get("/healthz")
     def healthz():
-        return {"ok": True}
+        return {"ok": True, "boot": boot}
 
     return app

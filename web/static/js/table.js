@@ -394,10 +394,21 @@ async function refresh() {
   } catch { /* the stream reconnects and refreshes */ }
 }
 
+// After a server restart (new code, or state the page fetched while it was
+// down) reload the page; a brief network blip just reconnects.
+let bootId = null;
+async function checkBoot() {
+  try {
+    const b = (await (await fetch("/healthz", { cache: "no-store" })).json()).boot;
+    if (bootId && b && b !== bootId) return location.reload();
+    bootId = b;
+  } catch { /* still down: the stream retries */ }
+}
+
 function connect() {
   const es = new EventSource("/api/stream");
   const go = debounce(refresh, 60);
-  es.onopen = () => { $("offline").classList.remove("on"); go(); };
+  es.onopen = () => { checkBoot(); $("offline").classList.remove("on"); go(); };
   es.onerror = () => $("offline").classList.add("on");
   es.onmessage = () => go();
 }

@@ -20,3 +20,4 @@ def test_feedback_tab_send_and_list(page, app_url):
     assert item["kind"] == "change" and item["page"]["route"] == "#/combat" and item["page"]["tool"] == "Combat"
     page.keyboard.press("Escape")
     expect(page.locator("#fb-panel.open")).to_have_count(0)
+

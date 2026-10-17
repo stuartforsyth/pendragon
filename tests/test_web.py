@@ -2,7 +2,7 @@ from tests.conftest import ok
 
 
 def test_pages_and_health(client):
-    assert client.get("/healthz").json() == {"ok": True}
+    assert client.get("/healthz").json()["ok"] is True
     assert "Pendragon" in client.get("/").text
     assert client.get("/table").status_code == 200
 

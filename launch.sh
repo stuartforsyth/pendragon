@@ -16,11 +16,12 @@ fi
 
 mkdir -p .run
 PIDFILE=".run/server.pid"
-# Always (re)start, so the server runs the current code after an update.
-if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-  echo "Restarting the Pendragon server (was PID $(cat "$PIDFILE"))..."
-  kill "$(cat "$PIDFILE")"
-  for _ in $(seq 1 20); do kill -0 "$(cat "$PIDFILE")" 2>/dev/null || break; sleep 0.1; done
+# Always (re)start: stop every copy already running (so nothing old keeps
+# serving open tabs), then start fresh on the current code.
+RESTART=""
+if "$DIR/stop.sh" >/dev/null 2>&1; then
+  RESTART=1
+  echo "Stopped the server that was already running."
 fi
 nohup .venv/bin/python -m web --port "$PORT" > .run/server.log 2>&1 &
 echo $! > "$PIDFILE"
@@ -45,7 +46,11 @@ fi
 
 echo "GM console:   $URL/"
 echo "Table screen: $URL/table   (open it from the console and share that window on Discord)"
-if command -v xdg-open >/dev/null 2>&1; then
+# Open the console only on a fresh start: after a restart the open tabs reload
+# themselves when the server comes back (set PENDRAGON_NO_BROWSER=1 to never open one).
+if [ -n "$RESTART" ] || [ -n "$PENDRAGON_NO_BROWSER" ]; then
+  echo "(Open tabs reload themselves; no new window opened.)"
+elif command -v xdg-open >/dev/null 2>&1; then
   xdg-open "$URL/" >/dev/null 2>&1 &
 elif command -v open >/dev/null 2>&1; then
   open "$URL/"
