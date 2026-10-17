@@ -329,8 +329,11 @@ def finalise(draft, rules, combat):
     """Turn an editor draft into a saved adversary stat block.
 
     Humans derive Hit Points/Move/etc. from characteristics and armour from
-    worn pieces; creatures keep their printed combat stats (never re-derived —
-    that would turn a Dragon's 16d6/Move 65 into human-formula values).
+    worn pieces; creatures and battle-card foes keep their printed combat stats
+    (never re-derived — that would turn a Dragon's 16d6/Move 65 into
+    human-formula values, or a card's 31 Hit Points into 30). Fields the editor
+    doesn't manage (battle-card Morale, Knight Value, ransom, per-player
+    scaling…) are carried over from the draft untouched.
     """
     kind = draft.get("kind", "generic")
     category = draft.get("category", "human")
@@ -344,7 +347,8 @@ def finalise(draft, rules, combat):
     numeric = {k: v if isinstance(v, int) else 0 for k, v in adv["characteristics"].items()}
     other_in = draft.get("other", {}) or {}
     health_in = draft.get("health", {}) or {}
-    if category == "human":
+    printed = category != "human" or bool(draft.get("battle_card"))
+    if not printed:
         d = rules.derive_stats(numeric)
         adv["health"] = {"hit_points": d["Hit Points"], "knockdown": d["Knockdown"],
                          "major_wound": d["Major Wound"], "unconscious": d["Unconscious"]}
@@ -362,7 +366,10 @@ def finalise(draft, rules, combat):
                          for k in ("hit_points", "knockdown", "major_wound", "unconscious")}
         adv["armour"] = {"pieces": [], "helmet": "", "shield": ""}
         shield = _int(other_in.get("shield"), 0)
-        adv["armour_desc"] = "Natural armour" + (" + shield" if shield else "")
+        if category == "human":     # battle card: keep the printed armour line
+            adv["armour_desc"] = str(draft.get("armour_desc", "") or "").strip()
+        else:
+            adv["armour_desc"] = "Natural armour" + (" + shield" if shield else "")
         adv["other"] = {"movement": _int(other_in.get("movement")),
                         "armor_points": _int(other_in.get("armor_points")),
                         "shield": shield, "glory": _int(other_in.get("glory")),
@@ -385,6 +392,11 @@ def finalise(draft, rules, combat):
     adv["notes"] = str(draft.get("notes", "") or "").strip()
     if draft.get("created_from_npc"):
         adv["created_from_npc"] = True
+    for k, v in draft.items():
+        if k not in adv:
+            adv[k] = v
+    for k, v in other_in.items():
+        adv["other"].setdefault(k, v)
     return adv
 
 

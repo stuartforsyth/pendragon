@@ -229,7 +229,7 @@ export default {
         return;
       }
       const d = draft;
-      const human = d.category === "human";
+      const human = d.category === "human" && !d.battle_card;   // battle cards keep printed stats
       derivedEl = armourEl = null;
 
       const txt = (obj, f, attrs = {}) => {
@@ -296,7 +296,9 @@ export default {
 
       // creature stats
       const creature = human ? null : h("div", { class: "panel" },
-        h("h3", {}, "Creature combat stats"), h("p", { class: "faint small", style: { margin: "-4px 0 10px" } }, "Printed, not derived — a creature's Hit Points, Move and armour come straight from its stat block."),
+        h("h3", {}, d.battle_card ? "Battle-card combat stats" : "Creature combat stats"), h("p", { class: "faint small", style: { margin: "-4px 0 10px" } }, d.battle_card
+          ? "Printed, not derived — Hit Points and armour come straight from the battle card."
+          : "Printed, not derived — a creature's Hit Points, Move and armour come straight from its stat block."),
         h("div", { class: "adv-grid creature-grid" }, CREATURE_FIELDS.map(([grp, f, label]) => {
           const inp = h("input", { class: "input num", type: "number", value: d[grp][f] ?? "" });
           inp.addEventListener("input", () => { d[grp][f] = inp.value === "" ? (f === "valorous_modifier" ? "" : 0) : Number(inp.value); touched(); });

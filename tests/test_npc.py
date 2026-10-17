@@ -1,3 +1,7 @@
+import copy
+import json
+import os
+
 from core.adversary import draft_from_npc, finalise, normalise_traits
 from core.npc import build_description, build_image_prompt, format_statblock_markdown
 
@@ -48,3 +52,20 @@ def test_finalise_keeps_dice_characteristics(rules):
     adv = finalise({"name": "Conroi", "characteristics": {"SIZ": 12, "DEX": 10, "STR": 12,
                     "CON": 12, "APP": "1d6+5"}}, rules, rules.combat)
     assert adv["characteristics"]["APP"] == "1D6+5" and adv["health"]["hit_points"] > 0
+
+
+def test_finalise_keeps_battle_card_data(rules):
+    # Saving a battle card in the editor must not strip its battle fields or
+    # re-derive its printed stats (Knights of Lothian: card HP 31, formula 30).
+    path = os.path.join(os.path.dirname(__file__), "..", "data", "examplecombat.json")
+    with open(path, encoding="utf-8") as fh:
+        card = json.load(fh)["adversaries"]["Knights of Lothian"]
+    card["name"] = "Knights of Lothian"
+    adv = finalise(copy.deepcopy(card), rules, rules.combat)
+    for k in ("battle_card", "morale_minimum", "per_player", "ransom"):
+        assert adv[k] == card[k]
+    for k in ("hit_points", "knockdown", "major_wound", "unconscious"):
+        assert adv["health"][k] == card["health"][k]
+    for k in ("armor_points", "shield", "glory", "morale_loss", "knight_value"):
+        assert adv["other"][k] == card["other"][k]
+    assert adv["armour_desc"] == card["armour_desc"]
