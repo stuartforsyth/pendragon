@@ -92,6 +92,19 @@ def resolve_roster(defn, n_players):
 # ---------------------------------------------------------------------------
 
 class Combatant:
+    # Battle-era fields. Class-level defaults so snapshots saved before they
+    # existed still replay (``from_dict`` only restores what was saved).
+    mounted = False
+    attacks_horse = False
+    height_override = None
+    countercharge = False
+    captured_by = None
+    defeated_with = ""
+    posture = None
+    rounds = None
+    extra_rounds = 0
+    position = None
+
     def __init__(self, type_name, template, label, hp_jitter=True):
         self.type = type_name
         self.label = label
@@ -147,7 +160,7 @@ class Combatant:
 
         self.elite = False
         self._base = None          # snapshot for demotion
-        self._out = None           # override: None / "unconscious" / "dead" / "fled"
+        self._out = None           # override: None / "unconscious" / "dead" / "fled" / "surrendered"
         self._engaged_logged = ""  # last engaged-with value written to the log
 
         # Situational modifier (mounted vs. foot, shield penalty, prone, etc.).
@@ -166,6 +179,8 @@ class Combatant:
             return "dead"
         if self._out == "fled":            # left the field — no longer tracked
             return "fled"
+        if self._out == "surrendered":
+            return "surrendered"
         if self._out == "unconscious" or self.cur_hp < self.unconscious:
             return "unconscious"
         return "active"
@@ -236,7 +251,8 @@ class Combatant:
         return old, msg
 
     def set_out(self, out):
-        """Override status: None (back up), 'unconscious', 'dead' or 'fled'."""
+        """Override status: None (back up), 'unconscious', 'dead', 'fled' or
+        'surrendered'."""
         self._out = out
 
     def wound_state(self):
@@ -248,6 +264,8 @@ class Combatant:
             return "Slain"
         if status == "fled":
             return "Fled"
+        if status == "surrendered":
+            return "Surrendered"
         if status == "unconscious":
             return "Near death" if self.cur_hp <= 0 else "Unconscious"
         if self.cur_hp >= self.max_hp:

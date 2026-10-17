@@ -13,7 +13,6 @@ export default {
     let encounters = [], advs = [], party = [], npcs = [];
     let pending = false;       // a re-render waiting for an input to lose focus
     let launchQuery = "", selected = "", players = null, includeParty = true;
-    const descOpen = { v: true };
 
     const body = h("div");
     clear(el, body);
@@ -33,7 +32,7 @@ export default {
     }
 
     function render() {
-      if (el.querySelector(".cbt-row input:focus, .cbt-head input:focus")) { pending = true; return; }
+      if (el.querySelector(".cbt-foe input:focus, .cbt-head input:focus")) { pending = true; return; }
       pending = false;
       clear(body, cs && cs.active ? running() : launcher());
     }
@@ -111,6 +110,10 @@ export default {
     }
 
     // ------------------------------------------------------------ running
+    // Lanes by knight: each knight's foes sit under them; one stat header per
+    // foe type; one line per foe; defeated foes collapse into a strip.
+    const openFoes = new Set();      // foe lines expanded to show their full stats
+
     function running() {
       const knights = cs.combatants.filter((c) => c.side === "party");
       const foes = cs.combatants.filter((c) => c.side !== "party");
@@ -118,6 +121,7 @@ export default {
       const note = h("input", { class: "input", placeholder: "Round note — e.g. the bridge collapses", style: { flex: 1 },
         onkeydown: async (e) => { if (e.key === "Enter" && e.target.value.trim()) { await post("/api/combat/note", { text: e.target.value }); e.target.value = ""; } } });
       const availableKnights = party.filter((m) => !cs.combatants.some((c) => c.party_id === m.id));
+      const pool = foes.filter((c) => cs.pool.includes(c.id));
       return [
         h("div", { class: "cbt-head sticky-bar" },
           h("div", { class: "row", style: { alignItems: "flex-end" } },
@@ -127,29 +131,160 @@ export default {
             h("div", { class: "round-box" }, h("span", { class: "label" }, "Round"), h("span", { class: "round-n" }, cs.round)),
             h("button", { class: "btn primary", onclick: () => post("/api/combat/round") }, icon("hourglass"), "Next round"),
             h("button", { class: "btn", onclick: (e) => addMenu(e.currentTarget, availableKnights) }, icon("plus"), "Add"),
-            h("button", { class: "btn danger", onclick: endCombat }, icon("flag"), "End")),
+            h("button", { class: "btn danger", onclick: endCombat }, icon("flag"), "End fight")),
           h("div", { class: "row", style: { marginTop: "10px" } },
             h("span", { class: "tag gules" }, `${up} of ${foes.length} foes standing`),
             knights.length ? h("span", { class: "tag azure" }, `${knights.filter((k) => !k.down).length} of ${knights.length} knights in the fight`) : null,
             note)),
-        descriptions(),
-        knights.length ? [h("div", { class: "section-label" }, "The Knights"), h("div", { class: "cbt-list" }, knights.map(row))] : null,
-        h("div", { class: "section-label" }, "The Foe"),
-        h("div", { class: "cbt-list" }, foes.length ? foes.map(row) : h("div", { class: "empty" }, "No foes — add some.")),
+        cs.gm_notes ? h("details", { class: "cbt-notes" }, h("summary", {}, "GM notes"), h("p", { class: "muted" }, cs.gm_notes)) : null,
+        cs.types?.length ? h("div", { class: "cbt-types" }, cs.types.map(typeHeader)) : null,
+        !foes.length ? h("div", { class: "empty" }, "No foes — add some.") : null,
+        knights.length ? h("div", { class: "cbt-lanes" }, knights.map((k) => lane(k, foes))) : null,
+        knights.length
+          ? (pool.length ? dropZone(h("div", { class: "cbt-pool" }, h("span", { class: "label" }, "Not engaged"),
+              pool.map(poolChip), h("span", { class: "faint small" }, "drag onto a knight, or click to assign")), "") : null)
+          : (pool.length ? h("div", { class: "cbt-lane" }, h("div", { class: "cbt-lane-body" }, pool.map(foeLine))) : null),
+        defeatedStrip(foes),
         h("div", { class: "cbt-help faint small" },
-          "Click an enemy's weapon skill to attack a knight: the app rolls it, you click the knight's result, and if the enemy hits its damage is rolled and applied (Table 7.1). ",
-          "When a knight hits an enemy, press Hit and enter the damage the player rolled — armour comes off automatically. Click any other value to roll it. ",
-          "Apply is for plain HP changes (healing, a fall). Mod: a situational modifier on every characteristic and skill roll (not damage). Strike any log entry to undo it."),
+          "Click a foe's weapon skill in its type header to attack a knight: the app rolls it, you click the knight's result, and if the foe hits its damage is rolled. ",
+          "When a knight hits a foe, press Hit and enter the damage the player rolled — armour comes off automatically. ±HP is for plain changes (healing, a fall). ",
+          "Drag a foe to another knight, or use its target chip, to change who it fights. Strike any log entry to undo it."),
       ];
     }
 
-    function descriptions() {
-      const d = cs.descriptions || [];
-      if (!d.length) return null;
-      return h("details", { class: "panel cbt-desc", open: descOpen.v, ontoggle: (e) => { descOpen.v = e.target.open; } },
-        h("summary", {}, "Descriptions & mechanics"),
-        h("div", { class: "stack", style: { marginTop: "8px" } }, d.map((x) =>
-          h("div", {}, h("b", { class: x.type === "GM notes" ? "gm-notes" : "" }, x.type), " — ", h("span", { class: "muted" }, x.text)))));
+    // One shared stat block per foe type. Clicking a value acts for that
+    // type's only active foe, or asks which one when there are several.
+    function typeHeader(t) {
+      const active = cs.combatants.filter((c) => c.side !== "party" && c.type === t.type && !c.down);
+      const forFoe = (anchor, label, value, fn) => {
+        if (!active.length) return toast(`No ${t.type} still fighting`, "err");
+        if (active.length === 1) return fn(active[0]);
+        menu(anchor, active.map((c) => [`${c.display_name} — ${value(c)}`, () => fn(c)]));
+      };
+      const rollFor = (c, body) => post(`/api/combat/${c.id}/roll`, body).then((r) => ctx.showLastRoll(r.event));
+      const knightsIn = cs.combatants.some((o) => o.side === "party");
+      return h("div", { class: "cbt-type" },
+        h("b", { class: "cbt-type-name" }, t.type),
+        h("span", { class: "grp" }, Object.entries(t.characteristics).map(([k, v]) => h("span", { class: "pair" }, h("span", { class: "nm" }, k), " ",
+          h("span", { class: "rollable", title: `Roll ${CHAR_FULL[k]}`, onclick: (e) => forFoe(e.currentTarget, k, (c) => c.characteristics[k] + (c.modifier || 0), (c) => rollFor(c, { what: "char", key: k })) }, v)))),
+        h("span", { class: "grp" }, t.attacks.map((a, i) => h("span", { class: "pair" }, h("span", { class: "nm" }, a.weapon), " ",
+          h("span", { class: `rollable ${a.value >= 16 ? "famous" : ""}`, title: `${a.weapon}: attack a knight`,
+            onclick: (e) => forFoe(e.currentTarget, a.weapon, (c) => skillDisplay((c.attacks[i]?.value ?? a.value) + (c.modifier || 0)),
+              (c) => (knightsIn ? attackDialog(c, i) : rollFor(c, { what: "attack", key: i }))) }, skillDisplay(a.value)),
+          " ", h("span", { class: "rollable dmg", title: `Roll ${a.weapon} damage`,
+            onclick: (e) => forFoe(e.currentTarget, a.weapon, (c) => c.attacks[i]?.damage ?? a.damage,
+              (c) => ctx.rollDamage({ label: a.weapon, expr: c.attacks[i]?.damage ?? a.damage, actor: c.log_name, path: `/api/combat/${c.id}/roll`, extra: { what: "damage", key: i } })) }, `(${a.damage})`)))),
+        h("span", { class: "faint" }, t.armour_text),
+        t.description || t.notes ? h("button", { class: "btn ghost sm icon", title: "Card text and rules",
+          onclick: () => modal(t.type, (close) => [
+            t.description ? h("p", {}, t.description) : null,
+            t.notes && t.notes !== t.description ? h("p", { class: "muted" }, t.notes) : null,
+            h("div", { class: "foot" }, h("button", { class: "btn primary", onclick: () => close() }, "Close"))]) }, icon("scroll")) : null);
+    }
+
+    // Lanes and the pool accept dropped foes: the drop retargets the foe.
+    function dropZone(node, knightName) {
+      node.addEventListener("dragover", (e) => { e.preventDefault(); node.classList.add("drop-ok"); });
+      node.addEventListener("dragleave", () => node.classList.remove("drop-ok"));
+      node.addEventListener("drop", (e) => {
+        e.preventDefault(); node.classList.remove("drop-ok");
+        const c = cs.combatants.find((o) => o.id === e.dataTransfer.getData("text/cid"));
+        if (c && (c.engaged_with || "") !== knightName) post(`/api/combat/${c.id}/engage`, { with: knightName });
+      });
+      return node;
+    }
+    const draggable = (node, c) => {
+      node.draggable = true;
+      node.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/cid", c.id); e.dataTransfer.effectAllowed = "move"; });
+      return node;
+    };
+
+    function targetMenu(anchor, c) {
+      const knights = cs.combatants.filter((o) => o.side === "party").map((o) => o.display_name);
+      menu(anchor, [...knights.map((n) => [n === c.engaged_with ? `${n} ✓` : n, () => n !== c.engaged_with && post(`/api/combat/${c.id}/engage`, { with: n }), { icon: "swords" }]),
+        null, ["Not engaged", () => c.engaged_with && post(`/api/combat/${c.id}/engage`, { with: "" })]]);
+    }
+
+    function lane(k, foes) {
+      const mine = foes.filter((c) => c.engaged_with === k.display_name && !c.down);
+      const mark = (out) => post(`/api/combat/${k.id}/status`, { out });
+      const tag = { unconscious: ["Down", "gules"], fled: ["Out of the fight", ""] }[k.status];
+      return dropZone(h("div", { class: `cbt-lane ${k.down ? "is-down" : ""}` },
+        h("div", { class: "cbt-lane-head" },
+          icon("shield", "cbt-shield"),
+          h("span", { class: "cbt-knight" }, k.display_name),
+          k.player ? h("span", { class: "faint small" }, k.player) : null,
+          tag ? h("span", { class: `tag ${tag[1]}` }, tag[0]) : null,
+          h("span", { class: "cbt-lane-slots" }),
+          k.down ? h("button", { class: "btn ghost sm", onclick: () => mark(null) }, "Back in the fight")
+            : [h("button", { class: "btn ghost sm", onclick: () => mark("unconscious") }, "Down"),
+               h("button", { class: "btn ghost sm", onclick: () => mark("fled") }, "Out")]),
+        h("div", { class: "cbt-lane-body" }, mine.length ? mine.map(foeLine) : h("div", { class: "faint small cbt-none" }, "No foe engaged"))),
+      k.display_name);
+    }
+
+    function foeLine(c) {
+      const creature = ["beast", "monster", "fae"].includes(c.category);
+      const marker = (c.elite ? "★" : "") + (c.named ? "◆" : "") + (creature && !c.named ? "✦" : "");
+      const tone = c.npc ? "npc" : c.elite ? "elite" : c.named ? "named" : c.category;
+      const pct = Math.max(0, Math.min(100, (c.cur_hp / c.max_hp) * 100));
+      const hpTone = pct > 50 ? "" : pct > 25 ? "w" : "b";
+      const open = openFoes.has(c.id);
+      const hpIn = h("input", { class: "input num hp-in", placeholder: "±HP", title: "Damage as negative, healing as positive — Enter",
+        onkeydown: (e) => { if (e.key === "Enter") applyHp(c, e.target); } });
+      const line = h("div", { class: `cbt-foe t-${tone} ${open ? "open" : ""}`, "data-id": c.id },
+        h("div", { class: "cbt-foe-line" },
+          h("button", { class: "cbt-foe-name", title: open ? "Hide details" : "Show stats, armour and modifier",
+            onclick: () => { open ? openFoes.delete(c.id) : openFoes.add(c.id); render(); } },
+            c.npc ? icon("helm", "npc-ico") : marker ? h("span", { class: "marker" }, marker) : null, c.display_name),
+          h("div", { class: "cbt-hp" },
+            h("div", { class: "hp-bar big" }, h("i", { class: hpTone, style: { width: `${pct}%` } })),
+            h("span", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`))),
+          h("span", { class: "ws faint small" }, c.wound_state),
+          h("span", { class: "cbt-chips" }),
+          h("button", { class: `cbt-target ${c.engaged_with ? "set" : ""}`, title: "Who is this foe fighting?",
+            onclick: (e) => targetMenu(e.currentTarget, c) }, `→ ${c.engaged_with || "nobody"} ▾`),
+          h("button", { class: "btn sm hit-btn", title: `A knight hit ${c.display_name}: enter the damage rolled`, onclick: () => hitDialog(c) }, icon("swords"), "Hit"),
+          hpIn,
+          h("button", { class: "btn sm icon", title: "Actions", onclick: (e) => actions(e.currentTarget, c) }, icon("dots"))),
+        open ? h("div", { class: "cbt-foe-more" }, statLine(c, false),
+          h("div", { class: "row" }, h("div", { class: "cbt-mod" }, h("span", { class: "faint small" }, "Mod"), modInput(c)), flavour(c))) : null);
+      return draggable(line, c);
+    }
+
+    // A plain HP change (healing, a fall): damage as negative, healing positive.
+    async function applyHp(c, input) {
+      const v = input.value.trim();
+      if (!v) return;
+      input.value = "";
+      input.blur();
+      await post(`/api/combat/${c.id}/hp`, { delta: v });
+    }
+
+    function modInput(c) {
+      return h("input", { class: `input num mod-in ${c.modifier < 0 ? "neg" : c.modifier > 0 ? "pos" : ""}`, value: c.modifier ? (c.modifier > 0 ? `+${c.modifier}` : c.modifier) : "0",
+        title: "Situational modifier on every roll — Enter",
+        onkeydown: (e) => { if (e.key === "Enter") e.target.blur(); },
+        onchange: (e) => post(`/api/combat/${c.id}/modifier`, { value: e.target.value.trim() || 0 }) });
+    }
+
+    function poolChip(c) {
+      return draggable(h("button", { class: "cbt-chip-foe", title: "Click to choose a knight, or drag onto one",
+        onclick: (e) => targetMenu(e.currentTarget, c) }, c.display_name, h("span", { class: "faint small" }, ` · ${c.wound_state}`)), c);
+    }
+
+    const FATE = { dead: ["✝", "slain"], fled: ["⇢", "fled"], surrendered: ["⚐", "surrendered"], unconscious: ["☾", "unconscious"] };
+    function defeatedStrip(foes) {
+      const down = foes.filter((c) => cs.defeated.includes(c.id));
+      if (!down.length) return null;
+      return h("div", { class: "cbt-defeated" }, h("span", { class: "label" }, "Defeated"),
+        down.map((c) => h("button", { class: "cbt-chip-foe down", title: "Revive or reactivate",
+          onclick: (e) => menu(e.currentTarget, [
+            [c.status === "fled" ? "Reactivate (back in the fight)" : "Revive", () => post(`/api/combat/${c.id}/status`, { out: null }), { icon: "heart" }],
+            c.status !== "dead" ? ["Slay", () => post(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }] : null,
+            c.ransom ? ["Roll ransom", () => post(`/api/combat/${c.id}/ransom`), { icon: "d6" }] : null,
+          ].filter(Boolean)) },
+          `${FATE[c.status][0]} ${c.display_name}`, h("span", { class: "faint small" }, ` · ${FATE[c.status][1]}`))));
     }
 
     function addMenu(anchor, knights) {
@@ -166,73 +301,6 @@ export default {
       if (await confirmBox("End combat?", "The Table returns to the Chronicle. Knights' Hit Points are saved back to the Party.", "End combat")) {
         await post("/api/combat/end");
       }
-    }
-
-    // ------------------------------------------------------------ a combatant row
-    const STATUS_TAG = { active: null, unconscious: ["Unconscious", "purpure"], dead: ["Slain", "gules"], fled: ["Fled — not tracked", ""] };
-
-    function knightRow(c) {
-      const tag = { unconscious: ["Down", "gules"], fled: ["Out of the fight", ""] }[c.status];
-      const mark = (out) => post(`/api/combat/${c.id}/status`, { out });
-      return h("div", { class: `cbt-row t-knight ${c.down ? "is-down" : ""}`, "data-id": c.id },
-        h("div", { class: "cbt-line" },
-          h("div", { class: "cbt-name" }, c.display_name,
-            c.player ? h("span", { class: "faint small", style: { fontWeight: 400, marginLeft: "8px" } }, c.player) : null,
-            tag ? h("span", { class: `tag ${tag[1]}`, style: { marginLeft: "8px" } }, tag[0]) : null),
-          c.down ? h("button", { class: "btn sm", onclick: () => mark(null) }, "Back in the fight")
-            : [h("button", { class: "btn sm", onclick: () => mark("unconscious") }, "Down"),
-               h("button", { class: "btn sm", onclick: () => mark("fled") }, "Out of the fight")]),
-        c.engaged_by?.length ? h("div", { class: "cbt-engby" }, icon("swords"), " Fought by ", c.engaged_by.join(", ")) : null);
-    }
-
-    function row(c) {
-      if (c.side === "party") return knightRow(c);
-      const isKnight = false;
-      const creature = ["beast", "monster", "fae"].includes(c.category);
-      const marker = (c.elite ? "★" : "") + (c.named && !isKnight ? "◆" : "") + (creature && !c.named ? "✦" : "");
-      const tone = c.down ? "down" : c.npc ? "npc" : c.elite ? "elite" : c.named ? "named" : c.category;
-      const st = STATUS_TAG[c.status];
-      const pct = Math.max(0, Math.min(100, (c.cur_hp / c.max_hp) * 100));
-
-      const hpIn = h("input", { class: "input num hp-in", placeholder: "±HP", title: "Damage as negative, healing as positive — Enter",
-        onkeydown: (e) => { if (e.key === "Enter") applyHp(c, e.target); } });
-      const modIn = h("input", { class: `input num mod-in ${c.modifier < 0 ? "neg" : c.modifier > 0 ? "pos" : ""}`, value: c.modifier ? (c.modifier > 0 ? `+${c.modifier}` : c.modifier) : "0",
-        title: "Situational modifier — Enter",
-        onkeydown: (e) => { if (e.key === "Enter") e.target.blur(); },
-        onchange: (e) => post(`/api/combat/${c.id}/modifier`, { value: e.target.value.trim() || 0 }) });
-      const engIn = isKnight ? null : engageSelect(c);
-
-      return h("div", { class: `cbt-row t-${tone} ${c.down ? "is-down" : ""}`, "data-id": c.id },
-        h("div", { class: "cbt-line" },
-          h("div", { class: "cbt-name" }, c.npc ? icon("helm", "npc-ico") : marker ? h("span", { class: "marker" }, marker + " ") : null, c.display_name,
-            c.npc ? h("span", { class: "tag murrey", style: { marginLeft: "8px" } }, "NPC") : null,
-            st ? h("span", { class: `tag ${st[1]}`, style: { marginLeft: "8px" } }, st[0]) : null),
-          engIn ? h("div", { class: "cbt-eng" }, h("span", { class: "faint small" }, "fighting"), engIn) : null,
-          h("div", { class: "cbt-hp" },
-            h("div", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`), h("span", { class: "faint small" }, " HP"),
-              !isKnight ? h("span", { class: "faint small ws" }, ` · ${c.wound_state}`) : null),
-            h("div", { class: "hp-bar" }, h("i", { style: { width: `${pct}%` } }))),
-          !isKnight ? h("button", { class: "btn sm hit-btn", title: `A knight hit ${c.display_name}: enter the damage rolled`,
-            onclick: () => hitDialog(c) }, icon("swords"), "Hit") : null,
-          hpIn,
-          h("button", { class: "btn sm", title: "Apply a plain HP change (healing, a fall…)", onclick: () => applyHp(c, hpIn) }, "Apply"),
-          h("div", { class: "cbt-mod" }, h("span", { class: "faint small" }, "Mod"), modIn),
-          h("button", { class: "btn sm icon", title: "Actions", onclick: (e) => actions(e.currentTarget, c) }, icon("dots"))),
-        statLine(c, isKnight),
-        c.engaged_by?.length ? h("div", { class: "cbt-engby" }, icon("swords"), " Fought by ", c.engaged_by.join(", ")) : null,
-        flavour(c));
-    }
-
-    // An enemy is set to fight one of the player knights (shown on both rows
-    // and on the Table); knights have no selector of their own.
-    function engageSelect(c) {
-      const knights = cs.combatants.filter((o) => o.side === "party").map((o) => o.display_name);
-      const cur = c.engaged_with || "";
-      return h("select", { class: `input eng-in ${cur ? "set" : ""}`, title: "Which knight is this enemy fighting?",
-        onchange: (e) => post(`/api/combat/${c.id}/engage`, { with: e.target.value }) },
-        h("option", { value: "" }, "— nobody —"),
-        knights.map((n) => h("option", { value: n, selected: n === cur }, n)),
-        cur && !knights.includes(cur) ? h("option", { value: cur, selected: true }, cur) : null);
     }
 
     const byName = (n) => cs.combatants.find((o) => o.display_name === n);
@@ -341,6 +409,7 @@ export default {
       items.push([c.status === "unconscious" || c.status === "dead" ? "Revive" : "Knock out",
         () => post(`/api/combat/${c.id}/status`, { out: c.status === "unconscious" || c.status === "dead" ? null : "unconscious" }), { icon: "heart" }]);
       if (c.status !== "dead") items.push(["Slay", () => post(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }]);
+      if (!isKnight && c.status !== "surrendered") items.push(["Surrenders", () => post(`/api/combat/${c.id}/status`, { out: "surrendered" }), { icon: "flag" }]);
       items.push([c.status === "fled" ? "Reactivate (resume tracking)" : "Deactivate (fled / not tracked)",
         () => post(`/api/combat/${c.id}/status`, { out: c.status === "fled" ? null : "fled" }), { icon: "flag" }]);
       if (!isKnight) {

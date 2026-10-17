@@ -64,3 +64,54 @@
 
 .attack-roll { font-size: 17px; padding: 10px 12px; border-radius: var(--r); background: var(--sable); border: 1px solid var(--line); }
 .knight-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+
+/* ---------- lanes by knight (S1) ---------- */
+.cbt-notes { margin: 10px 0 4px; }
+.cbt-notes summary { cursor: pointer; font-family: var(--f-display); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--purpure); }
+.cbt-types { display: grid; gap: 6px; margin: 12px 0; }
+.cbt-type { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding: 7px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); font-size: 14px; }
+.cbt-type .cbt-type-name { font-family: var(--f-display); letter-spacing: .04em; color: var(--ink); }
+.cbt-type .grp { display: inline-flex; flex-wrap: wrap; gap: 0 12px; align-items: baseline; }
+.cbt-type .nm { color: var(--ink-dim); }
+.cbt-type .btn.icon { margin-left: auto; }
+.cbt-lanes { display: grid; gap: 10px; }
+.cbt-lane { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; transition: box-shadow .15s; }
+.cbt-lane.is-down { opacity: .6; }
+.cbt-lane-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
+.cbt-lane-head .cbt-shield { width: 18px; height: 18px; color: var(--azure); }
+.cbt-knight { font-family: var(--f-display); font-weight: 700; font-size: 15px; color: #a9c9ee; }
+.cbt-lane-slots { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cbt-lane-body { display: grid; }
+.cbt-none { padding: 8px 14px; }
+.cbt-foe { border-bottom: 1px solid #221d19; }
+.cbt-foe:last-child { border-bottom: 0; }
+.cbt-foe-line { display: grid; grid-template-columns: minmax(150px, 1.1fr) 170px 100px minmax(0, 1fr) 190px auto 62px auto; gap: 10px; align-items: center; padding: 6px 12px; }
+.cbt-foe-name { all: unset; cursor: pointer; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbt-foe-name:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+.cbt-foe-name .marker { color: var(--or); margin-right: 4px; }
+.cbt-foe.t-elite .cbt-foe-name { color: var(--or-bright); }
+.cbt-foe.t-named .cbt-foe-name { color: #d2b5ef; }
+.cbt-foe.t-npc .cbt-foe-name { color: #f0b6d2; }
+.cbt-foe.t-monster .cbt-foe-name { color: #f0a49b; }
+.cbt-foe.t-beast .cbt-foe-name { color: #9fd8ae; }
+.cbt-foe .cbt-hp { width: auto; display: grid; gap: 2px; }
+.hp-bar.big { height: 8px; border-radius: 4px; margin: 0; }
+.hp-bar.big i { background: var(--vert); }
+.hp-bar.big i.w { background: var(--or); }
+.hp-bar.big i.b { background: var(--gules); }
+.cbt-foe .hp-text { font-size: 12px; color: var(--ink-2); }
+.cbt-foe .hp-text b { font-size: 13px; }
+.cbt-chips { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.cbt-target { all: unset; cursor: pointer; justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 700; border-radius: 5px; padding: 2px 8px; border: 1px solid var(--line-2); color: var(--ink-dim); white-space: nowrap; }
+.cbt-target.set { color: var(--azure); border-color: rgba(108,159,216,.5); }
+.cbt-target:focus-visible { outline: 2px solid var(--or); }
+.cbt-foe .input.num { height: 28px; width: 62px; }
+.cbt-foe-more { padding: 2px 14px 10px; display: grid; gap: 4px; }
+.cbt-foe-more .cbt-stats { margin-top: 0; }
+.cbt-pool, .cbt-defeated { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; border-radius: 10px; }
+.cbt-pool { border: 1px dashed var(--line-2); }
+.cbt-chip-foe { all: unset; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink-2); border: 1px solid var(--line-2); background: var(--panel); border-radius: 6px; padding: 3px 9px; }
+.cbt-chip-foe:focus-visible { outline: 2px solid var(--or); }
+.cbt-chip-foe.down { font-weight: 500; color: var(--ink-dim); border-color: var(--line); }
+.cbt-pool .cbt-chip-foe { cursor: grab; }
+.drop-ok { box-shadow: 0 0 0 2px var(--or); }

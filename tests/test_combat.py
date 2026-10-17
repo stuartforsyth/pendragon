@@ -88,3 +88,19 @@ def test_per_player_counts_round_half_up():
     defn = {"roster": [{"adversary": "A", "count": 1.5, "per_player": True}]}
     assert resolve_roster(defn, 3) == [("A", 5, False)]
     assert resolve_roster(defn, 7) == [("A", 11, False)]
+
+
+def test_surrendered_status_and_word(rules):
+    c = _foe(rules)
+    c.set_out("surrendered")
+    assert c.status == "surrendered" and c.down and c.wound_state() == "Surrendered"
+
+
+def test_old_snapshot_without_new_fields_replays(rules):
+    c = _foe(rules)
+    old = c.to_dict()
+    for k in ("mounted", "attacks_horse", "captured_by", "posture", "position"):
+        old.pop(k, None)
+    c2 = Combatant.from_dict(old)
+    assert c2.mounted is False and c2.captured_by is None and c2.extra_rounds == 0
+    assert Combatant.from_dict(c2.to_dict()).to_dict() == c2.to_dict()

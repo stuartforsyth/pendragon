@@ -239,6 +239,7 @@ _STATUS_TEXT = {
     "unconscious": ("{n} knocked out (unconscious)", "{n} is knocked senseless"),
     "dead": ("{n} slain", "{n} is slain"),
     "fled": ("{n} flees the field — no longer active", "{n} flees the field"),
+    "surrendered": ("{n} surrenders", "{n} surrenders"),
 }
 
 

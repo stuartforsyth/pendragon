@@ -76,6 +76,12 @@ misses anything) and the combat view; the Table refetches `/api/table`.
 
 ## Combat (kept deliberately simple)
 
+The tracker shows **one lane per knight** holding the foes engaged with them, a
+shared stat header per foe type (attacks clickable to roll), one line per foe
+(HP bar, wound word, target chip, Hit, ±HP, ⋯), a **Not engaged** pool and a
+**Defeated** strip (unconscious, slain, fled, surrendered). Drag a foe to a lane
+or use its target chip to retarget (`combat.engage`; `with: ""` = the pool).
+
 Player knights are run on paper: the app never tracks their Hit Points,
 armour, wounds or death. It only tracks the enemies.
 

@@ -282,7 +282,7 @@ Existing tests must still pass. `test_every_library_encounter_builds` uses the u
 
 ---
 
-## S1 — Tracker redesign: lanes by knight, type headers, one-line foes, Defeated strip, retarget, `surrendered` (size **L**)
+## S1 — Tracker redesign: lanes by knight, type headers, one-line foes, Defeated strip, retarget, `surrendered` (size **L**) — ✅ DONE 2026-10-17
 
 **Goal.** Every fight reads as one lane per knight. Each knight's foes sit under them, a shared stat
 header shows per foe type, every foe takes one line, and defeated foes collapse into a strip. Foes can

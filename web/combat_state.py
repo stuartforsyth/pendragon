@@ -94,6 +94,30 @@ def table_view(c):
     return out
 
 
+DEFEATED = {"unconscious", "dead", "fled", "surrendered"}
+
+
+def _types(combatants):
+    """One stat header per foe type (the GM's shared block): taken from a
+    non-elite foe of that type where there is one, since champions differ."""
+    out, seen = [], {}
+    for c in combatants:
+        if getattr(c, "side", "foe") == "party":
+            continue
+        if c.type not in seen or (out[seen[c.type]]["_elite"] and not c.elite):
+            entry = {"type": c.type, "characteristics": {k: v for k, v in c.characteristics.items() if k != "APP"},
+                     "attacks": c.attacks, "armour_text": c.describe_armour(),
+                     "description": c.description.strip(), "notes": c.notes.strip(), "_elite": c.elite}
+            if c.type in seen:
+                out[seen[c.type]] = entry
+            else:
+                seen[c.type] = len(out)
+                out.append(entry)
+    for e in out:
+        e.pop("_elite")
+    return out
+
+
 def serialise(state, view):
     if state is None:
         return None
@@ -104,7 +128,16 @@ def serialise(state, view):
                            if o is not r and o.get("engaged_with") and
                            o["engaged_with"] == (r["display_name"] if view == "gm" else r["name"])
                            and o["status"] == "active"]
-    return {"active": state["active"], "name": state["name"], "round": state["round"],
-            "players": state.get("players", 0),
-            "descriptions": state.get("descriptions", []) if view == "gm" else [],
-            "combatants": rows}
+    out = {"active": state["active"], "name": state["name"], "round": state["round"],
+           "players": state.get("players", 0),
+           "descriptions": state.get("descriptions", []) if view == "gm" else [],
+           "combatants": rows}
+    if view == "gm":
+        knights = {c.display_name for c in state["combatants"] if getattr(c, "side", "foe") == "party"}
+        foes = [c for c in state["combatants"] if getattr(c, "side", "foe") != "party"]
+        out.update(
+            types=_types(state["combatants"]),
+            gm_notes=next((d["text"] for d in out["descriptions"] if d.get("type") == "GM notes"), ""),
+            defeated=[c.id for c in foes if c.status in DEFEATED],
+            pool=[c.id for c in foes if c.status == "active" and c.engaged_with not in knights])
+    return out
