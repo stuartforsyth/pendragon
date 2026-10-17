@@ -9,6 +9,7 @@ import json
 from fastapi import APIRouter, Request
 
 from core import adversary as A
+from core import battle_def as BD
 from core import battle as B
 from core import examples as X
 from core.dice import NotationError, roll_notation
@@ -404,3 +405,61 @@ async def examples_restore(request: Request, body: dict):
     state.save_combat_data()
     state.notify("library")
     return {"key": key, "entry": entry}
+
+
+# -- saved battles (the Battles prep tool) ------------------------------------
+
+def _battles(state):
+    return state.combat_data.setdefault("battles", {})
+
+
+@router.get("/api/battles")
+def list_battles(request: Request):
+    bs = _battles(st(request))
+    return {"battles": [{"key": k, "size": bs[k].get("size"), "days": len(bs[k].get("days", [])),
+                         "source": bs[k].get("source", "")} for k in alpha(bs)]}
+
+
+@router.get("/api/battles/blank")
+def blank_battle(size: str = "clash"):
+    return {"battle": BD.blank_battle(size)}
+
+
+@router.get("/api/battles/{key}")
+def get_battle(request: Request, key: str):
+    bs = _battles(st(request))
+    if key not in bs:
+        bad("No such battle", 404)
+    return {"key": key, "battle": bs[key]}
+
+
+@router.put("/api/battles")
+async def save_battle(request: Request, body: dict):
+    state = st(request)
+    try:
+        b, warnings = BD.clean_battle(body.get("battle") or {}, _encs(state))
+    except ValueError as exc:
+        bad(str(exc))
+    key, original = b["name"], body.get("original")
+    if not key:
+        bad("Give the battle a name before saving")
+    bs = _battles(state)
+    if key in bs and key != original and not body.get("overwrite"):
+        bad(f"A battle named '{key}' exists", 409)
+    if original and original != key and original in bs:
+        del bs[original]
+    bs[key] = b
+    path = state.save_combat_data()
+    state.notify("library")
+    return {"key": key, "battle": b, "warnings": warnings, "path": path}
+
+
+@router.delete("/api/battles/{key}")
+async def delete_battle(request: Request, key: str):
+    state = st(request)
+    if key not in _battles(state):
+        bad("No such battle", 404)
+    del _battles(state)[key]
+    state.save_combat_data()
+    state.notify("library")
+    return {"ok": True}

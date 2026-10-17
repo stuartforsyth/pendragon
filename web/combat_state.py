@@ -17,7 +17,7 @@ COMBAT_STATE_TYPES = {
     "combat.promote", "combat.modifier", "combat.engage", "combat.removed",
     "combat.round", "combat.ended", "combat.blow",
     "combat.mounted", "combat.horse", "combat.height", "combat.captured",
-    "glory.reassigned", "glory.awarded",
+    "glory.reassigned", "glory.awarded", "battle.resumed",
 }
 
 
@@ -32,6 +32,15 @@ def apply(state, ev, promotion_cfg=None):
                 "descriptions": d.get("descriptions", []),
                 "started_event": ev["id"], "credits": {}, "manual": {},
                 "combatants": [Combatant.from_dict(c) for c in d.get("combatants", [])]}
+    if t == "battle.resumed":            # a fight carried over from a paused battle
+        snap = (d.get("snapshot") or {}).get("combat")
+        if not snap:
+            return state
+        return {"active": True, "name": snap.get("name", "Encounter"), "round": snap.get("round", 1),
+                "players": snap.get("players", 0), "descriptions": snap.get("descriptions", []),
+                "started_event": ev["id"], "credits": dict(snap.get("credits", {})),
+                "manual": dict(snap.get("manual", {})),
+                "combatants": [Combatant.from_dict(c) for c in snap.get("combatants", [])]}
     if state is None or not state["active"]:
         return state
     if t == "combat.ended":

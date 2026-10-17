@@ -56,3 +56,27 @@ export function knightCard(k, { compact = false } = {}) {
     effectChips(k.effects),
     happenedLine(k.happened));
 }
+
+const lastMorale = { key: null };
+
+/**
+ * The Morale gauge: the number "of N", a draining fill that bloodies as it
+ * drops, and a band word (Steady · Shaken · Bloodied · Breaking) so the state
+ * never rests on colour alone. The last change and its reason sit beneath.
+ */
+export function moraleGauge(m, { compact = false } = {}) {
+  if (!m) return h("div", { class: "mgauge empty" }, h("span", { class: "mg-label" }, "Morale"), h("span", { class: "mg-wait" }, "The conroi is mustering…"));
+  const pct = Math.max(0, Math.min(100, (m.current / Math.max(1, m.start)) * 100));
+  const key = `${m.current}/${m.start}/${m.last?.delta}/${m.last?.reason}`;
+  const changed = lastMorale.key !== null && lastMorale.key !== key;
+  lastMorale.key = key;
+  const band = (m.band || "").toLowerCase();
+  const fill = h("div", { class: "mg-fill", style: { height: `${pct}%` } });
+  return h("div", { class: `mgauge band-${band} ${compact ? "compact" : ""} ${changed ? "changed" : ""}`, role: "img",
+    "aria-label": `Morale ${m.current} of ${m.start}, ${m.band}` },
+    h("span", { class: "mg-label" }, "Morale"), fill,
+    h("div", { class: "mg-cap" },
+      h("span", { class: "mg-num" }, m.current), h("span", { class: "mg-of" }, `of ${m.start}`),
+      h("span", { class: "mg-word" }, m.band),
+      m.last ? h("span", { class: "mg-why" }, `${m.last.delta > 0 ? "+" : m.last.delta < 0 ? "−" : ""}${Math.abs(m.last.delta)} · ${m.last.reason}`) : null));
+}

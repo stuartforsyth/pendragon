@@ -8,7 +8,7 @@ import uuid
 from core import rules as rules_module
 from core.names import find_data_file, parse_names_file
 from core.npc import Generator
-from web import combat_state, table
+from web import battle_state, combat_state, table
 from web.hub import Hub
 from web.rules_index import RulesIndex
 from web.sessions import SessionStore, live_events
@@ -103,6 +103,23 @@ class AppState:
         return combat_state.reduce(live_events(self.session.events),
                                    self.rules.combat.get("promotion", {}))
 
+    def battle_state(self):
+        return battle_state.reduce(live_events(self.session.events))
+
+    def end_session(self):
+        """End the active session — pausing a running battle first, so it
+        can be resumed in a later session (``battle.paused``)."""
+        b = self.battle_state()
+        if not self.session.scratch and battle_state.is_live(b):
+            m = b["morale"]
+            self.record("battle.paused", f"Battle paused: {b['definition'].get('name', 'Battle')}",
+                        title="Battle paused", visibility="gm",
+                        data={"summary": {"name": b["definition"].get("name", "Battle"), "day": b["day"],
+                                          "turn": b["turn"], "morale": [m["current"], m["start"]] if m else None},
+                              "battle": {"id": b["id"], "day": b["day"], "turn": b["turn"], "step": None}})
+        return self.sessions.end()
+
     def table_payload(self):
         cs = combat_state.serialise(self.combat_state(), "table")
-        return table.build(self.session, cs, self.table_mode)
+        b = battle_state.table_view(self.battle_state(), self.party.items)
+        return table.build(self.session, cs, self.table_mode, battle=b)

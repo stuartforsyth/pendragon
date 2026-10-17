@@ -34,3 +34,42 @@
 @media (prefers-reduced-motion: reduce) {
   .glory-counter.rose .gl-value, .glory-counter.rose .gl-plus { animation: none; }
 }
+
+/* ---------- Morale gauge ---------- */
+.mgauge { position: relative; overflow: hidden; border: 2px solid var(--or); border-radius: 10px; background: #fbf4e2;
+  display: grid; align-content: end; min-height: 300px; }
+.mgauge.empty { align-content: center; justify-items: center; text-align: center; padding: 16px; }
+.mgauge .mg-label { position: absolute; top: 12px; left: 0; right: 0; text-align: center; font-family: var(--f-caps); font-size: 13px; letter-spacing: .3em; color: var(--ink-2); text-transform: uppercase; z-index: 1; }
+.mgauge.empty .mg-label { position: static; }
+.mgauge .mg-wait { font-style: italic; color: var(--ink-soft); font-size: 18px; margin-top: 8px; }
+.mg-fill { position: absolute; inset: auto 0 0 0; transition: height .9s ease, background .9s; }
+.mg-cap { position: relative; margin: 12px; padding: 10px 10px 12px; text-align: center; display: grid; gap: 2px;
+  background: rgba(251, 244, 226, .9); border-radius: 8px; color: var(--ink); box-shadow: 0 2px 8px rgba(42, 29, 20, .25); }
+.mg-num { font-family: var(--f-prose); font-weight: 600; font-size: 80px; line-height: .9; font-variant-numeric: lining-nums; }
+.mg-of { font-family: var(--f-caps); font-size: 15px; letter-spacing: .1em; }
+.mg-word { font-family: var(--f-caps); font-weight: 700; font-size: 20px; letter-spacing: .3em; text-transform: uppercase; margin-top: 6px; }
+.mg-why { font-size: 16px; font-style: italic; }
+/* bands: colour AND texture AND the word — clean green-gold to bloodied red */
+.band-steady .mg-fill { background: linear-gradient(180deg, #8fae5a, #4f7a34); }
+.band-shaken .mg-fill { background:
+  radial-gradient(circle at 78% 30%, rgba(110,14,8,.35) 0 5px, transparent 6px),
+  linear-gradient(180deg, #c9a24a, #9a6e22); }
+.band-bloodied .mg-fill { background:
+  radial-gradient(circle at 20% 18%, rgba(110,14,8,.55) 0 7px, transparent 8px),
+  radial-gradient(circle at 72% 40%, rgba(110,14,8,.5) 0 5px, transparent 6px),
+  radial-gradient(circle at 40% 75%, rgba(110,14,8,.45) 0 9px, transparent 10px),
+  linear-gradient(180deg, #b0632b, #8e2219); }
+.band-breaking .mg-fill { background:
+  radial-gradient(circle at 25% 30%, rgba(60,6,3,.6) 0 9px, transparent 10px),
+  radial-gradient(circle at 70% 55%, rgba(60,6,3,.55) 0 7px, transparent 8px),
+  radial-gradient(circle at 45% 85%, rgba(60,6,3,.5) 0 11px, transparent 12px),
+  linear-gradient(180deg, #8e2219, #4a0d08); }
+.band-steady .mg-word { color: var(--vert); }
+.band-shaken .mg-word { color: #8a5a12; }
+.band-bloodied .mg-word { color: var(--gules); }
+.band-breaking .mg-word { color: #4a0d08; }
+.band-breaking .mg-num { color: var(--gules); }
+.mgauge.changed .mg-cap { animation: mg-pulse 1.2s ease-out; }
+@keyframes mg-pulse { 0% { transform: scale(1.12); } 100% { transform: none; } }
+.mgauge.compact { min-height: 0; }
+@media (prefers-reduced-motion: reduce) { .mg-fill { transition: none; } .mgauge.changed .mg-cap { animation: none; } }

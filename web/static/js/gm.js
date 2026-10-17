@@ -8,10 +8,12 @@ const TOOLS = [
   { id: "npc", label: "NPCs", icon: "helm" },
   { id: "cast", label: "Cast", icon: "crowd" },
   { id: "combat", label: "Combat", icon: "swords" },
+  { id: "battle", label: "Battle", icon: "banner" },
   { id: "party", label: "Party", icon: "party" },
   null,
   { id: "adversaries", label: "Adversaries", icon: "dragon" },
   { id: "encounters", label: "Encounters", icon: "flag" },
+  { id: "battles", label: "Battles", icon: "banner" },
   { id: "rules", label: "Rules", icon: "book" },
   { id: "sessions", label: "Sessions", icon: "archive" },
 ];
@@ -121,6 +123,7 @@ const KIND = (t) => t.startsWith("roll.") ? ["roll", "d20"]
   : t === "combat.blow" || t === "combat.attack" ? ["combat", "swords"]
   : t.startsWith("combat.") ? ["combat", "swords"]
   : t.startsWith("glory.") ? ["combat", "star"]
+  : t.startsWith("battle.") ? ["combat", "banner"]
   : t.startsWith("npc.") ? ["npc", "helm"]
   : t === "narrate" ? ["narrate", "feather"]
   : t === "note" ? ["note", "note"]
@@ -291,8 +294,8 @@ async function endSession() {
 // ------------------------------------------------------------------ table mode
 let tableMode = "auto";
 function renderTableMode() {
-  clear($("tableMode"), [["auto", "Auto"], ["chronicle", "Story"], ["combat", "Battle"]].map(([m, label]) =>
-    h("button", { class: `chip ${m === tableMode ? "on" : ""}`, title: m === "auto" ? "Table switches to the battle board during combat" : `Pin the Table to ${label}`,
+  clear($("tableMode"), [["auto", "Auto"], ["chronicle", "Story"], ["combat", "Fight"], ["battle", "Battle"]].map(([m, label]) =>
+    h("button", { class: `chip ${m === tableMode ? "on" : ""}`, title: m === "auto" ? "Table shows the fight during combat, the battle while one runs, otherwise the story" : `Pin the Table to ${label}`,
       onclick: async () => { await post("/api/table/mode", { mode: m }); tableMode = m; renderTableMode(); } }, label)));
 }
 

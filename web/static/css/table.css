@@ -282,3 +282,19 @@ body {
 .fv-foot s { color: var(--ink-2); text-decoration-color: var(--gules); }
 .fv-foot .dcr { color: var(--or); }
 @media (max-width: 1000px) { .fightview { grid-template-columns: 1fr; } .tlane { grid-template-columns: 1fr; } }
+
+/* ---------- battle view (S6) ---------- */
+.battleview { display: grid; grid-template-columns: 230px minmax(0, 1fr) minmax(300px, 340px); gap: 26px; min-height: 0; }
+.battleview .mgauge { align-self: start; min-height: 420px; }
+.bv-centre { display: grid; gap: 14px; align-content: start; justify-items: center; min-width: 0; }
+.bv-status { font-family: var(--f-caps); font-size: 16px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-soft); }
+.bv-title { text-align: center; display: grid; gap: 6px; justify-items: center; padding: 18px 10px; }
+.bv-title.fresh { animation: bloom .8s; }
+.bv-kicker { font-family: var(--f-caps); font-size: 15px; letter-spacing: .3em; color: var(--ink-soft); text-transform: uppercase; }
+.bv-name { font-family: var(--f-display); font-weight: 700; font-size: 50px; line-height: 1.08; color: var(--gules); text-wrap: balance; }
+.bv-where { font-family: var(--f-caps); font-size: 20px; letter-spacing: .12em; color: var(--ink-2); }
+.bv-against { font-size: 24px; font-style: italic; color: var(--ink-2); }
+.bv-day { font-family: var(--f-caps); font-weight: 700; font-size: 22px; letter-spacing: .14em; color: var(--ink); }
+.bv-script { max-width: 36em; font-size: 22px; font-style: italic; color: var(--ink); background: rgba(251, 244, 226, .8);
+  border-left: 4px solid var(--purpure); padding: 10px 16px; border-radius: 0 6px 6px 0; }
+@media (max-width: 1000px) { .battleview { grid-template-columns: 1fr; } }

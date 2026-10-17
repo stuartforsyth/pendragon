@@ -2,10 +2,10 @@
 // only what players may see (see web/table.py); this file just makes it sing.
 
 import { h, clear, icon, debounce } from "./lib.js";
-import { knightCard } from "./board.js";
+import { knightCard, moraleGauge } from "./board.js";
 
 const $ = (id) => document.getElementById(id);
-let last = { heroId: null, states: {} };
+let last = { heroId: null, states: {}, titleCard: null };
 
 const OUT = { critical: "Critical", success: "Success", failure: "Failure", fumble: "Fumble" };
 
@@ -260,14 +260,45 @@ function fight(p) {
     h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), latest, others.map(mini)));
 }
 
+// The battle view (between fights): title band, the Morale gauge, the
+// centre stage (title card, revealed turn scripts; cards arrive with the turn
+// loop), and the Fray.
+const STATUS_LINE = { mustering: "The conroi musters", paused: "The battle is paused", turn: "", rear: "At the rear" };
+function battleView(p) {
+  const b = p.battle;
+  if (!b) return chronicle(p);
+  const titleFresh = b.title_card && b.title_card.id !== last.titleCard;
+  last.titleCard = b.title_card?.id;
+  const centre = [];
+  if (STATUS_LINE[b.status]) centre.push(h("div", { class: "bv-status" }, STATUS_LINE[b.status]));
+  if (b.status === "mustering" || titleFresh) {
+    centre.push(h("div", { class: `bv-title ${titleFresh ? "fresh" : ""}` },
+      h("div", { class: "bv-kicker" }, b.size_label, b.days > 1 ? ` · ${b.days} days` : ""),
+      h("div", { class: "bv-name" }, b.name),
+      b.where ? h("div", { class: "bv-where" }, b.where) : null,
+      b.against ? h("div", { class: "bv-against" }, `against ${b.against}`) : null,
+      flourish(),
+      h("div", { class: "bv-day" }, `Day ${b.day}`, b.intensity ? ` · Intensity ${b.intensity}` : "")));
+  }
+  for (const t of b.revealed_scripts || []) centre.push(h("div", { class: "bv-script" }, t));
+  return h("div", { class: "battleview" },
+    moraleGauge(b.morale),
+    h("div", { class: "bv-centre" }, centre),
+    h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), p.feed.slice(0, 7).map(mini)));
+}
+
 function render(p) {
   $("title").textContent = p.session.scratch ? "Pendragon" : p.session.title;
   document.title = `${p.session.scratch ? "Pendragon" : p.session.title} — The Table`;
   const combat = p.mode === "combat" && p.combat;
+  const battle = p.mode === "battle" && p.battle;
   clear($("mode"), combat
     ? [h("span", {}, p.combat.active ? p.combat.name : `${p.combat.name} — ended`), h("span", { class: "round" }, "Round ", h("span", { class: "rn" }, p.combat.round))]
+    : battle ? [h("span", {}, battle.turn ? `Day ${battle.day} · Turn ${battle.turn} of ${battle.turns_today}` : `Day ${battle.day}`),
+        battle.intensity ? h("span", { class: "round" }, "Intensity ", h("span", { class: "rn" }, battle.intensity)) : null]
     : h("span", {}, "The Chronicle"));
-  clear($("view"), combat ? fight(p) : chronicle(p));
+  if (battle) $("title").textContent = battle.name;
+  clear($("view"), combat ? fight(p) : battle ? battleView(p) : chronicle(p));
 }
 
 // ---------------------------------------------------------------- live

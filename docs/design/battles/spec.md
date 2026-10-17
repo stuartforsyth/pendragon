@@ -645,7 +645,7 @@ existing editor panels.
 
 ---
 
-## S6 — Battle container: Battles editor, launch, Mustering, Morale strip, army rolls, day Intensity, settings, deck edit, pause/resume, Table title + Morale gauge (size **L**)
+## S6 — Battle container: Battles editor, launch, Mustering, Morale strip, army rolls, day Intensity, settings, deck edit, pause/resume, Table title + Morale gauge (size **L**) — ✅ DONE 2026-10-17
 
 **Goal.** A battle can be prepared (saved definitions), launched (saved or quick), mustered (knights,
 commander, Morale, army rolls, Intensity), edited live, paused at session end and resumed in a later

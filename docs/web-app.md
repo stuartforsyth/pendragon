@@ -35,12 +35,14 @@ core/                      pure game logic (no UI) — shared by both apps
   adversary.py encounter_def.py  creator helpers
   battle.py                every Battle rule (GM ch. 6) as pure tables/functions
   examples.py              bring new shipped examples into the user's combat.json (adds only)
+  battle_def.py            saved battle definitions: battle → days → turn scripts
   rules.py pdf_export.py   rules data loading, combat.json persistence, PDF sheet
 web/
   app.py                   create_app(): routes, static, templates
   state.py                 AppState: rules, generator, sessions, hub, party/cast stores
   sessions.py              Session / SessionStore — the append-only event log
   combat_state.py          reduce(events) -> live combat; gm_view / table_view
+  battle_state.py          reduce(events) -> live battle (Morale, day/turn, army rolls, tokens); pause/resume
   table.py                 the player-safe projection (filters secrets server-side)
   hub.py                   server-sent events: "something changed" pings
   rules_index.py           rules corpus search (reads the rules_corpus symlink) + markdown rendering
@@ -125,3 +127,17 @@ armour, wounds or death. It only tracks the enemies.
   show "fought by …". The Table shows the same.
 - All combat rolls are public; the dice tray's Secret toggle is the only way
   to hide a roll.
+
+## Battles
+
+A **battle** is a container of fights with its own state (docs/design/battles/).
+Prepare saved battles in the **Battles** tool (`combat.json` → `battles`: size,
+days, per-day Intensity/turns/switches/deck/turn scripts) or launch a quick one
+from the **Battle** tool with just a Size. Launching copies the definition into
+`battle.started`; the GM musters the conroi (knights, commander, starting Morale
+the players worked out, Army Commander rolls for Clash+, today's Intensity), and
+the Morale strip, tokens and live settings run from there. Ending a session
+with a battle running writes `battle.paused`; **Resume** in a later session
+writes `battle.resumed` with a full snapshot. The Table's battle view shows the
+title band, the Morale gauge (number, draining bloodied fill, band word) and the
+Fray. Player rolls are resolved at the table; the GM records outcomes.

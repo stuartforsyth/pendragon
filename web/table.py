@@ -33,6 +33,16 @@ _SAFE_DATA = {
     "combat.captured": (),
     "glory.awarded": ("knight_name", "amount", "reason"),
     "glory.reassigned": ("knight_name", "foe", "amount"),
+    "battle.started": (),
+    "battle.deck": ("day", "add", "remove"),
+    "battle.army_roll": ("side", "outcome"),
+    "battle.day_started": ("day", "intensity"),
+    "battle.mustered": ("day", "start", "passion"),
+    "battle.commander": (),
+    "battle.morale_adjust": ("delta", "start", "reason"),
+    "battle.script": ("text",),
+    "battle.mounted": ("mounted",),
+    "battle.position": ("position",),
 }
 
 
@@ -125,7 +135,7 @@ def knight_cards(events, fl, combat):
     return cards
 
 
-def build(session, combat, pinned_mode="auto"):
+def build(session, combat, pinned_mode="auto", battle=None):
     fl = flags(session.events)
     feed = []
     for ev in reversed(session.events):
@@ -136,8 +146,13 @@ def build(session, combat, pinned_mode="auto"):
             feed.append(c)
             if len(feed) >= FEED_LIMIT:
                 break
-    auto = "combat" if combat and combat.get("active") else "chronicle"
+    if combat and combat.get("active"):
+        auto = "combat"
+    elif battle and battle.get("status") in ("mustering", "turn", "rear", "paused", "aftermath"):
+        auto = "battle"
+    else:
+        auto = "chronicle"
     mode = auto if pinned_mode == "auto" else pinned_mode
     return {"session": {"title": session.title, "scratch": session.scratch},
-            "mode": mode, "pinned": pinned_mode, "feed": feed, "combat": combat,
+            "mode": mode, "pinned": pinned_mode, "feed": feed, "combat": combat, "battle": battle,
             "knights": knight_cards(session.events, fl, combat)}

@@ -50,7 +50,7 @@ def list_sessions(request: Request):
 async def start_session(request: Request, body: dict):
     state = st(request)
     if not state.session.scratch:
-        state.sessions.end()
+        state.end_session()
     s = state.sessions.start(body.get("title", ""))
     state.notify("session")
     return {"session": s.meta()}
@@ -59,7 +59,7 @@ async def start_session(request: Request, body: dict):
 @router.post("/api/session/end")
 async def end_session(request: Request):
     state = st(request)
-    s = state.sessions.end()
+    s = state.end_session()
     state.notify("session")
     return {"session": s.meta()}
 
@@ -67,6 +67,8 @@ async def end_session(request: Request):
 @router.post("/api/session/resume")
 async def resume_session(request: Request, body: dict):
     state = st(request)
+    if not state.session.scratch and state.session.id != body.get("id"):
+        state.end_session()
     try:
         s = state.sessions.resume(body.get("id", ""))
     except (KeyError, OSError):
@@ -167,8 +169,8 @@ async def clear_table(request: Request):
 @router.post("/api/table/mode")
 async def table_mode(request: Request, body: dict):
     mode = body.get("mode")
-    if mode not in ("auto", "chronicle", "combat"):
-        bad("mode must be auto, chronicle or combat")
+    if mode not in ("auto", "chronicle", "combat", "battle"):
+        bad("mode must be auto, chronicle, combat or battle")
     state = st(request)
     state.table_mode = mode
     state.notify("table")
