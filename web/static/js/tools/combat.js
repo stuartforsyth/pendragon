@@ -6,6 +6,7 @@
 import { h, clear, api, post, icon, menu, modal, toast, useCss, confirmBox, skillDisplay,
   CHAR_FULL, CHAR_ORDER, debounce } from "../lib.js";
 import { moraleStrip } from "../components.js";
+import { knightShield } from "../board.js";
 
 export default {
   async mount(el, ctx) {
@@ -36,7 +37,7 @@ export default {
     }
 
     function render() {
-      if (el.querySelector(".cbt-foe input:focus, .cbt-head input:focus")) { pending = true; return; }
+      if (el.querySelector(".cbt-foe input:focus, .cbt-head input:focus, .cbt-drawer input:focus")) { pending = true; return; }
       pending = false;
       clear(body, cs && cs.active ? running() : launcher());
     }
@@ -141,6 +142,8 @@ export default {
     // Lanes by knight: each knight's foes sit under them; one stat header per
     // foe type; one line per foe; defeated foes collapse into a strip.
     const openFoes = new Set();      // foe lines expanded to show their full stats
+    let view = (() => { try { return localStorage.getItem("cbt-view") || "field"; } catch { return "field"; } })();
+    let picked = null;               // the token whose controls are open (Field view)
 
     // Post a change; if it defeated a foe nobody was fighting, ask who gets the Glory.
     async function act(path, body) {
@@ -207,17 +210,21 @@ export default {
           h("div", { class: "row", style: { marginTop: "10px" } },
             h("span", { class: "tag gules" }, `${up} of ${foes.length} foes standing`),
             knights.length ? h("span", { class: "tag azure" }, `${knights.filter((k) => !k.down).length} of ${knights.length} knights in the fight`) : null,
-            note)),
+            note,
+            knights.length ? h("span", { class: "seg", role: "group", "aria-label": "View" },
+              ["field", "list"].map((v) => h("button", { class: `chip ${view === v ? "on" : ""}`, onclick: () => {
+                view = v; try { localStorage.setItem("cbt-view", v); } catch {} render(); } }, v === "field" ? "Field" : "List"))) : null)),
         bt ? moraleStrip(bt, { onAdjust: () => ctx.navigate("battle"), onCommander: () => ctx.navigate("battle") }) : null,
         bt ? battleBanners() : null,
         cs.gm_notes ? h("details", { class: "cbt-notes" }, h("summary", {}, "GM notes"), h("p", { class: "muted" }, cs.gm_notes)) : null,
         cs.types?.length ? h("div", { class: "cbt-types" }, cs.types.map(typeHeader)) : null,
         !foes.length ? h("div", { class: "empty" }, "No foes — add some.") : null,
+        view === "field" && knights.length ? field(knights, foes, pool) : [
         knights.length ? h("div", { class: "cbt-lanes" }, knights.map((k) => lane(k, foes))) : null,
         knights.length
           ? (pool.length ? dropZone(h("div", { class: "cbt-pool" }, h("span", { class: "label" }, "Not engaged"),
               pool.map(poolChip), h("span", { class: "faint small" }, "drag onto a knight, or click to assign")), "") : null)
-          : (pool.length ? h("div", { class: "cbt-lane" }, h("div", { class: "cbt-lane-body" }, pool.map(foeLine))) : null),
+          : (pool.length ? h("div", { class: "cbt-lane" }, h("div", { class: "cbt-lane-body" }, pool.map(foeLine))) : null)],
         defeatedStrip(foes),
         h("div", { class: "cbt-help faint small" },
           "Each foe shows the weapon in its hand: click it to switch weapons or mark it Disarmed (it fights on with Brawling). Attack rolls that weapon against the knight it's fighting — you click the knight's result, and if the foe wins its damage is rolled. ",
@@ -255,6 +262,126 @@ export default {
             t.description ? h("p", {}, t.description) : null,
             t.notes && t.notes !== t.description ? h("p", { class: "muted" }, t.notes) : null,
             h("div", { class: "foot" }, h("button", { class: "btn primary", onclick: () => close() }, "Close"))]) }, icon("scroll")) : null);
+    }
+
+    // ------------------------------------------------------------ the Field
+    // Knights and foes as tokens; an engagement is a glowing red line. Drag a
+    // foe onto a knight (or a knight onto a foe) to engage them, a foe onto a
+    // foe to join its knight, a foe onto Waiting to free it. Click a token to
+    // open its controls. One foe fights one knight (for now).
+    const FOE_GLYPH = {
+      human: '<path d="M50 22v40M42 58h16M50 62v14" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M50 18l5 9h-10z" fill="currentColor"/>',
+      beast: '<path d="M30 70c4-14 8-30 12-40M46 72c2-16 4-32 6-44M62 70c0-14-1-28-2-40" stroke="currentColor" stroke-width="6" stroke-linecap="round" fill="none"/>',
+      monster: '<path d="M26 70c8-4 10-14 4-20s-4-16 6-20 22 2 24 12-6 14-2 20 14 6 18-2" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="40" cy="31" r="3.5" fill="currentColor"/>',
+      fae: '<path d="M50 20l7 22h23l-18 13 7 22-19-14-19 14 7-22-18-13h23z" fill="currentColor"/>',
+    };
+    function foeFace(c) {
+      const pct = Math.max(0, Math.min(1, c.cur_hp / Math.max(1, c.max_hp)));
+      const R = 46, C = 2 * Math.PI * R, col = pct > .5 ? "#79b585" : pct > .25 ? "#d4a84b" : "#d0574b";
+      const s = document.createElement("span");
+      s.className = "ftok-face";
+      s.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" class="medal"/>` +
+        `<g class="glyph">${FOE_GLYPH[c.category] || FOE_GLYPH.human}</g>` +
+        `<circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="6"/>` +
+        `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C * pct} ${C}" transform="rotate(-90 50 50)"/></svg>`;
+      return s;
+    }
+    let dragging = null;             // { id, side } while a token is dragged
+    function ftok(c, x, y) {
+      const knight = c.side === "party";
+      const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${!knight && c.engaged_with ? "engaged" : ""} ${c.down ? "down" : ""} ${c.elite ? "elite" : ""} ${picked === c.id ? "picked" : ""}`,
+        "data-id": c.id, style: { left: `${x}px`, top: `${y}px` }, title: knight ? "Click for controls · drag onto a foe to engage" : "Click for controls · drag onto a knight to engage",
+        onclick: () => { picked = picked === c.id ? null : c.id; render(); } },
+        knight ? h("span", { class: "ftok-face" }, knightShield(c.down)) : foeFace(c),
+        h("span", { class: "ftok-name" }, c.display_name),
+        h("span", { class: "ftok-sub" }, knight ? (c.down ? (c.status === "fled" ? "Out of the fight" : "Down") : c.mounted ? "Mounted" : "On foot")
+          : `${c.cur_hp}/${c.max_hp}${c.wound_state && c.wound_state !== "Unhurt" ? " · " + c.wound_state : ""}${c.wielding === "brawl" ? " · Disarmed" : ""}`));
+      if (c.down) return node;
+      node.draggable = true;
+      node.addEventListener("dragstart", (e) => {
+        dragging = { id: c.id, side: knight ? "knight" : "foe" };
+        e.dataTransfer.setData("text/cid", c.id); e.dataTransfer.effectAllowed = "move";
+        el.classList.add(`drag-${dragging.side}`);
+      });
+      node.addEventListener("dragend", () => { dragging = null; el.classList.remove("drag-knight", "drag-foe"); });
+      node.addEventListener("dragover", (e) => { if (dragging && canDrop(dragging, c)) { e.preventDefault(); node.classList.add("over"); } });
+      node.addEventListener("dragleave", () => node.classList.remove("over"));
+      node.addEventListener("drop", (e) => {
+        node.classList.remove("over");
+        if (!dragging || !canDrop(dragging, c)) return;          // let Waiting take it
+        e.preventDefault(); e.stopPropagation(); dropOn(e.dataTransfer.getData("text/cid"), c);
+      });
+      return node;
+    }
+    const byId = (id) => cs.combatants.find((o) => o.id === id);
+    function canDrop(d, target) {
+      if (target.down || d.id === target.id) return false;
+      const tKnight = target.side === "party";
+      return d.side === "foe" ? (tKnight || !!target.engaged_with) : !tKnight;
+    }
+    function dropOn(srcId, target) {
+      const src = byId(srcId);
+      if (!src || !canDrop({ id: src.id, side: src.side === "party" ? "knight" : "foe" }, target)) return;
+      const [foe, knightName] = src.side === "party" ? [target, src.display_name]
+        : target.side === "party" ? [src, target.display_name] : [src, target.engaged_with];
+      if ((foe.engaged_with || "") !== knightName) post(`/api/combat/${foe.id}/engage`, { with: knightName });
+    }
+
+    function field(knights, foes, pool) {
+      const W = Math.max(640, (el.querySelector(".cbt-field")?.clientWidth) || el.clientWidth || 960);
+      const live = foes.filter((f) => !f.down);
+      const groups = knights.map((k) => ({ k, foes: live.filter((f) => f.engaged_with === k.display_name) }));
+      const cols = Math.min(groups.length, W >= 1100 ? 4 : W >= 760 ? 3 : 2) || 1;
+      const cellW = W / cols, rows = Math.ceil(groups.length / cols);
+      const cellH = Math.max(230, ...groups.map((g) => 150 + Math.ceil(g.foes.length / 8) * 70));
+      const tokens = [], lines = [];
+      groups.forEach((g, i) => {
+        const cx = (i % cols + .5) * cellW, cy = Math.floor(i / cols) * cellH + cellH / 2 - 6;
+        tokens.push(ftok(g.k, cx, cy));
+        const n = g.foes.length, r = Math.min(cellW / 2 - 70, 96 + Math.max(0, n - 6) * 6);
+        g.foes.forEach((f, j) => {
+          const a = (n === 1 ? .5 : n === 2 ? (j ? .15 : .85) : j / n + .5 / n) * 2 * Math.PI + Math.PI / 2;
+          tokens.push(ftok(f, cx + r * Math.cos(a), cy + r * .78 * Math.sin(a)));
+          lines.push([g.k.id, f.id]);
+        });
+      });
+      const height = rows * cellH + 20;
+      const waiting = pool.filter((f) => !f.down);
+      const wait = h("div", { class: "cbt-wait" }, h("span", { class: "label" }, "Waiting"),
+        waiting.length ? waiting.map((f) => { const t = ftok(f, 0, 0); t.classList.add("inline"); return t; })
+          : h("span", { class: "faint small" }, "Drag a foe here to take it out of an engagement"));
+      wait.addEventListener("dragover", (e) => { if (dragging?.side === "foe") { e.preventDefault(); wait.classList.add("over"); } });
+      wait.addEventListener("dragleave", () => wait.classList.remove("over"));
+      wait.addEventListener("drop", (e) => {
+        e.preventDefault(); wait.classList.remove("over");
+        const f = byId(e.dataTransfer.getData("text/cid"));
+        if (f && f.side !== "party" && f.engaged_with) post(`/api/combat/${f.id}/engage`, { with: "" });
+      });
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "cbt-links");
+      const stage = h("div", { class: "cbt-field", style: { height: `${height}px` } }, svg, tokens);
+      const drawLinks = () => {
+        const box = stage.getBoundingClientRect();
+        const centre = (id) => { const f = stage.querySelector(`.ftok[data-id="${id}"] .ftok-face`); if (!f) return null;
+          const b = f.getBoundingClientRect(); return [b.left - box.left + b.width / 2, b.top - box.top + b.height / 2]; };
+        svg.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
+        svg.innerHTML = '<defs><filter id="cbt-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
+          lines.map(([a, b]) => { const p = centre(a), q = centre(b); return p && q ? `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" class="cbt-link" filter="url(#cbt-glow)"/>` : ""; }).join("");
+      };
+      requestAnimationFrame(drawLinks);
+      const ro = new ResizeObserver(() => { if (!stage.isConnected) return ro.disconnect(); drawLinks(); });
+      ro.observe(stage);
+      const pick = picked && byId(picked);
+      return [h("div", { class: "cbt-field-wrap" }, stage, pick ? drawer(pick, foes) : null), wait];
+    }
+
+    // The picked token's controls: a foe's row (weapon, Attack, Hit, ±HP…) and
+    // stats, or a knight's lane (mounted, Down/Out, their foes).
+    function drawer(c, foes) {
+      if (c.side !== "party" && !openFoes.has(c.id)) openFoes.add(c.id);
+      return h("div", { class: "cbt-drawer" },
+        h("button", { class: "btn ghost sm icon cbt-drawer-x", title: "Close", onclick: () => { picked = null; render(); } }, icon("x")),
+        c.side === "party" ? lane(c, foes) : h("div", { class: "cbt-lane" }, h("div", { class: "cbt-lane-body" }, foeLine(c))));
     }
 
     // Lanes and the pool accept dropped foes: the drop retargets the foe.

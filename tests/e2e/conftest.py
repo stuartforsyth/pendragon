@@ -99,6 +99,8 @@ def page(browser, request, tmp_path_factory, app_url):   # app_url first, so the
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
     pg.set_default_timeout(5000)
+    if not request.node.get_closest_marker("field"):     # the combat tracker's List view, unless testing the Field
+        pg.add_init_script("try { localStorage.setItem('cbt-view', 'list') } catch (e) {}")
     yield pg
     if getattr(request.node, "failed_call", False):
         path = tmp_path_factory.mktemp("shots") / f"{request.node.name}.png"
@@ -114,3 +116,7 @@ def table(browser, app_url):
     pg.set_default_timeout(5000)
     yield pg
     pg.close()
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "field: use the combat tracker's Field view (tokens) instead of List")

@@ -162,3 +162,44 @@ span.chip-height { cursor: default; }
   background: rgba(208,87,75,.12); border: 1px solid var(--gules-deep); color: var(--gules); }
 .cbt-lane-head .meta { color: var(--ink-2); font-size: 13px; }
 .cbt-lane-head .withdraw { color: var(--or-bright); font-weight: 700; }
+
+/* ---------- the Field: tokens and glowing engagement lines ---------- */
+.seg { display: inline-flex; gap: 4px; margin-left: 6px; }
+.cbt-field-wrap { position: relative; margin-top: 14px; }
+.cbt-field { position: relative; border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: radial-gradient(ellipse at 50% 40%, #221c18, #141110 75%); overflow: hidden; }
+.cbt-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cbt-link { stroke: #e2483b; stroke-width: 2.6; stroke-linecap: round; animation: link-pulse 2.4s ease-in-out infinite; }
+@keyframes link-pulse { 0%, 100% { opacity: .78; } 50% { opacity: 1; } }
+.ftok { position: absolute; transform: translate(-50%, -27px); display: grid; justify-items: center; gap: 2px; width: 130px;
+  text-align: center; cursor: grab; user-select: none; }
+.ftok.inline { position: static; transform: none; width: 104px; }
+.ftok-face { display: grid; place-items: center; width: 54px; height: 54px; position: relative; transition: transform .15s, filter .15s; }
+.ftok-face svg { width: 100%; height: 100%; display: block; }
+.ftok.is-knight .ftok-face svg { width: 48px; height: 55px; }
+.ftok .medal { fill: #2b201a; stroke: #7a4a3a; stroke-width: 3; }
+.ftok .glyph { color: #e2b7a8; }
+.ftok.elite .medal { stroke: var(--or); }
+.ftok-name { font: 700 13px/1.15 var(--f-ui); color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ftok-sub { font: 12px/1.1 var(--f-ui); color: var(--ink-dim); white-space: nowrap; }
+.ftok:hover .ftok-face { transform: scale(1.08); }
+.ftok.picked .ftok-face::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 2px solid var(--or-bright); box-shadow: 0 0 14px rgba(240,201,107,.55); }
+.ftok.down { opacity: .45; cursor: default; filter: grayscale(.7); }
+.ftok.is-knight .ftok-name { color: #9cc0ea; }
+/* while dragging: where you can drop glows */
+.drag-foe .ftok.is-knight:not(.down) .ftok-face, .drag-foe .ftok.is-foe.engaged:not(.down) .ftok-face,
+.drag-knight .ftok.is-foe:not(.down) .ftok-face { filter: drop-shadow(0 0 8px rgba(240,201,107,.9)); }
+.ftok.over .ftok-face { transform: scale(1.18); filter: drop-shadow(0 0 12px rgba(240,201,107,1)) !important; }
+.cbt-wait { margin-top: 10px; min-height: 64px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 4px; padding: 8px 12px;
+  border: 1px dashed var(--line-2); border-radius: var(--r); }
+.cbt-wait .label { margin-right: 8px; }
+.drag-foe .cbt-wait { border-color: var(--or); box-shadow: 0 0 10px rgba(240,201,107,.35) inset; }
+.cbt-wait.over { background: rgba(212,168,75,.08); }
+.cbt-drawer { position: absolute; top: 0; right: 0; width: min(560px, 62%); max-height: 100%; overflow: auto; background: var(--panel);
+  border: 1px solid var(--line-2); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 30px 0 8px; z-index: 2; }
+.cbt-drawer-x { position: absolute; top: 4px; right: 6px; }
+.cbt-drawer .cbt-lane { border: 0; margin: 0; }
+.cbt-drawer .cbt-foe-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.cbt-drawer .cbt-foe-line .cbt-hp { width: 150px; }
+.cbt-drawer .cbt-foe-line .cbt-wield { flex: 1 1 100%; order: 5; }
+@media (prefers-reduced-motion: reduce) { .cbt-link { animation: none; } }
