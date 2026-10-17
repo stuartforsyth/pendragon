@@ -175,127 +175,161 @@ figcaption span { color: var(--page-dim); font-size: 15.5px; }
 .flow { stroke-dasharray: 2 3; animation: flow 1.1s linear infinite; }
 @keyframes flow { to { stroke-dashoffset: -5; } }
 </style>
+<style>
+.gm .kglory, .tb .kglory { position: absolute; right: -1.1cqw; top: -.6cqw; min-width: 2.4cqw; height: 2.4cqw; border-radius: 99px; display: grid; place-items: center; font: 700 1cqw var(--f-display); padding: 0 .4cqw; }
+.tb .kglory { background: #fbf4e2; border: .15cqw solid var(--t-or); color: var(--t-or); }
+.gm .kglory { background: #2a2216; border: 1px solid var(--or); color: var(--or-bright); font-size: .85cqw; height: 2cqw; }
+.drawer { position: absolute; right: 0; top: 0; bottom: 0; width: 30cqw; background: rgba(28,25,23,.97); border-left: 1px solid var(--line-2); padding: 1.6cqw 1.6cqw; display: grid; align-content: start; gap: .9cqw; box-shadow: -1.5cqw 0 3cqw rgba(0,0,0,.5); }
+.drawer h3 { margin: 0; font: 700 1.6cqw var(--f-display); color: var(--ink); }
+.drawer .x { position: absolute; right: 1.2cqw; top: 1.2cqw; color: var(--ink-dim); font-size: 1.4cqw; }
+.dim { position: absolute; inset: 0; background: rgba(10,8,7,.25); }
+.trays { position: absolute; left: 2.2cqw; bottom: 1.4cqw; display: grid; gap: .5cqw; }
+.ticker { position: absolute; left: 2.4cqw; bottom: 1.4cqw; width: 52cqw; display: grid; grid-template-columns: 1fr 1fr; gap: .8cqw; }
+.ticker .m { background: rgba(251,244,226,.88); border: 1px solid var(--parch-dark); border-left: .3cqw solid var(--t-gules); border-radius: .5cqw; padding: .5cqw .8cqw; font-size: 1.05cqw; line-height: 1.25; }
+.ticker .m.r { border-left-color: var(--t-or); }
+.ticker .m b { font: 700 .95cqw var(--f-display); display: block; color: var(--t-ink); }
+.ticker .m .ok { font: 700 .95cqw var(--f-display); color: var(--t-vert); margin-right: .3cqw; }
+.ticker .m .res { font: 700 .95cqw var(--f-display); color: #fbf4e2; background: var(--t-gules); border-radius: .2cqw; padding: 0 .4cqw; margin-right: .3cqw; }
+.example { font: italic .8cqw var(--f-ui); color: var(--ink-dim); }
+.tb .example { color: var(--t-soft); font-family: var(--f-prose); font-size: 1cqw; }
+</style>
 
 <div class="wrap">
   <header>
-    <h1>Combat board</h1>
-    <p>A concept for the combat rework: tokens instead of rows, engagements drawn as glowing red lines, and dice that roll across the players' board. Your party, mid-fight. This is a sketch to agree the direction before designing each piece. Nothing here is clickable except the dice replay.</p>
+    <h1>Combat board — six knights</h1>
+    <p>Second sketch. Six knights, so three are examples: Sir Bors, Sir Cai and Dame Lynet. Engagements spread across the whole field instead of sitting in a row. A powerful foe takes on two knights, one Knifeman is shared by two knights, and the rest face one knight each. Nothing here is final; the real layout gets designed in the UX pass.</p>
   </header>
 
   <figure>
-    <div class="frame gm" id="gm-lake"></div>
-    <figcaption><b>1 · GM screen: three knights on the lake monster</b>
-      <span>One engagement: the three knights fight the monster together. The monster is selected, so its card is open on the right. It takes −10 on each exchange (−5 per knight after the first). Sir Emrys is <i>ignored</i> this round: his line is dashed, he gets an unopposed action, and the monster takes only −5. <b>Attack all</b> rolls the monster's attack once for each checked knight in turn.</span></figcaption>
+    <div class="frame gm" id="gm-a"></div>
+    <figcaption><b>1 · GM screen, nothing selected</b>
+      <span>The whole field is the board: no fixed side panel. Each engagement sits where there is room. The war-chief faces two knights and takes −5 on each exchange. Knifeman 4 fights both Sir Emrys and Sir Bors, so it has two lines. Waiting and Fallen sit in the bottom-left corner.</span></figcaption>
   </figure>
 
   <figure>
-    <div class="frame tb" id="tb-lake"><button class="replay" type="button" data-replay="tb-lake">Roll the dice again</button></div>
-    <figcaption><b>2 · Players' board: the same moment</b>
-      <span>The same picture in parchment and ink. No numbers on the monster, only how hurt it looks. The dice tumble across the board and land on the values the app rolled: Dame Cwylog's 5D6 plus the gold +4D6 for her critical. The blow is told as a sentence, and the monster shakes when struck.</span></figcaption>
+    <div class="frame gm" id="gm-b"></div>
+    <figcaption><b>2 · GM screen, the war-chief selected</b>
+      <span>Clicking a token slides its card in from the right, over the field. Close it and the field is whole again. Attack all rolls the war-chief once against each knight, at −5 for facing two.</span></figcaption>
   </figure>
 
   <figure>
-    <div class="frame gm" id="gm-picts"></div>
-    <figcaption><b>3 · GM screen: three Knifemen on each knight</b>
-      <span>Three engagements, one per knight. A Knifeman is being dragged from <i>Waiting</i> onto Sir Emrys: drop it and the line locks in. Dragging a knight onto a Knifeman does the same thing. Fallen foes leave their engagement and line up below with the Glory they earned. The Knifemen's horse attacks show here for you, and never on the board.</span></figcaption>
+    <div class="frame tb" id="tb-a"><button class="replay" type="button" data-replay="tb-a">Roll the dice again</button></div>
+    <figcaption><b>3 · Players' board, the same moment</b>
+      <span>The same field in parchment. Each knight's Glory sits on their shield, so there is no separate row of cards. Foes show only how hurt they look. The last two events run along the bottom-left, and the latest blow sits bottom-right with its dice.</span></figcaption>
   </figure>
-
-  <figure>
-    <div class="frame tb" id="tb-picts"><button class="replay" type="button" data-replay="tb-picts">Roll the dice again</button></div>
-    <figcaption><b>4 · Players' board: the Knifemen</b>
-      <span>Each knight with the foes on them. A gold d20 lands for a foe's attack roll, with no damage yet. The board gives no hint that the Knifemen are going for the horses.</span></figcaption>
-  </figure>
-
-  <div class="legend">
-    <div><b>Engage</b><p>Drag any token onto any other: a knight onto a foe, or a foe onto a knight. To unlink, drag a token away, or use ✕ on its line. One gesture is one log entry, so one strike undoes it.</p></div>
-    <div><b>Layout</b><p>The app arranges each engagement as a cluster: a lone foe in the middle with knights around it, or a knight in the middle with foes around them. No map, no distances.</p></div>
-    <div><b>The card</b><p>Click a token to open its card: weapon in hand, Attack (or Attack all), Hit, ±HP, Disarmed, status, horse, Height, modifier. Everything the rows do today, one token at a time.</p></div>
-    <div><b>Dice</b><p>A 3D dice engine, bundled into the app so it works offline, rolls the server's real numbers: never a separate re-roll. With reduced motion on, the result simply appears.</p></div>
-  </div>
 </div>
 
 <script>
 const SHIELD = '<svg viewBox="0 0 44 50"><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="#24507f"/><path d="M6 32 22 18l16 14" fill="none" stroke="#d2a645" stroke-width="4"/><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="none" stroke="#4e3a28" stroke-width="2"/></svg>';
 const MEDAL = (fill, ring, glyph, pct, ringCol) => {
-  const r = 46, c = 2 * Math.PI * r, arc = c * pct;
+  const r = 46, c = 2 * Math.PI * r;
   return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="41" fill="${fill}" stroke="${ring}" stroke-width="3"/>${glyph}` +
-    (pct != null ? `<circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="5"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${ringCol}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${arc} ${c}" transform="rotate(-90 50 50)"/>` : "") + "</svg>";
+    (pct != null ? `<circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="5"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${ringCol}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c * pct} ${c}" transform="rotate(-90 50 50)"/>` : "") + "</svg>";
 };
-const SERPENT = (col) => `<path d="M26 70c8-4 10-14 4-20s-4-16 6-20 22 2 24 12-6 14-2 20 14 6 18-2" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round"/><circle cx="40" cy="31" r="3" fill="${col}"/><path d="M33 26l-6-6M45 25l3-8" stroke="${col}" stroke-width="3" stroke-linecap="round"/>`;
 const DAGGER = (col) => `<path d="M50 20v42M42 58h16M50 62v14" stroke="${col}" stroke-width="5" stroke-linecap="round"/><path d="M50 18l4 8h-8z" fill="${col}"/>`;
+const AXE = (col) => `<path d="M38 78 62 24" stroke="${col}" stroke-width="5" stroke-linecap="round"/><path d="M56 22c10-2 18 6 16 16l-14-6z" fill="${col}"/><path d="M30 40c4-6 14-6 16 2" fill="none" stroke="${col}" stroke-width="3"/>`;
+const ringCol = (p) => p > .5 ? "#79b585" : p > .25 ? "#d4a84b" : "#d0574b";
 
-function tok(t, gm) {
+const KN = {
+  erik: { name: "Sir Erik the Cruel", sub: "Jason", glory: 30, mt: true },
+  cwy: { name: "Dame Cwylog", sub: "Michael", glory: 5, mt: false },
+  emr: { name: "Sir Emrys", sub: "Paul", glory: 5, mt: true },
+  bors: { name: "Sir Bors", sub: "example", glory: 0, mt: true },
+  cai: { name: "Sir Cai", sub: "example", glory: 10, mt: true },
+  lyn: { name: "Dame Lynet", sub: "example", glory: 5, mt: false },
+};
+const FOES = {
+  chief: { name: "Pictish War-chief", big: true, glyph: AXE, pct: .62, word: ["Wounded", "hurt"], gmsub: "Axe 19 · 6D6" },
+  k1: { name: "Knifeman 1", pct: 1, word: ["Unhurt", ""] }, k2: { name: "Knifeman 2", pct: .4, word: ["Badly wounded", "bad"] },
+  k4: { name: "Knifeman 4", pct: 1, word: ["Unhurt", ""] }, k5: { name: "Knifeman 5", pct: .7, word: ["Wounded", "hurt"] },
+  k6: { name: "Knifeman 6", pct: 1, word: ["Unhurt", ""] }, k7: { name: "Knifeman 7", pct: 1, word: ["Unhurt", ""] },
+  k8: { name: "Knifeman 8", pct: .55, word: ["Wounded", "hurt"], hit: true }, k9: { name: "Knifeman 9", pct: 1, word: ["Unhurt", ""] },
+  k10: { name: "Knifeman 10", pct: 1, word: ["Unhurt", ""] }, k11: { name: "Knifeman 11", pct: .8, word: ["Wounded", "hurt"] },
+};
+const LINKS = [["erik", "chief"], ["cwy", "chief", "hot"], ["emr", "k1"], ["emr", "k2"], ["emr", "k4"], ["bors", "k4"], ["bors", "k5"], ["bors", "k6"],
+  ["cai", "k7"], ["cai", "k8", "hot"], ["lyn", "k9"], ["lyn", "k10"], ["lyn", "k11"]];
+// positions in a 160 x 90 field (GM and board share the arrangement; the board is a touch roomier)
+const POS = {
+  gm: { erik: [16, 26], cwy: [16, 62], chief: [38, 44], emr: [70, 28], k1: [58, 17], k2: [54, 42], k4: [90, 36], bors: [112, 24], k5: [126, 14], k6: [130, 36],
+        cai: [70, 70], k7: [56, 62], k8: [86, 62], lyn: [122, 66], k9: [108, 78], k10: [138, 78], k11: [146, 54] },
+  tb: { erik: [16, 24], cwy: [16, 58], chief: [38, 40], emr: [70, 24], k1: [58, 15], k2: [54, 38], k4: [92, 32], bors: [114, 22], k5: [130, 12], k6: [138, 26],
+        cai: [70, 64], k7: [56, 56], k8: [86, 58], lyn: [120, 46], k9: [104, 56], k10: [138, 56], k11: [148, 30] },
+};
+
+function tok(id, mode, extra = {}) {
+  const gm = mode === "gm", [x, y] = POS[mode][id];
   const el = document.createElement("div");
-  el.className = `tok ${t.kind} ${t.big ? "big" : ""} ${t.cls || ""}`;
-  el.style.left = (t.x / 160 * 100) + "%"; el.style.top = (t.y / 90 * 100) + "%";
-  let face;
-  if (t.kind === "knight") face = SHIELD;
-  else if (t.monster) face = MEDAL(gm ? "#22302c" : "#e9dcc0", gm ? "#5d7b70" : "#2f5e57", SERPENT(gm ? "#9fd0c2" : "#2f5e57"), gm ? t.pct : null, t.pct > .5 ? "#79b585" : "#d4a84b");
-  else face = MEDAL(gm ? "#2b201a" : "#f3e7cc", gm ? "#7a4a3a" : "#8e2219", DAGGER(gm ? "#e2b7a8" : "#8e2219"), gm ? t.pct : null, t.pct > .5 ? "#79b585" : t.pct > .25 ? "#d4a84b" : "#d0574b");
-  el.innerHTML = `<div class="face">${face}</div><div class="nm">${t.name}</div>${t.sub ? `<div class="sub">${t.sub}</div>` : ""}${t.pills || ""}`;
+  const k = KN[id], f = FOES[id];
+  el.className = `tok ${k ? "knight" : "foe"} ${f?.big ? "big" : ""} ${f?.hit && !gm ? "hit" : ""} ${extra.cls || ""}`;
+  el.style.left = (x / 160 * 100) + "%"; el.style.top = (y / 90 * 100) + "%";
+  if (k) {
+    const n = LINKS.filter((l) => l[0] === id).length;
+    el.innerHTML = `<div class="face">${SHIELD}<span class="kglory">✦${k.glory}</span></div><div class="nm">${k.name}</div>` +
+      (k.sub === "example" ? `<div class="sub example">example knight</div>` : `<div class="sub">${gm ? k.sub : "played by " + k.sub}</div>`) +
+      (gm ? `<div><span class="pill ${k.mt ? "mt" : "ft"}">${k.mt ? "Mounted" : "On foot"}</span>${n > 1 ? ` <span class="pill mo">⚠ ${n} foes · −${(n - 1) * 5}</span>` : ""}</div>` : "");
+  } else {
+    const glyph = f.glyph || DAGGER;
+    const face = gm ? MEDAL(f.big ? "#2c241c" : "#2b201a", f.big ? "#a07a3a" : "#7a4a3a", glyph(f.big ? "#e8c98a" : "#e2b7a8"), f.pct, ringCol(f.pct))
+                    : MEDAL(f.big ? "#efe0bf" : "#f3e7cc", f.big ? "#6b4a1e" : "#8e2219", glyph(f.big ? "#6b4a1e" : "#8e2219"), null);
+    const knightsOn = LINKS.filter((l) => l[1] === id).length;
+    el.innerHTML = `<div class="face">${face}</div><div class="nm">${f.name}</div>` +
+      (gm ? `<div class="sub">${f.gmsub || (f.pct < 1 ? Math.round(f.pct * 22) + " / 22" : "22 / 22")}</div>${knightsOn > 1 ? `<span class="pill mo">−${(knightsOn - 1) * 5} · ${knightsOn} knights</span>` : ""}`
+          : `<span class="ws ${f.word[1]}">${f.word[0]}</span>`);
+  }
   return el;
 }
 
-function links(frame, pairs, gm) {
-  const ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
+function draw(frameId, mode, opts = {}) {
+  const f = document.getElementById(frameId), gm = mode === "gm";
+  const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
   svg.setAttribute("viewBox", "0 0 160 90"); svg.setAttribute("preserveAspectRatio", "none"); svg.classList.add("links");
-  const id = frame.id + "-g";
-  svg.innerHTML = `<defs><filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${gm ? .9 : .7}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
-  for (const p of pairs) {
+  const gid = frameId + "-g";
+  svg.innerHTML = `<defs><filter id="${gid}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${gm ? .9 : .7}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  for (const [a, b, hot] of LINKS) {
+    const [x1, y1] = POS[mode][a], [x2, y2] = POS[mode][b];
     const l = document.createElementNS(ns, "line");
-    l.setAttribute("x1", p[0].x); l.setAttribute("y1", p[0].y); l.setAttribute("x2", p[1].x); l.setAttribute("y2", p[1].y);
-    const col = gm ? "#e2483b" : "#a3241a";
-    l.setAttribute("stroke", p.ignored ? (gm ? "#6f6455" : "#9a845f") : col);
-    l.setAttribute("stroke-width", p.ignored ? .35 : (p.hot ? .9 : .6));
-    l.setAttribute("stroke-linecap", "round");
-    if (p.ignored) l.setAttribute("stroke-dasharray", "1.2 1.4");
-    else { l.setAttribute("filter", `url(#${id})`); l.classList.add("glowline"); if (p.flow) l.classList.add("flow"); }
+    Object.entries({ x1, y1, x2, y2, stroke: gm ? "#e2483b" : "#a3241a", "stroke-width": hot ? 1.1 : .6, "stroke-linecap": "round", filter: `url(#${gid})` }).forEach(([k, v]) => l.setAttribute(k, v));
+    l.classList.add("glowline");
     svg.appendChild(l);
   }
-  frame.prepend(svg);
+  f.prepend(svg);
+  Object.keys(POS[mode]).forEach((id) => f.appendChild(tok(id, mode, { cls: opts.sel === id ? "sel" : "" })));
+  return f;
 }
-
 function add(frame, html, cls, style) { const d = document.createElement("div"); d.className = cls; if (style) Object.assign(d.style, style); d.innerHTML = html; frame.appendChild(d); return d; }
+const topbar = (f) => add(f, `<div class="ttl"><small>In combat</small><b>Pictish Ambush</b></div><div class="rnd">ROUND<b>2</b></div><span class="sp"></span>
+  <span class="btn pri">⧗ Next round</span><span class="btn">+ Add</span><span class="btn">⇆ Distribute</span><span class="btn tog"><i></i>Rebated (for love)</span><span class="btn dng">⚑ End fight</span>`, "topbar");
+const trays = (f) => add(f, `<div class="strip" style="position:static"><span class="lab">Waiting</span><span>Knifeman 12</span></div>
+  <div class="strip" style="position:static"><span class="lab">Fallen</span><span class="fallen"><s>Knifeman 3</s> slain · <b>✦5</b> Sir Emrys</span></div>`, "trays");
 
-/* ---------- frame 1: GM, lake monster ---------- */
+/* GM A */
+(() => { const f = draw("gm-a", "gm"); topbar(f); trays(f); })();
+
+/* GM B: drawer */
 (() => {
-  const f = document.getElementById("gm-lake");
-  add(f, `<div class="ttl"><small>In combat</small><b>The Lake Monster</b></div><div class="rnd">ROUND<b>2</b></div><span class="sp"></span>
-    <span class="btn pri">⧗ Next round</span><span class="btn">+ Add</span><span class="btn tog"><i></i>Rebated (for love)</span><span class="btn dng">⚑ End fight</span>`, "topbar");
-  const M = { x: 62, y: 50 }, K = [{ x: 22, y: 26 }, { x: 16, y: 52 }, { x: 22, y: 78 }];
-  links(f, [[K[0], M], Object.assign([K[1], M], { hot: true, flow: true }), Object.assign([K[2], M], { ignored: true })], true);
-  const ks = [["Sir Erik the Cruel", "Jason", '<span class="pill mt">Mounted</span>'], ["Dame Cwylog", "Michael", '<span class="pill ft">On foot</span>'], ["Sir Emrys", "Paul", '<span class="pill ig">ignored this round</span>']];
-  ks.forEach((k, i) => f.appendChild(tok({ kind: "knight", x: K[i].x, y: K[i].y, name: k[0], sub: k[1], pills: k[2] }, true)));
-  f.appendChild(tok({ kind: "foe", monster: true, big: true, x: M.x, y: M.y, name: "The Lake Monster", sub: "61 / 80 · Wounded", pct: 61 / 80, cls: "sel",
-    pills: '<span class="pill mo">−5 vs each · 1 ignored</span>' }, true));
-  add(f, `<h3>The Lake Monster</h3>
-    <div class="row"><div class="hp"><i style="width:76%"></i></div><span class="num">61 / 80</span></div>
-    <div class="lab">In its jaws</div>
-    <div class="row"><div class="wpn">⚔ Bite <b>18</b> · 8D6 <s>▾</s></div></div>
-    <div class="lab">Attack all — one exchange each</div>
+  const f = draw("gm-b", "gm", { sel: "chief" }); topbar(f); trays(f);
+  add(f, "", "dim");
+  add(f, `<span class="x">✕</span><h3>Pictish War-chief</h3>
+    <div class="row"><div class="hp"><i class="w" style="width:62%"></i></div><span class="num">17 / 28</span></div>
+    <div class="lab">In hand</div>
+    <div class="row"><div class="wpn">⚔ Axe <b>19</b> · 6D6 <s>▾</s></div></div>
+    <div class="lab">Attack all · one exchange each</div>
     <div class="against">
-      <div><span class="chk">✓</span>Sir Erik the Cruel<em>18 −5 = 13</em></div>
-      <div><span class="chk">✓</span>Dame Cwylog<em>18 −5 = 13</em></div>
-      <div class="off"><span class="chk">✓</span>Sir Emrys<em>ignored · unopposed</em></div>
+      <div><span class="chk">✓</span>Sir Erik the Cruel<em>19 −5 = 14</em></div>
+      <div><span class="chk">✓</span>Dame Cwylog<em>19 −5 = 14</em></div>
     </div>
     <div class="cbtns"><span class="btn pri">⚔ Attack all (2)</span><span class="btn">Attack one ▾</span><span class="btn dng">⛨ Hit by…</span><span class="btn">±HP</span></div>
-    <div class="note">Armour 10 · Knockdown 30 · Major Wound 24. Glory 250, shared by the knights who defeat it (Table A.1).</div>`, "card");
-  add(f, `<b>Drag</b> a token onto another to engage · <b>✕</b> on a line to part them · click a token for its card`, "hint");
+    <div class="row"><span class="btn">Disarmed</span><span class="btn">Down</span><span class="btn">Flees</span><span class="btn">Surrenders</span></div>
+    <div class="note">Armour 10 + shield 6 · Knockdown 16 · Major Wound 15 · Glory 50 to the knight of the defeating blow.</div>`, "drawer");
 })();
 
-/* ---------- frame 2: board, lake monster ---------- */
-function tbHead(f, ev, round) {
-  add(f, `<svg class="crest" viewBox="0 0 44 50"><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="#8e2219"/><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="none" stroke="#d2a645" stroke-width="2"/></svg>
-    <b>Pendragon</b><span class="rule"></span><span class="ev">${ev}</span><span class="rnd">Round ${round}</span>`, "tb-head");
-}
+/* Board */
 function die(tray, x, y, v, cls, delay) {
   const R = { 1: [0, 0], 2: [0, -90], 3: [-90, 0], 4: [90, 0], 5: [0, 90], 6: [0, 180] }[v];
   const pips = { 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
   const face = (n) => `<div class="f f${n}">${Array.from({ length: 9 }, (_, i) => pips[n].includes(i + 1) ? "<i></i>" : "<span></span>").join("")}</div>`;
   const d = document.createElement("div");
-  d.className = `die ${cls || ""}`;
-  d.style.left = x + "cqw"; d.style.top = y + "cqw";
+  d.className = `die ${cls || ""}`; d.style.left = x + "cqw"; d.style.top = y + "cqw";
   d.style.setProperty("--rx", R[0] + "deg"); d.style.setProperty("--ry", R[1] + "deg");
   d.style.setProperty("--rx2", (R[0] + 20) + "deg"); d.style.setProperty("--ry2", (R[1] - 25) + "deg");
   d.style.setProperty("--sx", (-40 - Math.random() * 20) + "cqw"); d.style.setProperty("--d", (1.4 + delay) + "s");
@@ -303,82 +337,18 @@ function die(tray, x, y, v, cls, delay) {
   tray.appendChild(d);
 }
 (() => {
-  const f = document.getElementById("tb-lake");
-  tbHead(f, "The Lake Monster", 2);
-  const M = { x: 64, y: 44 }, K = [{ x: 28, y: 22 }, { x: 22, y: 46 }, { x: 28, y: 70 }];
-  links(f, [[K[0], M], Object.assign([K[1], M], { hot: true }), [K[2], M]], false);
-  [["Sir Erik the Cruel", "Jason"], ["Dame Cwylog", "Michael"], ["Sir Emrys", "Paul"]].forEach((k, i) =>
-    f.appendChild(tok({ kind: "knight", x: K[i].x, y: K[i].y, name: k[0], sub: `played by ${k[1]}` }, false)));
-  f.appendChild(tok({ kind: "foe", monster: true, big: true, x: M.x, y: M.y, name: "The Lake Monster", cls: "hit", pills: '<span class="ws hurt">Badly wounded</span>' }, false));
-  add(f, `<div class="seal"><svg viewBox="0 0 100 100"><path d="M50 3c8 9 16 2 22 10s-1 16 8 22 4 16 9 24-6 14-5 22-12 9-17 15-14 0-17 0-11 6-17 0-17-7-17-15-9-14-4-22 1-16 9-24-1-15 8-22 14 0 22-10Z" fill="#8e2219"/></svg><b>33</b></div>
-    <div><span class="ban">★ Critical hit! ★</span><p>A critical blow! Dame Cwylog’s sword inflicts 33 points of damage on the Lake Monster, who is badly wounded.</p><small>43 rolled − 10 armour = 33</small></div>`,
-    "blow", { left: "40%", right: "2.4cqw", top: "66%" });
-  add(f, `<div><b>Sir Erik the Cruel</b><i>Last: dodged the monster’s bite</i></div><div class="g"><small>GLORY</small>0</div>`, "kband-x", { display: "none" });
-  const tray = add(f, "", "tray rolling", { top: "12%" });
-  [[48, 3, 4], [52, 4.6, 6], [56, 2.6, 3], [60, 4.2, 5], [64, 2.4, 2], [70, 3.4, 6, "gold"], [74, 4.8, 4, "gold"], [78, 2.8, 5, "gold"], [82, 4, 3, "gold"]]
-    .forEach(([x, y, v, c], i) => die(tray, x, y, v, c, i * .06));
+  const f = draw("tb-a", "tb");
+  add(f, `<svg class="crest" viewBox="0 0 44 50"><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="#8e2219"/><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="none" stroke="#d2a645" stroke-width="2"/></svg>
+    <b>Pendragon</b><span class="rule"></span><span class="ev">Pictish Ambush</span><span class="rnd">Round 2</span>`, "tb-head");
+  add(f, `<div class="m r"><b>Pictish War-chief — Axe</b><span class="ok">9 Success</span>vs 14 · against Dame Cwylog</div>
+    <div class="m"><b>Dame Cwylog → War-chief</b><span class="res">11 wound</span>Dame Cwylog’s sword inflicts 11 points of damage on the Pictish War-chief, who is wounded.</div>`, "ticker");
+  add(f, `<div class="seal"><svg viewBox="0 0 100 100"><path d="M50 3c8 9 16 2 22 10s-1 16 8 22 4 16 9 24-6 14-5 22-12 9-17 15-14 0-17 0-11 6-17 0-17-7-17-15-9-14-4-22 1-16 9-24-1-15 8-22 14 0 22-10Z" fill="#8e2219"/></svg><b>9</b></div>
+    <div><p>Sir Cai’s lance inflicts 9 points of damage on Knifeman 8, who is wounded.</p><small>9 rolled − 0 armour = 9</small></div>`,
+    "blow", { left: "58%", right: "2.4cqw", bottom: "1.4cqw", boxShadow: "0 .4cqw 1.4cqw rgba(60,35,10,.25)", borderColor: "#cdb68a" });
+  const tray = add(f, "", "tray rolling", { top: "47%" });
+  [[58, 0, 1], [62, 1.6, 4], [66, 0.4, 4]].forEach(([x, y, v], i) => die(tray, x, y, v, "", i * .06));
 })();
 
-/* ---------- frame 3: GM, Knifemen ---------- */
-(() => {
-  const f = document.getElementById("gm-picts");
-  add(f, `<div class="ttl"><small>In combat · The Battle of Bedegraine · Day 1 · Turn 1</small><b>Pictish Knifemen</b></div><div class="rnd">ROUND<b>1</b></div><span class="sp"></span>
-    <span class="btn pri">⧗ Next round</span><span class="btn">⇆ Distribute foes equally</span><span class="btn tog"><i></i>Rebated (for love)</span><span class="btn dng">⚑ End fight</span>`, "topbar");
-  const C = [{ x: 28, y: 26 }, { x: 78, y: 26 }, { x: 128, y: 26 }];
-  const ANG = { 3: [0.08, 0.5, 0.92], 2: [0.2, 0.8] };
-  const around = (c, n, r) => ANG[n].map((a) => ({ x: c.x + r * Math.cos(Math.PI * a), y: c.y + 14 + r * .75 * Math.sin(Math.PI * a) }));
-  const pairs = [], toks = [];
-  const knights = [["Sir Erik the Cruel", "Mounted"], ["Dame Cwylog", "Mounted"], ["Sir Emrys", "On foot"]];
-  const foes = [[["1", .7], ["2", 1], ["3", .3]], [["4", 1], ["5", .55], ["6", 1]], [["7", 1], ["8", 1]]];
-  knights.forEach((k, i) => {
-    toks.push(tok({ kind: "knight", x: C[i].x, y: C[i].y, name: k[0], pills: `<span class="pill ${k[1] === "Mounted" ? "mt" : "ft"}">${k[1]}</span>` +
-      (foes[i].length > 1 ? ` <span class="pill mo">⚠ ${foes[i].length} foes · −${(foes[i].length - 1) * 5} vs each</span>` : "") }, true));
-    around(C[i], foes[i].length, 19).forEach((p, j) => {
-      pairs.push([C[i], p]);
-      toks.push(tok({ kind: "foe", x: p.x, y: p.y, name: "Knifeman " + foes[i][j][0], pct: foes[i][j][1], sub: k[1] === "Mounted" ? "⇣ horse · no Height" : "Dagger 15" }, true));
-    });
-  });
-  const ghost = { x: 104, y: 70 };
-  pairs.push(Object.assign([C[2], ghost], { flow: true }));
-  links(f, pairs, true);
-  toks.forEach((t) => f.appendChild(t));
-  f.appendChild(tok({ kind: "foe", x: ghost.x, y: ghost.y, name: "Knifeman 9", sub: "dragging…", pct: 1, cls: "ghost" }, true));
-  add(f, `<span class="lab">Waiting</span><span>Knifeman 9 (being dragged)</span>`, "strip", { left: "2.2cqw", bottom: "5.4cqw" });
-  add(f, `<span class="lab">Fallen</span><span class="fallen"><s>Knifeman 10</s> slain · <b>✦5</b> Sir Erik</span><span class="fallen"><s>Knifeman 11</s> fled · <b>✦5</b> Dame Cwylog</span>`, "strip", { left: "2.2cqw", bottom: "2.4cqw" });
-})();
-
-/* ---------- frame 4: board, Knifemen ---------- */
-(() => {
-  const f = document.getElementById("tb-picts");
-  tbHead(f, "Bedegraine · Day 1 · Turn 1", 1);
-  const C = [{ x: 21, y: 18 }, { x: 59, y: 18 }, { x: 97, y: 18 }];
-  const around = (c, n, r) => [0.06, 0.5, 0.94].map((a) => ({ x: c.x + r * Math.cos(Math.PI * a), y: c.y + 15 + r * .85 * Math.sin(Math.PI * a) }));
-  const pairs = [], toks = [];
-  const knights = [["Sir Erik the Cruel", "Jason"], ["Dame Cwylog", "Michael"], ["Sir Emrys", "Paul"]];
-  const words = [[["Wounded", "hurt"], ["Unhurt", ""], ["Badly wounded", "bad"]], [["Unhurt", ""], ["Wounded", "hurt"], ["Unhurt", ""]], [["Unhurt", ""], ["Unhurt", ""], ["Unhurt", ""]]];
-  knights.forEach((k, i) => {
-    toks.push(tok({ kind: "knight", x: C[i].x, y: C[i].y, name: k[0], sub: `played by ${k[1]}` }, false));
-    around(C[i], 3, 15).forEach((p, j) => {
-      pairs.push(Object.assign([C[i], p], { hot: i === 1 && j === 1 }));
-      toks.push(tok({ kind: "foe", x: p.x, y: p.y, name: "Knifeman " + (i * 3 + j + 1), cls: i === 1 && j === 1 ? "hit" : "", pills: `<span class="ws ${words[i][j][1]}">${words[i][j][0]}</span>` }, false));
-    });
-  });
-  links(f, pairs, false);
-  toks.forEach((t) => f.appendChild(t));
-  add(f, `<div class="h">The Fray</div>
-    <div class="m r"><b>Knifeman 5 — Dagger</b><span class="ok">17 Success</span>vs 15</div>
-    <div class="m"><b>Dame Cwylog → Knifeman 5</b><span class="res">9 wound</span>Dame Cwylog’s sword inflicts 9 points of damage on Knifeman 5, who is wounded.</div>
-    <div class="m"><b>Sir Erik the Cruel → Knifeman 1</b><span class="res">6 wound</span>Sir Erik the Cruel’s lance inflicts 6 points of damage on Knifeman 1, who is wounded.</div>`, "fray");
-  add(f, `<div><b>Sir Erik the Cruel</b><span class="g"><small>GLORY</small>5</span><i>Last: his lance wounds Knifeman 1</i></div>
-    <div><b>Dame Cwylog</b><span class="g"><small>GLORY</small>5</span><i>Last: her sword wounds Knifeman 5</i></div>
-    <div><b>Sir Emrys</b><span class="g"><small>GLORY</small>0</span><i>Last: three Knifemen close in</i></div>`, "kband");
-  const tray = add(f, "", "tray rolling", { top: "56%" });
-  const d = document.createElement("div"); d.className = "d20"; d.style.left = "52cqw"; d.style.top = "-2cqw";
-  d.innerHTML = `<svg viewBox="0 0 100 100"><path d="M50 4 92 28v44L50 96 8 72V28Z" fill="#f1d27a" stroke="#8a6a2a" stroke-width="3"/><path d="M50 4 22 62h56ZM8 28l14 34L8 72M92 28 78 62l14 10M22 62l28 34 28-34" fill="none" stroke="#8a6a2a" stroke-width="1.6" opacity=".7"/></svg><b>17</b>`;
-  tray.appendChild(d);
-})();
-
-/* replay the dice */
 document.querySelectorAll("[data-replay]").forEach((b) => b.addEventListener("click", () => {
   const tray = document.getElementById(b.dataset.replay).querySelector(".tray");
   tray.classList.remove("rolling"); void tray.offsetWidth; tray.classList.add("rolling");
