@@ -164,7 +164,7 @@ def _mustering(request):
 
 @router.post("/api/battle/army-roll")
 async def army_roll(request: Request, body: dict):
-    state, b = _mustering(request)
+    state, b = _live(request)            # correctable all day, not only at Mustering
     size = b["definition"]["size"]
     if not B.SIZES[size]["army_rolls"]:
         bad("Army Commander rolls are for a Clash or larger")
@@ -206,8 +206,9 @@ def _record_army(state, b, side, outcome, roll=None):
 
 @router.post("/api/battle/day")
 async def day(request: Request, body: dict):
-    """Today's Intensity: entered, or rolled from the Size (Table 6.1)."""
-    state, b = _mustering(request)
+    """Today's Intensity: entered, or rolled from the Size (Table 6.1) —
+    and overridable at any time during the day (piece 1, U5)."""
+    state, b = _live(request)
     size = b["definition"]["size"]
     if body.get("roll_for_me"):
         dice = B.SIZES[size]["intensity"]
@@ -255,6 +256,35 @@ async def muster(request: Request, body: dict):
     ev = state.record("battle.mustered", line, title=_name(b),
                       data={"day": b["day"], "start": start_m, "passion": passion, "commander": commander,
                             "knights": knights, "table_text": line, "battle": _link(b)})
+    return {"event": ev}
+
+
+@router.post("/api/battle/conroi")
+async def conroi(request: Request, body: dict):
+    """Edit the muster after Begin: who rides in the conroi, the Passion, the
+    starting Morale. Everything stays editable while the battle runs."""
+    state, b = _live(request)
+    if b["status"] == "mustering":
+        bad("Set these on the Mustering screen", 409)
+    data, bits = {}, []
+    if "knights" in body:
+        knights = [p for p in body.get("knights") or [] if state.party.get(p)]
+        if not knights:
+            bad("The conroi needs at least one knight")
+        data["knights"] = knights
+        bits.append("rides with " + ", ".join(_party_name(state, p) for p in knights))
+    if "passion" in body:
+        data["passion"] = (body.get("passion") or "").strip()
+        bits.append(f"Passion {data['passion'] or '—'}")
+    if body.get("start") not in (None, ""):
+        data["start"] = to_int(body["start"], "starting Morale")
+        if data["start"] < 1:
+            bad("Starting Morale must be at least 1")
+        bits.append(f"starting Morale {data['start']}")
+    if not data:
+        bad("Nothing to change")
+    line = "The conroi: " + "; ".join(bits)
+    ev = state.record("battle.conroi", line, title="The conroi", data={**data, "table_text": line, "battle": _link(b)})
     return {"event": ev}
 
 
@@ -310,6 +340,18 @@ async def settings(request: Request, body: dict):
     state, b = _live(request)
     size = b["definition"]["size"]
     encs = state.combat_data.get("encounters", {})
+    if body.get("battle_patch"):
+        bp = body["battle_patch"]
+        patch = {k: str(bp[k] or "").strip() for k in ("name", "where", "against", "notes") if k in bp}
+        if "size" in bp:
+            if bp["size"] not in B.SIZES:
+                bad("Choose a battle size")
+            patch["size"] = bp["size"]
+        if "name" in patch and not patch["name"]:
+            bad("The battle needs a name")
+        ev = state.record("battle.settings", "Battle settings: " + ", ".join(f"{k} → {v}" for k, v in patch.items()),
+                          title="Battle settings", visibility="gm", data={"battle_patch": patch, "battle": _link(b)})
+        return {"event": ev}
     if body.get("add_day"):
         try:
             new_day = BD.clean_day(body["add_day"], size, encs, [], "New day")

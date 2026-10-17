@@ -885,3 +885,22 @@ def test_quick_battle_empty_deck_means_every_battle_encounter(client):
     _step(client, "set", encounter="Knights of Gorre")
     assert _battle(client)["t"]["set"]["encounter"] == "Knights of Gorre"
     assert "Pictish Knifemen" in [c["name"] for c in ok(client.get("/api/table"))["battle"]["deck"]["foes"]]
+
+
+# -- everything stays editable while the battle runs -------------------------------
+
+def test_edit_everything_mid_battle(client):
+    pids = _running(client)                                  # Sir Bors, Sir Cai; Intensity 12
+    third = _party(client, "Dame Lynet")[0]
+    _step(client, "set", encounter="Pictish Knifemen")
+    ok(client.post("/api/battle/day", json={"intensity": 15}))                           # override Intensity
+    ok(client.post("/api/battle/army-roll", json={"side": "enemy", "outcome": "success"}))  # correct an army roll
+    ok(client.post("/api/battle/conroi", json={"knights": pids + [third], "passion": "Honor", "start": 18}))
+    ok(client.post("/api/battle/settings", json={"battle_patch": {"name": "The Ford", "where": "the Trent", "size": "small"}}))
+    b = _battle(client)
+    assert b["intensity_today"] == 15 and b["tokens"]["force"] == "available"
+    assert b["conroi"] == pids + [third] and b["passion"] == "Honor" and b["morale"] == {"start": 18, "current": 18, "last": None}
+    assert b["definition"]["name"] == "The Ford" and b["definition"]["size"] == "small"
+    assert b["step"]["current"] == "intensity"               # the turn carries on where it was
+    ok(client.post("/api/battle/commander", json={"commander": third}))
+    assert _battle(client)["commander_name"] == "Dame Lynet"

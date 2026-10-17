@@ -683,34 +683,78 @@ export default {
     }
 
     // Live settings: today and later days are editable; past days are locked.
+    // Live settings: everything about the battle stays editable while it runs —
+    // the battle itself, the conroi, today's Intensity and army rolls, and the
+    // days (today and later; past days are locked).
     async function settingsDrawer() {
       const edits = {};
-      await modal("Battle settings", (close) => [
-        h("div", { class: "stack" }, b.definition.days.map((day, i) => {
-          const n = i + 1, past = n < b.day;
-          return h("div", {}, h("div", { class: "label" }, `Day ${n}`, past ? " (past days are locked)" : ""),
-            dayCard(day, b.definition.size, { readOnly: past, decks, label: `Day ${n}`, onChange: (d) => { edits[n] = d; } }));
-        })),
-        h("div", { class: "foot" },
-          h("button", { class: "btn", onclick: async () => { await post("/api/battle/settings", { add_day: { turns: SIZES[b.definition.size].turns } }); close(); settingsDrawer(); } }, icon("plus"), "Add day"),
-          h("button", { class: "btn ghost", onclick: () => close() }, "Cancel"),
-          h("button", { class: "btn primary", onclick: async () => {
-            for (const [n, d] of Object.entries(edits)) {
-              const old = b.definition.days[n - 1];
-              const deckChanged = JSON.stringify(old.deck) !== JSON.stringify(d.deck);
-              const patch = {};
-              for (const k of ["intensity", "turns", "first_charge", "on_foot", "no_charge", "commanders", "notes", "scripts"])
-                if (JSON.stringify(old[k]) !== JSON.stringify(d[k])) patch[k] = d[k];
-              if (Object.keys(patch).length) await post("/api/battle/settings", { day: Number(n), patch });
-              if (deckChanged) {
+      const det = { name: b.definition.name || "", where: b.definition.where || "", against: b.definition.against || "", notes: b.definition.notes || "", size: b.definition.size };
+      const running = ["turn", "rear"].includes(b.status);
+      const con = { knights: [...b.conroi], passion: b.passion || "", start: b.morale?.start ?? "" };
+      const dayIntensity = { value: b.intensity_today ?? "" };
+      await modal("Battle settings", (close) => {
+        const sizeChips = h("div", { class: "chips" });
+        const drawSizes = () => clear(sizeChips, Object.entries(SIZES).map(([k, sz]) => h("button", { class: `chip ${det.size === k ? "on" : ""}`, onclick: () => { det.size = k; drawSizes(); } }, sz.label)));
+        drawSizes();
+        const field = (label, key, textarea = false) => h("label", { class: "field" }, h("span", {}, label),
+          textarea ? h("textarea", { class: "input", rows: 2, oninput: (e) => { det[key] = e.target.value; } }, det[key])
+            : h("input", { class: "input", value: det[key], oninput: (e) => { det[key] = e.target.value; } }));
+        const party_ = party.filter((m) => m.active !== false || b.conroi.includes(m.id));
+        const conroiSec = running ? h("div", { class: "panel" }, h("h3", {}, "The conroi"),
+          party_.map((m) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: con.knights.includes(m.id),
+            onchange: (e) => { con.knights = e.target.checked ? [...con.knights, m.id] : con.knights.filter((x) => x !== m.id); } }), m.name)),
+          h("div", { class: "row" },
+            h("label", { class: "field" }, h("span", {}, "Starting Morale"), h("input", { class: "input num", type: "number", min: 1, value: con.start, oninput: (e) => { con.start = e.target.value; } })),
+            h("label", { class: "field", style: { flex: 1 } }, h("span", {}, "Passion"), h("input", { class: "input", value: con.passion, oninput: (e) => { con.passion = e.target.value; } }))),
+          h("div", { class: "faint small" }, "Change the commander from the Morale strip.")) : null;
+        const todaySec = running ? h("div", { class: "panel" }, h("h3", {}, `Today — Day ${b.day}`),
+          h("div", { class: "row" }, h("label", { class: "field" }, h("span", {}, "Intensity"),
+            h("input", { class: "input num", type: "number", min: 1, max: 40, value: dayIntensity.value, oninput: (e) => { dayIntensity.value = e.target.value; } })),
+            h("button", { class: "btn sm", onclick: async () => { await post("/api/battle/day", { roll_for_me: true }); close(); settingsDrawer(); } }, icon("d6"), `Roll again (${SIZES[b.definition.size].dice})`)),
+          SIZES[b.definition.size].army ? ["friendly", "enemy"].map((side) => {
+            const ac = b.definition.army_commanders?.[side] || {};
+            return h("div", { class: "army-row" }, h("div", { class: "label" }, `${ac.name || (side === "friendly" ? "Friendly" : "Enemy")} — Battle roll`),
+              outcomeChips({ value: b.army[String(b.day)]?.[side] || null, onPick: async (o) => { await post("/api/battle/army-roll", { side, outcome: o }); close(); settingsDrawer(); } }));
+          }) : null) : null;
+        return [
+          h("div", { class: "panel" }, h("h3", {}, "The battle"),
+            h("div", { class: "grid2" }, field("Name", "name"), h("div", {}, h("div", { class: "label" }, "Size"), sizeChips)),
+            h("div", { class: "grid2" }, field("Where", "where"), field("Against", "against")), field("Notes (GM only)", "notes", true)),
+          conroiSec, todaySec,
+          h("div", { class: "stack" }, b.definition.days.map((day, i) => {
+            const n = i + 1, past = n < b.day;
+            return h("div", {}, h("div", { class: "label" }, `Day ${n}`, past ? " (past days are locked)" : ""),
+              dayCard(day, det.size, { readOnly: past, decks, label: `Day ${n}`, onChange: (d) => { edits[n] = d; } }));
+          })),
+          h("div", { class: "foot" },
+            h("button", { class: "btn", onclick: async () => { await post("/api/battle/settings", { add_day: { turns: SIZES[det.size].turns } }); close(); settingsDrawer(); } }, icon("plus"), "Add day"),
+            h("button", { class: "btn ghost", onclick: () => close() }, "Cancel"),
+            h("button", { class: "btn primary", onclick: async () => {
+              const bp = {};
+              for (const k of ["name", "where", "against", "notes", "size"]) if ((b.definition[k] || "") !== det[k]) bp[k] = det[k];
+              if (Object.keys(bp).length) await post("/api/battle/settings", { battle_patch: bp });
+              if (running) {
+                const cp = {};
+                if (JSON.stringify([...con.knights].sort()) !== JSON.stringify([...b.conroi].sort())) cp.knights = con.knights;
+                if (con.passion !== (b.passion || "")) cp.passion = con.passion;
+                if (String(con.start) !== String(b.morale?.start ?? "")) cp.start = Number(con.start);
+                if (Object.keys(cp).length) await post("/api/battle/conroi", cp);
+                if (String(dayIntensity.value) !== String(b.intensity_today ?? "") && dayIntensity.value !== "") await post("/api/battle/day", { intensity: Number(dayIntensity.value) });
+              }
+              for (const [n, d] of Object.entries(edits)) {
+                const old = b.definition.days[n - 1];
+                const patch = {};
+                for (const k of ["intensity", "turns", "first_charge", "on_foot", "no_charge", "commanders", "notes", "scripts"])
+                  if (JSON.stringify(old[k]) !== JSON.stringify(d[k])) patch[k] = d[k];
+                if (Object.keys(patch).length) await post("/api/battle/settings", { day: Number(n), patch });
                 const before = new Set([...old.deck.foes, ...old.deck.opportunities]), after = new Set([...d.deck.foes, ...d.deck.opportunities]);
                 const add = [...after].filter((k) => !before.has(k)), remove = [...before].filter((k) => !after.has(k));
                 if (add.length || remove.length) await post("/api/battle/deck", { day: Number(n), add, remove });
               }
-            }
-            close();
-          } }, "Save")),
-      ], { wide: true });
+              close();
+            } }, "Save")),
+        ];
+      }, { wide: true });
     }
 
     // + New encounter: saved to the library and added to today's deck.

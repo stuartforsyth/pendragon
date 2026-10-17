@@ -857,3 +857,13 @@ Approved hi-fi mockups: `mockups/battles-ux-mockups.html`; walkthrough and ratio
 7. ⑧ postures default to each knight's previous-turn posture from turn 2 (visibly highlighted; one tap to change; "Confirm postures"); first-charge turns force R/V.
 8. Reminders at the step that needs them: turn script at ②; Force token glows at ②, Negate at ⑦; posture rounds in tracker lanes; countercharge/barrage banners in the fight; "−5 Battle this turn" at ③.
 9. Keyboard: C/S/F/X outcome chips, R/V/P/K postures, Enter = the open step's main action.
+
+## 15. Editability (user direction, 2026-10-17)
+
+"All aspects of the battle need to remain editable — especially before launch." Before launch:
+the Battles editor edits everything; at Mustering every field is on screen. While the battle
+runs, **Battle settings** edits the battle (name, size, where, against, notes), the conroi
+(knights, Passion, starting Morale — `battle.conroi`), today's Intensity and the Army Commander
+rolls (correctable all day; latest wins), and today's and later days; the commander changes from
+the Morale strip. Past days stay locked (piece 1, U5) because they are history; turn outcomes are
+corrected with reopen/undo.

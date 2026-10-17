@@ -248,3 +248,20 @@ def test_change_commander_after_typing_morale(page, app_url):
     page.locator(".mstrip .who").click()
     page.locator(".menu").get_by_role("button", name="Sir Cai").click()
     expect(page.locator(".mstrip .who")).to_contain_text("Commander: Sir Cai")
+
+
+def test_battle_settings_edit_everything_mid_turn(page, app_url):
+    quick_launch(page, app_url)
+    muster(page)
+    set_encounter(page, "Pictish Knifemen")
+    page.get_by_role("button", name="Battle settings").click()
+    modal = page.locator(".modal")
+    modal.locator(".field", has_text="Name").locator("input").fill("The Ford at Bedegraine")
+    modal.locator(".panel", has_text="The conroi").get_by_text("Dame Lynet").click()        # take her out
+    modal.locator(".field", has_text="Passion").locator("input").fill("Loyalty (King)")
+    modal.locator(".panel", has_text="Today").locator(".field", has_text="Intensity").locator("input").fill("16")
+    modal.get_by_role("button", name="Save", exact=True).click()
+    expect(page.locator(".bl-title")).to_have_text("The Ford at Bedegraine")
+    expect(page.locator(".bhead")).to_contain_text("Intensity 16")
+    expect(page.locator(".kchip")).to_have_count(2)
+    expect_step(page, "Charge · Intensity")                   # still mid-turn

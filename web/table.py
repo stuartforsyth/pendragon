@@ -39,6 +39,7 @@ _SAFE_DATA = {
     "battle.day_started": ("day", "intensity"),
     "battle.mustered": ("day", "start", "passion"),
     "battle.commander": (),
+    "battle.conroi": ("passion", "start"),
     "battle.morale_adjust": ("delta", "start", "reason"),
     "battle.script": ("text",),
     "battle.mounted": ("mounted",),

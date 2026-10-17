@@ -71,7 +71,9 @@ def apply(b, ev):
         return b
     if t == "battle.settings":
         days = b["definition"].setdefault("days", [])
-        if d.get("add_day"):
+        if d.get("battle_patch"):
+            b["definition"].update(copy.deepcopy(d["battle_patch"]))
+        elif d.get("add_day"):
             days.append(copy.deepcopy(d["add_day"]))
         else:
             i = int(d.get("day", b["day"])) - 1
@@ -97,7 +99,8 @@ def apply(b, ev):
         b["army"].setdefault(str(d.get("day", b["day"])), {})[d["side"]] = d["outcome"]
     elif t == "battle.day_started":
         b["intensity"][str(d.get("day", b["day"]))] = int(d["intensity"])
-        b["last_title_event"] = ev["id"]
+        if b["status"] == "mustering":
+            b["last_title_event"] = ev["id"]
     elif t == "battle.mustered":
         b["morale"] = {"start": int(d["start"]), "current": int(d["start"]), "last": None}
         b["passion"] = d.get("passion", "")
@@ -115,6 +118,16 @@ def apply(b, ev):
         b["turn"] = 1
         b["t"] = new_turn()
         b["fought_last"] = False
+    elif t == "battle.conroi":
+        if "knights" in d:
+            b["conroi"] = list(d["knights"])
+            for pid in b["conroi"]:
+                _knight(b, pid)
+        if "passion" in d:
+            b["passion"] = d["passion"]
+        if d.get("start") is not None and b["morale"]:
+            b["morale"]["start"] = int(d["start"])
+            b["morale"]["current"] = min(b["morale"]["current"], b["morale"]["start"])
     elif t == "battle.commander":
         b["commander"] = d.get("commander")
         b["commander_by_day"][str(b["day"])] = d.get("commander")
