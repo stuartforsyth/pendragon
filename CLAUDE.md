@@ -72,3 +72,20 @@ and never copy a fix into this repo.
 - `data/party.json`, `data/cast.json`, `sessions/*.json` — also the user's
   git-ignored content, with the same rule. Tests and screenshots must run
   against copies (see `tests/test_web.py`'s fixture).
+
+## Homeserver deployment
+
+This app deploys to the **homeserver** under the contract in
+`~/code/nas-container-deploy/CONTRACT.md` (GitHub: `stuartforsyth/nas-container-deploy`, private).
+
+- Read `CONTRACT.md` and `GLOSSARY.md` there before changing any deploy script, compose file,
+  Dockerfile or `homeserver.toml`. The contract wins over anything in this repo's docs.
+- This repo owns its deployment: `scripts/deploy` must meet the contract's Deploy rules (R-DEP-*);
+  reference: `~/code/nas-container-deploy/templates/deploy`. Deploy target is the SSH alias `homeserver`. Never name the
+  machine or its IPs.
+- Need a rule changed, or an exception? Do not work around the contract. Add a request file to
+  `~/code/nas-container-deploy/requests/inbox/` (template: `requests/TEMPLATE.md`). That is the
+  only file you may write in that repo.
+- Check compliance with `~/code/nas-container-deploy/bin/audit` (read-only).
+- **Status: planned.** Not on the homeserver yet. When it moves there, write `scripts/deploy` from the
+  reference, add `homeserver.toml`, and request an inventory entry via `requests/inbox/`. Today it runs locally on port 8020 with `./launch.sh`.
