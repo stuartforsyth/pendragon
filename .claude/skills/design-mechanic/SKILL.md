@@ -15,7 +15,9 @@ approved.
 docs/design/{mechanic}/
 ├── breakdown.md        # stage 1: the sequence and its pieces, with scope decisions
 ├── pieces/NN-slug.md   # stage 2: one decision record per piece
+├── ux-audit.md         # stage 1: screenshots + critique of the existing UI it touches
 ├── design.md           # stage 3: Opus's compiled design  (approval gate)
+├── mockups/            # stage 3½: hi-fi mockups of the key screens (approval gate)
 └── spec.md             # stage 4: build spec              (approval gate)
 ```
 
@@ -31,9 +33,16 @@ docs/design/{mechanic}/
    rules say (cite corpus ids/pages), what already exists in the app, and a first-guess
    scope tag: **app** (automate/track it), **assist** (prompt or reference only), or
    **paper/VTT** (the GM handles it elsewhere — not implemented).
-3. Also list the cross-cutting concerns: events needed, what the Table (players' screen) may
+3. **UX audit of what exists.** Run a throwaway instance on copies of the data
+   (`PENDRAGON_DATA_DIR` / `PENDRAGON_SESSIONS_DIR`), put it in a realistic state (a real
+   fight, a populated log), and screenshot every GM screen and Table view the mechanic will
+   touch, at the GM's laptop size and the screenshared Table size. Critique them honestly in
+   `ux-audit.md`: what is hard to scan, buried, repeated, mis-sized or missing, judged against
+   how the GM and players use it mid-session. Existing UI built in an earlier iteration is not
+   a constraint — propose improving it (the battles audit led to the combat tracker redesign).
+4. Also list the cross-cutting concerns: events needed, what the Table (players' screen) may
    show and what stays secret, GM-only controls, undo.
-4. **Gate:** show the user the piece list and order; adjust until they agree. Then number
+5. **Gate:** show the user the piece list and order; adjust until they agree. Then number
    the pieces.
 
 ## 2 — Grill each piece
@@ -54,7 +63,9 @@ confirmation, what is automatic); what the players' Table shows for it and what 
 how it looks (reuse existing patterns/components in `web/static/js/tools/` and the CSS
 tokens; ask before inventing a new visual idea); and mobile/desktop and keyboard needs. Offer
 a quick ASCII sketch for layout choices (AskUserQuestion previews work well) and settle on
-one. Pieces tagged **paper/VTT** skip the UI conversation.
+one. Where a layout question is hard to judge from ASCII, show a quick rendered mockup instead
+(an HTML Artifact using the app's real tokens and fonts). Pieces tagged **paper/VTT** skip the
+UI conversation.
 
 **Review every decision the user makes — you are a design partner, not a scribe.** After each
 answer (rules, workflow or UI), before recording it, run a quick critical review and say the
@@ -99,10 +110,30 @@ list them as questions. Output `design.md`.
 (back to stage 2 for the affected piece if needed). The user must explicitly approve
 `design.md`.
 
+## 3½ — UX pass: make the design's UX optimal
+
+The piece-by-piece UI answers are not yet a UX. After the design is approved and before the
+spec, design the key screens as a whole:
+
+1. Build **hi-fi mockups** (HTML Artifacts, also saved under `mockups/`) of every main GM screen
+   and Table view the mechanic adds or changes, using the app's real CSS tokens and fonts, in a
+   realistic mid-session state with the user's real party. Show state changes (empty, mid-turn,
+   warning, done) as separate frames.
+2. **Walk the GM's flow click by click** through one full realistic cycle (e.g. a whole Battle
+   Turn): count clicks, find dead ends, hunt for anything the GM must remember that the screen
+   should show, and anything shown that nobody needs. Do the same for a player glancing at the
+   Table: can they find *their* knight's situation in two seconds, and does the valuable
+   information stand out from the routine?
+3. Check consistency with the rest of the app and with the players' readability at screenshare
+   size; check the scope rule (no setup creeping into role-play).
+4. **Gate:** present the mockups with a short list of the UX choices made and the alternatives
+   rejected; iterate until the user approves. Approved mockups are attached to the spec, and
+   the build must match them.
+
 ## 4 — Spec
 
 Launch a **fresh Agent with `model: "opus"`** to write `spec.md` from the approved design (it
-must read `design.md`, the piece files, the skill's Notes, and the real code each slice touches,
+must read `design.md`, the piece files, the approved mockups, the skill's Notes, and the real code each slice touches,
 so paths, functions, events and test fixtures are accurate). The spec contains: ordered build slices each shippable on its own,
 with files to touch, event schemas, route signatures, UI elements and behaviour per slice, and **tests per slice**
 (real behaviours, run against copies of the data per CLAUDE.md). **Gate:** user approves.
@@ -111,7 +142,10 @@ with files to touch, event schemas, route signatures, UI elements and behaviour 
 
 Implement slice by slice following the spec and project rules (logic in `core/`, every action
 an event, deterministic deltas, Table data filtered server-side). Run the test suite after
-each slice, run the app to see it working, commit per slice when the user asks. Update
+each slice, run the app to see it working, commit per slice when the user asks. **UX
+acceptance per slice:** screenshot the running app (throwaway instance, realistic state) at the
+GM's and the Table's sizes, compare with the approved mockups, fix what differs or reads badly,
+and show the user the screenshots before calling the slice done. Update
 `docs/web-app.md` and tick the spec off. Deviations from the spec are surfaced to the user,
 not silently made.
 
