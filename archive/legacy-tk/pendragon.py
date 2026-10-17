@@ -22,6 +22,11 @@ import os
 import random
 import sys
 import tkinter as tk
+
+# Archived: this app lives in archive/legacy-tk/; the shared code (core/) and
+# data/ are at the repository root, two folders up.
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, ROOT)
 from tkinter import font as tkfont
 from tkinter import filedialog, messagebox, ttk
 
@@ -405,7 +410,7 @@ class App(tk.Tk):
                 "Exporting a filled character sheet needs the 'pypdf' package.\n\n"
                 "Install it with:  python -m pip install pypdf")
             return
-        here = os.path.dirname(os.path.abspath(__file__))
+        here = ROOT
         template = pdf_export.sheet_template_path(here)
         if not os.path.isfile(template):
             messagebox.showerror(
@@ -792,7 +797,7 @@ class App(tk.Tk):
 # ---------------------------------------------------------------------------
 
 def main():
-    here = os.path.dirname(os.path.abspath(__file__))
+    here = ROOT
 
     path = find_data_file()
     if path is None:

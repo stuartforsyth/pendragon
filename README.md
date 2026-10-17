@@ -41,9 +41,9 @@ happens is recorded in a **session log**, saved as one file per session.
 
 Design decisions and architecture: [`docs/web-app.md`](docs/web-app.md).
 
-The original Tkinter desktop app (`./pendragon.py`) still runs on the same
-`core/` logic during the transition; the sections below describe the
-features both share.
+The original Tkinter desktop app is archived in `archive/legacy-tk/` (see
+[`archive/README.md`](archive/README.md)). It still runs on the same `core/`
+logic; the sections below describe the features both share.
 
 ## The four tabs
 
@@ -205,13 +205,11 @@ the detailed design of these two tabs.
 
 ## Desktop app (legacy)
 
-The Tk app needs Tkinter (`python3-tk` on some distros) and a graphical
-session. Run from the project folder (or use `run.sh` / `run.bat`):
+Archived in `archive/legacy-tk/` and no longer maintained. It needs Tkinter
+(`python3-tk` on some distros) and a graphical session:
 
 ```bash
-./pendragon.py
-# or
-python3 pendragon.py
+archive/legacy-tk/run.sh      # or run.bat on Windows
 ```
 
 1. Select a **Gender** and a **Culture**.

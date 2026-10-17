@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Double-click (or run) to launch the Pendragon GM tools.
-# Change into this script's own directory so it works from anywhere.
-cd "$(dirname "$0")" || exit 1
+# Archived legacy desktop app. Runs from the repository root (two folders up)
+# so it finds core/ and data/. The current app is the web app: ../../launch.sh
+cd "$(dirname "$0")/../.." || exit 1
 
 # Prefer python3, fall back to python.
 if command -v python3 >/dev/null 2>&1; then
@@ -14,7 +15,7 @@ else
     exit 1
 fi
 
-"$PY" pendragon.py
+"$PY" archive/legacy-tk/pendragon.py
 status=$?
 
 # If something went wrong, keep the window open so the error is readable.

@@ -20,8 +20,8 @@ vanilla JS, no build step) that replaces the original Tkinter desktop app.
   `PENDRAGON_SESSIONS_DIR`. Tests: `.venv/bin/python -m pytest -q` (includes the
   browser click-through tests in `tests/e2e/`, which need Playwright's Chromium:
   `.venv/bin/python -m playwright install chromium`; skipped if missing).
-- Legacy Tk app: `./pendragon.py` (tabs in `encounter.py`, `adversary.py`,
-  `encounter_creator.py`) — kept working on `core/` until it is retired.
+- Legacy Tk app: archived in `archive/legacy-tk/` (`pendragon.py` + its tabs and
+  `run.sh`/`run.bat`). Not maintained; don't change it for new features.
 - Design decisions: `docs/web-app.md`.
 
 ## Answering rules questions — corpus first, then the PDFs
