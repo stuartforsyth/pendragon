@@ -1,3 +1,4 @@
 -r requirements.txt
 pytest>=8
 httpx>=0.27
+playwright>=1.64   # browser click-through tests (tests/e2e); browsers: python -m playwright install chromium

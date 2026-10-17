@@ -874,3 +874,14 @@ def test_launch_bedegraine_day2_on_foot(client):
     _muster(client, pids, commander="gm", intensity=None)
     b = _battle(client)
     assert b["intensity_today"] == 18 and b["step"]["items"][1]["state"] == "skipped"   # no charge this day
+
+
+def test_quick_battle_empty_deck_means_every_battle_encounter(client):
+    pids = _party(client, "Sir Bors")
+    _quick(client, "clash")
+    _muster(client, pids)
+    deck = _battle(client)["deck_now"]
+    assert deck["all"] and "Pictish Knifemen" in deck["foes"] and "Clash of Champions" in deck["opportunities"]
+    _step(client, "set", encounter="Knights of Gorre")
+    assert _battle(client)["t"]["set"]["encounter"] == "Knights of Gorre"
+    assert "Pictish Knifemen" in [c["name"] for c in ok(client.get("/api/table"))["battle"]["deck"]["foes"]]

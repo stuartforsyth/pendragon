@@ -145,7 +145,12 @@ an event, deterministic deltas, Table data filtered server-side). Run the test s
 each slice, run the app to see it working, commit per slice when the user asks. **UX
 acceptance per slice:** screenshot the running app (throwaway instance, realistic state) at the
 GM's and the Table's sizes, compare with the approved mockups, fix what differs or reads badly,
-and show the user the screenshots before calling the slice done. Update
+and show the user the screenshots before calling the slice done. **Click-through tests per
+slice:** every GM flow the slice adds gets a browser test in `tests/e2e/` (Playwright, real
+server on copied data) that clicks through it the way the GM does — buttons, typing, Enter —
+from a realistic start (including a quick, unprepared setup) to the next state, and checks the
+Table where it changes. API-level tests alone missed broken button paths in battles; a slice
+isn't done until its click-through passes. Update
 `docs/web-app.md` and tick the spec off. Deviations from the spec are surfaced to the user,
 not silently made.
 

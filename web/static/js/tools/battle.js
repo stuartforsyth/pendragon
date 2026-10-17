@@ -260,7 +260,9 @@ export default {
     const ui = { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, lastUndo: null, turnKey: "" };
     const knightName = (pid) => b.knight_list.find((k) => k.pid === pid)?.name || "A knight";
     const cardOf = (key) => decks.find((c) => c.key === key) || b.cards?.[key] || { key };
-    const step = (stepKey, extra = {}) => post("/api/battle/step", { step: stepKey, ...extra });
+    // Recording an outcome releases the cursor, so the stepper can redraw (it
+    // holds off while someone is typing in one of its boxes).
+    const step = (stepKey, extra = {}) => { document.activeElement?.blur?.(); return post("/api/battle/step", { step: stepKey, ...extra }); };
 
     function summary(key) {
       const t = b.t;
@@ -344,10 +346,10 @@ export default {
         : `min ${c.morale_minimum ?? "—"} · loss ${c.morale_loss || "—"} · KV ${c.kv_per_knight ?? "?"}`);
     }
 
+    // Today's deck from the server: script-restricted, and an empty day deck
+    // means every battle Foe and Opportunity in the library.
     function deckKeys(role) {
-      const dd = b.day_def;
-      let deck = dd.deck || {};
-      for (const sc of dd.scripts || []) if (sc.turn === b.turn && sc.deck) deck = sc.deck;
+      const deck = b.deck_now || { foes: [], opportunities: [] };
       return (role === "opportunity" ? deck.opportunities : deck.foes) || [];
     }
 
@@ -386,8 +388,10 @@ export default {
           return h("button", { class: "gcard", title: c.description || k, onmouseenter: () => { if (!ui.flavour) fl.placeholder = c.description || fl.placeholder; },
             onclick: () => step("set", { encounter: k, flavour: ui.flavour, forced: ui.forceArmed }) },
             h("span", { class: "cn" }, k), gmMeta(c));
-        })) : h("div", { class: "hint" }, "No foes in today's deck: ", h("button", { class: "linkish", onclick: settingsDrawer }, "Edit deck"), " · ",
-          h("button", { class: "linkish", onclick: quickEncounter }, "+ New encounter")),
+        })) : h("div", { class: "hint" }, "No battle Foes in your library yet — mark encounters as Foes in the Encounter Creator, add the battle cards with Encounters → Examples…, or ",
+          h("button", { class: "linkish", onclick: quickEncounter }, "+ New encounter"), "."),
+        b.deck_now?.all && keys.length ? h("div", { class: "faint small" }, "No deck set for today, so every battle Foe in your library is available. ",
+          h("button", { class: "linkish", onclick: settingsDrawer }, "Choose today's deck")) : null,
         fl,
         h("div", { class: "row" },
           keys.length ? h("button", { class: "btn sm", title: "A random Foe from today's deck (not filtered by Morale)", onclick: () => step("set", { draw: true, flavour: ui.flavour, forced: ui.forceArmed }) }, icon("d6"), "Draw") : null,

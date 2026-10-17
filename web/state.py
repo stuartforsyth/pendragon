@@ -121,5 +121,5 @@ class AppState:
 
     def table_payload(self):
         cs = combat_state.serialise(self.combat_state(), "table")
-        b = battle_state.table_view(self.battle_state(), self.party.items)
+        b = battle_state.table_view(self.battle_state(), self.party.items, self.combat_data.get("encounters", {}))
         return table.build(self.session, cs, self.table_mode, battle=b)

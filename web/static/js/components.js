@@ -259,6 +259,7 @@ export function amountEntry({ dice, min = 1, max = 99, onEnter, rollForMe, place
   const submit = () => {
     const v = Number(inp.value);
     if (inp.value === "" || v < min || v > max) { inp.focus(); inp.select?.(); return; }
+    inp.blur();
     onEnter?.(v);
   };
   inp.addEventListener("keydown", (e) => e.key === "Enter" && submit());

@@ -160,6 +160,22 @@ def new_turn():
             "barrage": None, "countercharge": None, "events": {}}
 
 
+def effective_deck(b, library=None, with_script=True):
+    """Today's deck — narrowed by this turn's script restriction. An empty day
+    deck means every battle Foe and Opportunity in the library (piece 3)."""
+    dd = _day_def(b)
+    deck = dd.get("deck") or {}
+    if with_script:
+        for sc in dd.get("scripts", []):
+            if sc.get("turn") == b["turn"] and sc.get("deck"):
+                deck = sc["deck"]
+    foes, opps = list(deck.get("foes", [])), list(deck.get("opportunities", []))
+    if not foes and not opps and library is not None:
+        foes = sorted(k for k, e in library.items() if e.get("battle_role") == "foe")
+        opps = sorted(k for k, e in library.items() if e.get("battle_role") == "opportunity")
+    return {"foes": foes, "opportunities": opps, "all": not deck.get("foes") and not deck.get("opportunities")}
+
+
 def chosen(b):
     """The Encounter this turn is fought against, and its card."""
     t = b["t"]
@@ -232,7 +248,7 @@ def steps(b):
         done_p = bool(conroi_ids(b)) and all(pid in t["postures"] for pid in conroi_ids(b))
         items.append(("postures", "done" if done_p else None, "", ""))
         f = t["fight"]
-        items.append(("fight", "done" if f and not f.get("active") else "optional", "", ""))
+        items.append(("fight", "done" if f and not f.get("active") else None, "", ""))
     items.append(("end", "done" if t["ended"] else None, "", ""))
     return _states(items)
 
@@ -316,7 +332,7 @@ def _apply_step(b, ev):
                     _knight(b, pid)["mounted"] = False
         return
     if step == "end":
-        if cur != "end":
+        if cur not in ("end", "fight"):           # End turn is offered on the fight step too
             return _misfit(b, ev, "The turn isn't finished")
         if t_type == "battle.turn_ended":
             gain = kv_gain(b)
@@ -583,9 +599,13 @@ def _names(party):
     return {m["id"]: m for m in party}
 
 
-def gm_view(b, party):
+def gm_view(b, party, library=None):
     if b is None:
         return None
+    if b["status"] in ("turn", "rear", "mustering"):
+        deck_now = effective_deck(b, library)
+    else:
+        deck_now = None
     if b["status"] in ("turn", "rear"):
         b = copy.deepcopy(b)
         b["step"] = steps(b)
@@ -594,7 +614,7 @@ def gm_view(b, party):
         b["first_charge_turn"] = first_charge_turn(b)
         b["conroi_now"] = conroi_ids(b)
         b["kv_gain"] = kv_gain(b)
-    b = {**b, "glory_battle": battle_glory(b)}
+    b = {**b, "glory_battle": battle_glory(b), "deck_now": deck_now}
     if b["status"] == "aftermath":
         b["aftermath"] = aftermath_view(b, party)
     names = _names(party)
@@ -621,7 +641,7 @@ _BANNER = {"critical": ("The foe comes on in strength — doubled!", "harm"), "s
            "fumble": ("Fortune smiles — an Opportunity?", "boon"), "failure": ("Intensity fails · choose your fate", "harm")}
 
 
-def table_view(b, party):
+def table_view(b, party, library=None):
     """What players may see (the battle view). Never: Minimum, Loss, KV, the
     cards' mechanics, the definition, unrevealed scripts, dice or tokens."""
     if b is None:
@@ -667,11 +687,12 @@ def table_view(b, party):
                    "knight_name": nm(pid), "crit": bool(p.get("crit"))} for pid, p in (t.get("picks") or {}).items()],
         "selected": (t.get("select") or {}).get("encounter")}
     dd = _day_def(b)
+    deck_eff = effective_deck(b, library, with_script=False)
     in_play = {x for x in [(t.get("set") or {}).get("encounter"), (t.get("select") or {}).get("encounter")] if x}
     in_play |= {p["encounter"] for p in (t.get("picks") or {}).values()}
-    out["deck"] = {"foes": [{"name": k, "in_play": k in in_play} for k in dd.get("deck", {}).get("foes", [])],
+    out["deck"] = {"foes": [{"name": k, "in_play": k in in_play} for k in deck_eff["foes"]],
                    "opportunities": [{"name": k, "in_play": k in in_play, "spent": k in b.get("spent_opportunities", [])}
-                                     for k in dd.get("deck", {}).get("opportunities", [])]}
+                                     for k in deck_eff["opportunities"]]}
     results = []
     if (t.get("intensity") or {}).get("outcome") in ("success", "critical"):
         for sc in dd.get("scripts", []):

@@ -67,7 +67,7 @@ def _card(state, key):
 @router.get("/api/battle")
 def get_battle(request: Request):
     state = st(request)
-    return {"battle": BS.gm_view(state.battle_state(), state.party.items)}
+    return {"battle": BS.gm_view(state.battle_state(), state.party.items, state.combat_data.get("encounters", {}))}
 
 
 @router.get("/api/battle/paused")
@@ -442,14 +442,10 @@ async def knight(request: Request, pid: str, body: dict):
 _POSTURE_WORD = {"reckless": "Reckless", "valorous": "Valorous", "prudent": "Prudent", "cowardly": "Cowardly"}
 
 
-def _today_deck(b, role="foe"):
-    """Today's deck, narrowed by this turn's script restriction if any."""
-    dd = BS._day_def(b)
-    deck = dd.get("deck") or {}
-    for sc in dd.get("scripts", []):
-        if sc.get("turn") == b["turn"] and sc.get("deck"):
-            deck = sc["deck"]
-    return list(deck.get("opportunities" if role == "opportunity" else "foes", []))
+def _today_deck(state, b, role="foe"):
+    """Today's (script-restricted) deck; empty means every battle encounter."""
+    deck = BS.effective_deck(b, state.combat_data.get("encounters", {}))
+    return deck["opportunities"] if role == "opportunity" else deck["foes"]
 
 
 _STEP_TITLE = {"field": "The conroi", "set": "This turn", "charge": "The charge", "intensity": "Intensity",
@@ -515,7 +511,7 @@ def record_outcome(state, step, payload, source="gm"):
             _not_now("the Encounter is set at the start of a turn")
         if m["current"] <= 0:
             _not_now("Morale is 0 — the conroi must retire to the rear")
-        deck = _today_deck(b)
+        deck = _today_deck(state, b)
         if payload.get("draw"):
             import random
             if not deck:
@@ -543,7 +539,7 @@ def record_outcome(state, step, payload, source="gm"):
         engaged = bool(payload.get("engaged_last"))
         result = B.charge_opportunity(outcome, engaged)
         if result == "enemy_charge":
-            eligible = [k for k in _today_deck(b) if _card(state, k)["mounted_charge"]]
+            eligible = [k for k in _today_deck(state, b) if _card(state, k)["mounted_charge"]]
             if not eligible:
                 result = "no_charge"              # no mounted knights in the enemy army: a simple failure
         lines = []
@@ -588,9 +584,9 @@ def record_outcome(state, step, payload, source="gm"):
                     bad("An Opportunity needs a critical Battle roll")
                 if key in b["spent_opportunities"]:
                     bad(f"{key} was already played in this battle")
-                if key not in _today_deck(b, "opportunity"):
+                if key not in _today_deck(state, b, "opportunity"):
                     bad(f"'{key}' isn't in today's deck")
-            elif key not in _today_deck(b):
+            elif key not in _today_deck(state, b):
                 bad(f"'{key}' isn't in today's deck")
         who = _pid_name(state, pid)
         line = (f"{who}{' (critical)' if crit else ''} picks {key}{' ★' if card and card['role'] == 'opportunity' else ''}"
@@ -611,7 +607,7 @@ def record_outcome(state, step, payload, source="gm"):
                 bad("Only an Intensity fumble brings an Opportunity")
             key = key or set_key
             if key != set_key:
-                if key not in _today_deck(b, "opportunity") or key in b["spent_opportunities"]:
+                if key not in _today_deck(state, b, "opportunity") or key in b["spent_opportunities"]:
                     bad("Choose an unplayed Opportunity from today's deck")
         elif via == "enemy_charge":
             if not BS._enemy_charge_locked(b):
@@ -776,7 +772,7 @@ def record_outcome(state, step, payload, source="gm"):
                                     data={"table_text": dline, "battle": {**_link(b, "end")}, **src}))
     else:
         bad("Unknown step")
-    return {"events": evs, "battle": BS.gm_view(state.battle_state(), state.party.items)}
+    return {"events": evs, "battle": BS.gm_view(state.battle_state(), state.party.items, state.combat_data.get("encounters", {}))}
 
 
 @router.post("/api/battle/fight")

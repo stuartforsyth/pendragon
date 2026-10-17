@@ -17,7 +17,9 @@ vanilla JS, no build step) that replaces the original Tkinter desktop app.
   deterministic deltas, never re-rolls.
 - Run: `./launch.sh` (port 8020) / `./stop.sh`; dev: `.venv/bin/python -m web --reload`.
   Throwaway instance against copies of the data: set `PENDRAGON_DATA_DIR` and
-  `PENDRAGON_SESSIONS_DIR`. Tests: `.venv/bin/python -m pytest -q`.
+  `PENDRAGON_SESSIONS_DIR`. Tests: `.venv/bin/python -m pytest -q` (includes the
+  browser click-through tests in `tests/e2e/`, which need Playwright's Chromium:
+  `.venv/bin/python -m playwright install chromium`; skipped if missing).
 - Legacy Tk app: `./pendragon.py` (tabs in `encounter.py`, `adversary.py`,
   `encounter_creator.py`) — kept working on `core/` until it is retired.
 - Design decisions: `docs/web-app.md`.
