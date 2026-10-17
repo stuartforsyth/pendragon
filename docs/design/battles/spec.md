@@ -1,6 +1,6 @@
 # Battles — build spec (stage 4)
 
-Status: **draft, awaiting approval**, written 2026-10-17.
+Status: **APPROVED by the user 2026-10-17 (all 24 open-point recommendations accepted)**, written 2026-10-17.
 
 The spec is built from these sources, in this order of authority:
 
