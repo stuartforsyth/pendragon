@@ -141,6 +141,7 @@ export function debounce(fn, ms = 250) {
 // ---------------------------------------------------------------- icons
 // Simple 24×24 stroke icons drawn for this app.
 const P = {
+  drop: '<path d="M12 2.5C9 7 5.5 10.6 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10.6 15 7 12 2.5Z"/>',
   d20: '<path d="M12 2.5 20.5 7.3v9.4L12 21.5 3.5 16.7V7.3Z"/><path d="M12 2.5 7 15h10Z"/><path d="M3.5 7.3 7 15l-3.5 1.7M20.5 7.3 17 15l3.5 1.7M7 15l5 6.5 5-6.5"/>',
   d6: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor"/><circle cx="15" cy="15" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>',
   helm: '<path d="M5 20v-7a7 7 0 0 1 14 0v7"/><path d="M5 20h14M12 6v14M8.5 13h7"/>',

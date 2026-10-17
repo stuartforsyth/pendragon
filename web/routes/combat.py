@@ -7,7 +7,7 @@ import random
 from fastapi import APIRouter, Request
 
 from core import battle as B
-from core.combat import (CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_breakdown,
+from core.combat import (blow_narrative, CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_breakdown,
                          resolve_attack, resolve_blow, roll_ransom, surrender_check)
 from core.dice import NotationError, roll_notation, skill_display
 from core.encounter_def import to_editable
@@ -746,6 +746,8 @@ def record_blow(state, cs, body):
         b["armour"] = 0
 
     who = attacker.display_name if attacker else (body.get("attacker_name") or "").strip()
+    if not who and target is not None and _is_foe(target):
+        who = target.engaged_with or ""          # a knight's blow: the knight this foe fights
     what = weapon or ""
     hit = ("CRITICAL " if b["critical"] else "") + ("reckless " if b["reckless"] else "")
     head = f"{who}’s {what or 'blow'}" if who else (what or "A blow")
@@ -765,12 +767,12 @@ def record_blow(state, cs, body):
         tail = (" — " + "; ".join(consequences)) if consequences else ""
         text = (f"{head} {hit}hits {target.log_name}: {breakdown}. "
                 f"{old} → {tgt.cur_hp} Hit Points{msg}{tail}")
-        if _is_foe(target):
-            state_txt = ("slain!" if "Mortal" in msg else "a Major Wound — falls unconscious!" if "Major" in msg
-                         else tgt.wound_state())
-            table = f"{head} {hit}hits {target.display_name}: {breakdown}. {target.display_name}: {state_txt}{tail}"
-        else:
-            table = text
+        fate = "Slain" if "Mortal" in msg else "Major Wound" if "Major" in msg else tgt.wound_state()
+        table = blow_narrative(attacker=who, weapon=what, target=target.display_name, amount=b["wound"],
+                               to_knight=False, fate=fate, critical=b["critical"], unarmed=unarmed,
+                               knockdown=b["knockdown"])
+        if b["shield_broken"]:
+            table += f" {target.display_name}’s shield breaks!"
         title = f"{who + ' → ' if who else ''}{target.display_name}"
     else:
         text = table = f"{head} {hit}damage: {breakdown}"
@@ -779,7 +781,7 @@ def record_blow(state, cs, body):
             "attacker": who, "weapon": what, "target": target.display_name if target else "",
             "blow": b, "breakdown": breakdown, "shield_broken": b["shield_broken"],
             "major": bool(target and "Major" in msg), "mortal": bool(target and "Mortal" in msg),
-            "table_text": table + suffix, **gextra}
+            "table_text": table, "narrative": table, **gextra}
     return state.record("combat.blow", text + suffix, title=title, data=data)
 
 
@@ -796,11 +798,13 @@ def _report_blow_on_knight(state, attacker, knight, weapon, expr, rolled, extra,
     crit = "CRITICAL " if b["critical"] else ""
     protect = "armour + shield/parry apply" if shield else "armour only, no shield/parry"
     text = f"{head} {crit}hits {knight.display_name} for {b['damage']} damage ({blow_breakdown(b).rsplit(' → ', 1)[0]}) — {protect}"
+    story = blow_narrative(attacker=who, weapon=weapon, target=knight.display_name, amount=b["damage"],
+                           to_knight=True, critical=b["critical"], unarmed=unarmed)
     return state.record("combat.blow", text, title=f"{who + ' → ' if who else ''}{knight.display_name}",
                         data={"cid": knight.id, "delta": 0, "attacker": who, "weapon": weapon or "",
                               "target": knight.display_name, "blow": b, "to_knight": True,
                               "knight_shield": shield, "breakdown": blow_breakdown(b),
-                              "table_text": text, "touches": [knight.party_id]})
+                              "table_text": story, "narrative": story, "touches": [knight.party_id]})
 
 
 # -- an enemy attacks a knight: Table 7.1 from the two results ----------------

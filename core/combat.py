@@ -538,6 +538,41 @@ def _dice_term(label, expr, roll_fn):
     return {"label": label, "expr": r["expr"], "rolls": rolls, "total": r["total"]}
 
 
+def _weapon_phrase(who, weapon, unarmed):
+    """"Dame Cwylog's sword", "Pictish Knifeman 1's fists", or just the name."""
+    w = (weapon or "").strip()
+    if unarmed or w.lower() in ("brawling", "fist", "punch", "unarmed"):
+        return f"{who}’s fists" if who else "A fist", True
+    if who and w:
+        return f"{who}’s {w.lower()}", False
+    return who or (f"A {w.lower()}" if w else "A blow"), not who and not w
+
+
+def blow_narrative(*, attacker, weapon, target, amount, to_knight, fate="", critical=False, unarmed=False,
+                   knockdown=None):
+    """The players' sentence for a blow — what happened, not the arithmetic.
+    e.g. "Dame Cwylog's sword inflicts 33 points of damage on Pictish Knifeman 2,
+    who is slain." Knights' damage is before their armour (players apply it)."""
+    subj, plural = _weapon_phrase(attacker, weapon, unarmed)
+    verb = "inflict" if plural else "inflicts"
+    pts = f"{amount} point{'s' if amount != 1 else ''} of damage"
+    lead = "A critical blow! " if critical else ""
+    if to_knight:
+        line = f"{lead}{subj} {verb} {pts} on {target}."
+    elif not amount:
+        line = f"{lead}{subj} {'strike' if plural else 'strikes'} {target}, but armour turns the blow aside."
+    else:
+        tail = {"Slain": ", who is slain", "Major Wound": ", who falls with a Major Wound",
+                "Near death": ", who falls, near death", "Unconscious": ", who falls unconscious",
+                "Badly wounded": ", who is badly wounded", "Wounded": ", who is wounded"}.get(fate, "")
+        line = f"{lead}{subj} {verb} {pts} on {target}{tail}."
+    if knockdown == "automatic":
+        line += f" {target} is knocked down!"
+    elif knockdown == "check":
+        line += f" {target} must roll DEX or be knocked down."
+    return line
+
+
 def resolve_blow(*, expr=None, rolled=None, critical=False, unarmed=False,
                  reckless=False, extra="", rebated=False, armour=0, shield=0,
                  shield_applies=False, through_shields=False, knockdown=0,

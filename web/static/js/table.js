@@ -159,7 +159,7 @@ function hero(c, fresh) {
 }
 
 // ---------------------------------------------------------------- mini cards
-const MINI_ICON = (t) => t === "combat.blow" || t === "combat.attack" ? "swords" : t.startsWith("roll.") || t === "combat.check" ? "d20" : t === "sealed" ? "lock"
+const MINI_ICON = (t) => t === "combat.blow" || t === "roll.damage" ? "drop" : t === "combat.attack" ? "swords" : t.startsWith("roll.") || t === "combat.check" ? "d20" : t === "sealed" ? "lock"
   : t.startsWith("combat.") ? "swords" : t.startsWith("npc.") ? "helm" : t === "narrate" ? "feather"
   : t === "rule.shown" ? "book" : "scroll";
 
@@ -167,19 +167,21 @@ function mini(c) {
   const d = c.data || {};
   let res = null;
   if (c.type === "roll.check" && d.outcome) res = h("span", { class: "res", style: { color: { critical: "#b08a36", success: "#2f6b3e", failure: "#8e2219", fumble: "#1b1612" }[d.outcome] } }, `${d.roll} ${OUT[d.outcome]}`);
-  if (c.type === "roll.dice" || c.type === "roll.damage") res = h("span", { class: "res" }, d.total);
-  if (c.type === "combat.blow" && d.blow) res = h("span", { class: "res", style: { color: "#8e2219" } }, `${d.to_knight ? d.blow.damage : d.blow.wound} dmg`);
+  if (c.type === "roll.dice") res = h("span", { class: "res" }, d.total);
+  if (c.type === "roll.damage") res = h("span", { class: "res dmg" }, `${d.total} damage`);
+  if (c.type === "combat.blow" && d.blow) res = h("span", { class: "res dmg" }, d.to_knight ? `${d.blow.damage} damage` : `${d.blow.wound} wound`);
   let text = c.text;
   if (c.type.startsWith("npc.") && d.npc) text = d.npc.subtitle;
   if (c.type === "narrate") text = d.style === "scene" ? "" : d.text || "An image";
   if (c.type === "roll.check") text = d.shown ? `vs ${d.shown}` : "";
   if (c.type === "roll.dice" || c.type === "roll.damage") text = text.replace(/^.*?(damage)?: /, "");
+  if (c.type === "combat.blow" && d.blow) text = d.narrative || text;
   const title = c.title || (c.type === "narrate" ? (d.style === "scene" ? "Scene" : "Narration") : c.type === "sealed" ? "A secret roll" : "");
   if (c.type === "session.started" || c.type === "session.resumed") text = c.type === "session.started" ? "The session begins" : "The session resumes";
-  return h("div", { class: `card mini ${c.type === "sealed" ? "sealed" : ""}` },
+  return h("div", { class: `card mini ${c.type === "sealed" ? "sealed" : ""} ${isDamage(c) ? "k-dmg" : c.type.startsWith("roll.") ? "k-roll" : ""} ${isCrit(c) ? "crit" : ""}` },
     h("div", { class: "ic" }, icon(MINI_ICON(c.type))),
     h("div", { class: "t" }, title || text),
-    title ? h("div", { class: "x" }, res, text) : h("div", { class: "x" }, res));
+    title ? h("div", { class: "x" }, isCrit(c) ? h("span", { class: "critmark" }, "★ Critical") : null, res, text) : h("div", { class: "x" }, res));
 }
 
 // ---------------------------------------------------------------- views
@@ -199,22 +201,69 @@ function chronicle(p) {
     h("div", { class: "feed" }, h("h2", {}, "Earlier"), rest.slice(0, 10).map(mini)));
 }
 
+// Rolls and damage look different at a glance: a roll is a number on a die
+// (gold, with its outcome); damage is a number on a red seal, with the sum
+// that produced it. Players must never mistake "rolled 9" for "took 9".
+const isDamage = (c) => c.type === "combat.blow" || c.type === "roll.damage";
+const DIE = '<path d="M50 4 92 28v44L50 96 8 72V28Z" fill="none" stroke="currentColor" stroke-width="4"/><path d="M50 4 8 72h84ZM8 28l42 24 42-24M50 52v44" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45"/>';
+const SEAL = '<path d="M50 3c8 9 16 2 22 10s-1 16 8 22 4 16 9 24-6 14-5 22-12 9-17 15-14 0-17 0-11 6-17 0-17-7-17-15-9-14-4-22 1-16 9-24-1-15 8-22 14 0 22-10Z" fill="currentColor"/>';
+const BURST = Array.from({ length: 16 }, (_, i) => { const a = (i * Math.PI) / 8, b = a + Math.PI / 16;
+  return `<path d="M50 50 L${50 + 50 * Math.cos(a)} ${50 + 50 * Math.sin(a)} L${50 + 50 * Math.cos(b)} ${50 + 50 * Math.sin(b)}Z" fill="currentColor"/>`; }).join("");
+const isCrit = (c) => { const d = c.data || {}; return d.outcome === "critical" || !!d.critical || !!d.blow?.critical; };
+const badgeSvg = (markup) => { const x = document.createElement("span"); x.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${markup}</svg>`; return x.firstChild; };
+
+function blowLines(d) {
+  const b = d.blow;
+  if (d.to_knight) {
+    return [`${b.full} rolled${b.rebated ? ` · rebated ½ → ${b.damage}` : ""}`,
+      d.knight_shield ? "Subtract your armour and shield" : "Subtract your armour (no shield)"];
+  }
+  const sum = [`${b.full} rolled`];
+  if (b.rebated) sum.push(`½ → ${b.damage}`);
+  if (b.armour) sum.push(`− ${b.armour} armour`);
+  if (b.shield_blocked) sum.push(`− ${b.shield_blocked} shield`);
+  return [`${sum.join(" ")} = ${b.wound}`];
+}
+
+// Headline chips: the sentence tells the story, these shout the big outcomes.
+function blowFx(d) {
+  return [d.mortal ? "Slain!" : d.major ? "Major Wound!" : ""].filter(Boolean);
+}
+
 // The latest roll, big, for the Fray column.
 function latestRollCard(p) {
   const latestRoll = p.feed.find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow");
   if (!latestRoll) return [null, p.feed.slice(0, 7)];
   const d = latestRoll.data || {};
+  const dmg = isDamage(latestRoll);
   const n = latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? (d.to_knight ? d.blow?.damage : d.blow?.wound)
     : d.total ?? (latestRoll.type === "sealed" ? "?" : d.roll ?? "");
   const num = h("div", { class: "bign" }, n);
   if (latestRoll.id !== last.heroId && typeof n === "number") tumble(num, n);
   last.heroId = latestRoll.id;
-  const card = h("div", { class: "card latest" },
-    h("div", { class: "rollline" }, num, h("div", { style: { minWidth: 0 } },
-      h("div", { class: "lt" }, latestRoll.title || (latestRoll.type === "sealed" ? "A secret roll" : "Roll")),
+  const kindWord = !dmg ? "Roll" : latestRoll.type === "combat.blow" && !d.to_knight ? "Wound" : "Damage";
+  const crit = isCrit(latestRoll);
+  const badge = h("div", { class: `badge ${dmg ? "seal" : "die"} ${d.outcome || ""}` },
+    crit ? h("span", { class: "burst" }, badgeSvg(BURST)) : null,
+    badgeSvg(dmg ? SEAL : DIE), num, h("span", { class: "kw" }, kindWord));
+  let body;
+  if (latestRoll.type === "combat.blow" && d.blow) {
+    const fx = blowFx(d);
+    body = [h("div", { class: "story" }, d.narrative || latestRoll.text),
+      blowLines(d).map((x) => h("div", { class: "lx sum" }, x)),
+      fx.length ? h("div", { class: "fxrow" }, fx.map((x) => h("span", { class: "fxx" }, x))) : null];
+  } else if (latestRoll.type === "roll.damage") {
+    body = [h("div", { class: "lt" }, latestRoll.title || d.label || "Damage"),
+      h("div", { class: "lx sum" }, `${d.expr || ""}${d.critical ? " · critical" : ""}${d.rebated ? " · rebated ½" : ""}`)];
+  } else {
+    body = [h("div", { class: "lt" }, latestRoll.title || (latestRoll.type === "sealed" ? "A secret roll" : "Roll")),
       d.outcome ? [h("span", { class: `ribbon ${d.outcome}` }, OUT[d.outcome]), d.shown ? h("div", { class: "lx" }, `against ${d.shown}`) : null]
-        : latestRoll.type === "combat.blow" ? h("div", { class: "lx" }, `${d.target ? "on " + d.target + " · " : ""}${d.blow.full} rolled${d.blow.rebated ? ", rebated" : ""}${d.blow.critical ? " · CRITICAL" : ""}${d.mortal ? " · Slain!" : d.major ? " · Major Wound!" : ""}${d.blow.knockdown === "automatic" ? " · Knocked down!" : d.blow.knockdown === "check" ? " · Knockdown check!" : ""}`)
-        : h("div", { class: "lx" }, latestRoll.text))));
+        : h("div", { class: "lx" }, latestRoll.text)];
+  }
+  const card = h("div", { class: `card latest ${dmg ? "k-dmg" : "k-roll"} ${crit ? "crit" : ""} ${crit && latestRoll.id !== last.critId ? "crit-new" : ""}` },
+    crit ? h("div", { class: "critbanner" }, "★ ", dmg ? (latestRoll.type === "combat.blow" ? "Critical hit!" : "Critical damage!") : "Critical!", " ★") : null,
+    h("div", { class: "rollline" }, badge, h("div", { style: { minWidth: 0 } }, body)));
+  if (crit) last.critId = latestRoll.id;
   return [card, p.feed.filter((c) => c !== latestRoll).slice(0, 6)];
 }
 

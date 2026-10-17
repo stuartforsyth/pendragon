@@ -21,7 +21,7 @@ _SAFE_DATA = {
     "roll.check": ("label", "outcome", "roll", "kind", "actor", "shown", "value"),
     "combat.attack": ("verdict", "result"),
     "combat.blow": ("attacker", "weapon", "target", "blow", "breakdown", "major", "mortal",
-                    "to_knight", "knight_shield"),
+                    "to_knight", "knight_shield", "narrative"),
     "roll.opposed": ("a", "b", "winner"),
     "roll.damage": ("label", "total", "critical", "rebated", "actor", "expr", "breakdown"),
     "narrate": ("text", "style", "image_url"),
