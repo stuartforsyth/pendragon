@@ -514,6 +514,42 @@ async def credit(request: Request, cid: str, body: dict):
     return {"event": ev}
 
 
+@router.post("/api/combat/link")
+async def link(request: Request, body: dict):
+    """A knight joins a foe (dragged onto it). A foe nobody fights is simply
+    engaged; one already fighting another knight now fights both."""
+    state, cs = _active(request)
+    foe = _combatant(cs, body.get("cid"))
+    knight = next((k for k in cs["combatants"] if not _is_foe(k) and k.display_name == body.get("knight")), None)
+    if not _is_foe(foe) or knight is None:
+        bad("Drag a knight onto a foe")
+    if knight.display_name in foe.linked():
+        return {"event": None}
+    if not foe.engaged_with:
+        return await engage(request, foe.id, {"with": knight.display_name})
+    others = " and ".join(foe.linked())
+    line = f"{knight.display_name} joins {others} against {foe.display_name}"
+    ev = state.record("combat.link", line, title=foe.display_name,
+                      data={"knight": knight.display_name, "add": [foe.id], "table_text": line,
+                            "touches": [k.party_id for k in cs["combatants"] if not _is_foe(k) and k.display_name in [*foe.linked(), knight.display_name]]})
+    return {"event": ev}
+
+
+@router.post("/api/combat/unlink")
+async def unlink(request: Request, body: dict):
+    """A knight leaves one foe (``cid``) or every foe (dragged onto empty ground)."""
+    state, cs = _active(request)
+    name = body.get("knight") or ""
+    foes = [c for c in cs["combatants"] if _is_foe(c) and name in c.linked()
+            and (not body.get("cid") or c.id == body["cid"])]
+    if not foes:
+        return {"event": None}
+    line = f"{name} breaks off from {', '.join(f.display_name for f in foes)}"
+    ev = state.record("combat.link", line, title=name,
+                      data={"knight": name, "remove": [f.id for f in foes], "table_text": line})
+    return {"event": ev}
+
+
 @router.post("/api/combat/wield")
 async def wield(request: Request, body: dict):
     """Change the weapon in hand: one foe (``cid``), or every foe of a type still
@@ -579,7 +615,7 @@ async def distribute(request: Request):
     knight they fell to, so their Glory still counts for him."""
     state, cs = _active(request)
     knights = [c for c in cs["combatants"] if not _is_foe(c) and c.status == "active"]
-    foes = [c for c in cs["combatants"] if _is_foe(c) and c.status == "active"]
+    foes = [c for c in cs["combatants"] if _is_foe(c) and c.status == "active" and not c.engaged_also]   # never split a shared foe
     if not knights:
         bad("No knights in the fight to share the foes")
     if not foes:
@@ -631,15 +667,17 @@ async def roll(request: Request, cid: str, body: dict):
         key = key if key == "brawl" else int(key)
         if what == "attack":
             height = _height(cs, c)
-            # The GM's one-roll pill for a foe outnumbered by knights: −5 per knight after
-            # the first (core.combat.multiple-opponents p.148) — two knights −5, three −10.
-            o = body.get("outnumbered")
-            outnumbered = -5 if o is True else max(-10, min(0, int(o))) if isinstance(o, (int, float)) and o is not False else 0
-            common["extra"].update(attack=key, height=height, outnumbered=outnumbered)
-            bits = ([f"Height {height:+d}"] if height else []) + ([f"−{-outnumbered} outnumbered"] if outnumbered else [])
+            # Outnumbered by knights: −5 per knight after the first (core p.148), counted
+            # from the links; plus the GM's one-roll ± for anything else.
+            on_it = [k for k in cs["combatants"] if not _is_foe(k) and k.status == "active" and k.display_name in c.linked()]
+            outnumbered = -5 * (len(on_it) - 1) if len(on_it) > 1 else 0
+            adjust = to_int(body.get("adjust") or 0, "modifier")
+            common["extra"].update(attack=key, height=height, outnumbered=outnumbered, adjust=adjust)
+            bits = ([f"Height {height:+d}"] if height else []) + ([f"−{-outnumbered} outnumbered"] if outnumbered else []) \
+                + ([f"{adjust:+d}".replace("-", "−")] if adjust else [])
             label = atk["weapon"] + (f" ({', '.join(bits)})" if bits else "")
             ev = record_check(state, label=label, value=atk["value"],
-                              modifier=c.modifier + height + outnumbered, **common)
+                              modifier=c.modifier + height + outnumbered + adjust, **common)
         else:
             ev = record_damage(state, label=atk["weapon"], expr=atk["damage"],
                                critical=bool(body.get("critical")),

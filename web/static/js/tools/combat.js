@@ -144,7 +144,7 @@ export default {
     const openFoes = new Set();      // foe lines expanded to show their full stats
     let view = (() => { try { return localStorage.getItem("cbt-view") || "field"; } catch { return "field"; } })();
     let picked = null;               // the token whose controls are open (Field view)
-    const minus5 = new Map();        // foe id → −5 / −10 on its next attack roll (outnumbered)
+    const adjust = new Map();        // foe id → a one-roll ± for its next attack
 
     // Post a change; if it defeated a foe nobody was fighting, ask who gets the Glory.
     async function act(path, body) {
@@ -318,35 +318,89 @@ export default {
     function canDrop(d, target) {
       if (target.down || d.id === target.id) return false;
       const tKnight = target.side === "party";
-      return d.side === "foe" ? (tKnight || !!target.engaged_with) : !tKnight;
+      if (d.side === "foe") return tKnight || !!target.engaged_with;
+      return !tKnight && !(target.linked || []).includes(byId(d.id)?.display_name);
     }
     function dropOn(srcId, target) {
       const src = byId(srcId);
       if (!src || !canDrop({ id: src.id, side: src.side === "party" ? "knight" : "foe" }, target)) return;
-      const [foe, knightName] = src.side === "party" ? [target, src.display_name]
-        : target.side === "party" ? [src, target.display_name] : [src, target.engaged_with];
-      if ((foe.engaged_with || "") !== knightName) post(`/api/combat/${foe.id}/engage`, { with: knightName });
+      if (src.side === "party") return post("/api/combat/link", { cid: target.id, knight: src.display_name });   // a knight joins
+      const knightName = target.side === "party" ? target.display_name : target.engaged_with;                  // a foe moves
+      if ((src.linked || []).join() !== knightName) post(`/api/combat/${src.id}/engage`, { with: knightName });
     }
 
     function field(knights, foes, pool) {
       const W = Math.max(640, (el.querySelector(".cbt-field")?.clientWidth) || el.clientWidth || 960);
-      const live = foes.filter((f) => !f.down);
-      const groups = knights.map((k) => ({ k, foes: live.filter((f) => f.engaged_with === k.display_name) }));
-      const cols = Math.min(groups.length, W >= 1100 ? 4 : W >= 760 ? 3 : 2) || 1;
-      const cellW = W / cols, rows = Math.ceil(groups.length / cols);
-      const cellH = Math.max(230, ...groups.map((g) => 150 + Math.ceil(g.foes.length / 8) * 70));
-      const tokens = [], lines = [];
-      groups.forEach((g, i) => {
-        const cx = (i % cols + .5) * cellW, cy = Math.floor(i / cols) * cellH + cellH / 2 - 6;
-        tokens.push(ftok(g.k, cx, cy));
-        const n = g.foes.length, r = Math.min(cellW / 2 - 70, 96 + Math.max(0, n - 6) * 6);
-        g.foes.forEach((f, j) => {
-          const a = (n === 1 ? .5 : n === 2 ? (j ? .15 : .85) : j / n + .5 / n) * 2 * Math.PI + Math.PI / 2;
-          tokens.push(ftok(f, cx + r * Math.cos(a), cy + r * .78 * Math.sin(a)));
-          lines.push([g.k.id, f.id]);
-        });
+      const live = foes.filter((f) => !f.down && (f.linked || []).length);
+      // engagements = knights joined through the foes they share
+      const seen = new Set(), groups = [];
+      for (const k of knights) {
+        if (seen.has(k.id)) continue;
+        const g = { ks: [], fs: [] }, todo = [k];
+        while (todo.length) {
+          const x = todo.pop();
+          if (seen.has(x.id)) continue;
+          seen.add(x.id);
+          if (x.side === "party") {
+            g.ks.push(x);
+            live.filter((f) => f.linked.includes(x.display_name)).forEach((f) => todo.push(f));
+          } else {
+            g.fs.push(x);
+            knights.filter((kk) => x.linked.includes(kk.display_name)).forEach((kk) => todo.push(kk));
+          }
+        }
+        groups.push(g);
+      }
+      // Lay out each engagement around (0,0), then flow them across the field
+      // like words in a paragraph, each taking only the room it needs.
+      const ring = (list, r, start, sy = .85) => list.map((t, j) => {
+        const a = start + (2 * Math.PI * j) / list.length;
+        return [t, r * Math.cos(a), r * sy * Math.sin(a)];
       });
-      const height = rows * cellH + 20;
+      const shape = (g) => {
+        let pos;
+        if (g.ks.length === 1) {
+          const n = g.fs.length;
+          pos = [[g.ks[0], 0, 0], ...ring(g.fs, 92 + Math.max(0, n - 6) * 9, n === 2 ? Math.PI : Math.PI / 2)];
+        } else {
+          const shared = g.fs.filter((f) => f.linked.filter((n) => g.ks.some((k) => k.display_name === n)).length > 1);
+          const R = shared.length ? 135 : 0;
+          pos = [...(shared.length === 1 ? [[shared[0], 0, 0]] : ring(shared, 48, Math.PI / 2))];
+          g.ks.forEach((k, i) => {
+            const th = Math.PI + (2 * Math.PI * i) / g.ks.length, kx = R * Math.cos(th), ky = R * .8 * Math.sin(th);
+            pos.push([k, kx, ky]);
+            const own = g.fs.filter((f) => !shared.includes(f) && f.linked.includes(k.display_name));
+            own.forEach((f, j) => {
+              const a = th + (j - (own.length - 1) / 2) * 1.05;
+              pos.push([f, kx + 110 * Math.cos(a), ky + 110 * .9 * Math.sin(a)]);
+            });
+          });
+        }
+        const xs = pos.map((p) => p[1]), ys = pos.map((p) => p[2]);
+        const box = { x0: Math.min(...xs) - 68, x1: Math.max(...xs) + 68, y0: Math.min(...ys) - 34, y1: Math.max(...ys) + 50 };
+        return { pos, w: box.x1 - box.x0, h: box.y1 - box.y0, box };
+      };
+      const shapes = groups.map(shape), rowsOf = [[]];
+      let x = 0;
+      for (const sh of shapes) {
+        if (x + sh.w > W - 16 && rowsOf.at(-1).length) { rowsOf.push([]); x = 0; }
+        rowsOf.at(-1).push(sh); x += sh.w + 12;
+      }
+      const tokens = [], lines = [];
+      let y = 12;
+      for (const row of rowsOf) {
+        const rowW = row.reduce((t, sh) => t + sh.w, 0) + 12 * (row.length - 1), rowH = Math.max(...row.map((sh) => sh.h));
+        let ox = (W - rowW) / 2;
+        for (const sh of row) {
+          const cx = ox - sh.box.x0, cy = y + (rowH - sh.h) / 2 - sh.box.y0;
+          sh.pos.forEach(([t, dx, dy]) => tokens.push(ftok(t, cx + dx, cy + dy)));
+          ox += sh.w + 12;
+        }
+        y += rowH + 14;
+      }
+      groups.forEach((g) => g.fs.forEach((f) => g.ks.forEach((k) => { if (f.linked.includes(k.display_name)) lines.push([k.id, f.id]); })));
+      const height = Math.max(240, y + 6);
+
       const waiting = pool.filter((f) => !f.down);
       const wait = h("div", { class: "cbt-wait" }, h("span", { class: "label" }, "Waiting"),
         waiting.length ? waiting.map((f) => { const t = ftok(f, 0, 0); t.classList.add("inline"); return t; })
@@ -361,12 +415,19 @@ export default {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("class", "cbt-links");
       const stage = h("div", { class: "cbt-field", style: { height: `${height}px` } }, svg, tokens);
+      stage.addEventListener("dragover", (e) => { if (dragging?.side === "knight") e.preventDefault(); });
+      stage.addEventListener("drop", (e) => {                     // a knight dropped on open ground breaks off
+        if (dragging?.side !== "knight" || e.target.closest(".ftok")) return;     // a knight on a knight does nothing
+        e.preventDefault();
+        const k = byId(dragging.id);
+        if (k) post("/api/combat/unlink", { knight: k.display_name });
+      });
       const drawLinks = () => {
         const box = stage.getBoundingClientRect();
         const centre = (id) => { const f = stage.querySelector(`.ftok[data-id="${id}"] .ftok-face`); if (!f) return null;
           const b = f.getBoundingClientRect(); return [b.left - box.left + b.width / 2, b.top - box.top + b.height / 2]; };
         svg.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
-        svg.innerHTML = '<defs><filter id="cbt-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
+        svg.innerHTML = '<defs><filter id="cbt-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${box.width}" height="${box.height}"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
           lines.map(([a, b]) => { const p = centre(a), q = centre(b); return p && q ? `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" class="cbt-link" filter="url(#cbt-glow)"/>` : ""; }).join("");
       };
       requestAnimationFrame(drawLinks);
@@ -409,7 +470,7 @@ export default {
     }
 
     function lane(k, foes) {
-      const mine = foes.filter((c) => c.engaged_with === k.display_name && !c.down);
+      const mine = foes.filter((c) => (c.linked || []).includes(k.display_name) && !c.down);
       const mark = (out) => post(`/api/combat/${k.id}/status`, { out });
       const tag = { unconscious: ["Down", "gules"], fled: ["Out of the fight", ""] }[k.status];
       return dropZone(h("div", { class: `cbt-lane ${k.down ? "is-down" : ""}` },
@@ -486,17 +547,17 @@ export default {
           disarmed ? "✋ " : "⚔ ", h("span", { class: "wn" }, a?.weapon || "Brawling"), " ",
           h("b", {}, noSkill ? "—" : skillDisplay(a.value)), h("span", { class: "faint" }, ` · ${a?.damage || "—"}`),
           disarmed ? h("span", { class: "tag gules" }, "Disarmed") : null, " ▾"),
-        h("button", { class: `chip pill-out ${minus5.get(c.id) ? "on" : ""}`,
-          title: "Outnumbered by knights: −5 for two, −10 for three, on this foe's next attack roll (click to cycle)",
-          onclick: () => { const v = { 0: -5, [-5]: -10, [-10]: 0 }[minus5.get(c.id) || 0]; v ? minus5.set(c.id, v) : minus5.delete(c.id); render(); } },
-          minus5.get(c.id) ? `${minus5.get(c.id)}`.replace("-", "−") : "−5"),
+        c.outnumbered ? h("span", { class: "tag gules out-tag", title: `${c.linked.length} knights on it: −5 per knight after the first, on its attack rolls` },
+          `${c.outnumbered}`.replace("-", "−") + " outnumbered") : null,
+        h("input", { class: "input num adj-in", placeholder: "±", value: adjust.get(c.id) ?? "", title: "Any other modifier for this foe's next attack roll only",
+          oninput: (e) => { const v = e.target.value.trim(); /^[+-]?\d+$/.test(v) ? adjust.set(c.id, Number(v)) : adjust.delete(c.id); } }),
         h("button", { class: "btn sm atk-btn", disabled: c.down || noSkill || null,
           title: noSkill ? "No Brawling skill — set one in the Adversaries editor" : `${c.display_name} attacks ${c.engaged_with || "a knight"} with ${a.weapon}`,
           onclick: () => {
-            const outnumbered = minus5.get(c.id) || 0;           // one roll, then the pill switches off
-            minus5.delete(c.id); render();
-            return knightsIn ? attackDialog(c, key, outnumbered)
-              : post(`/api/combat/${c.id}/roll`, { what: "attack", key, outnumbered }).then((r) => { ctx.showLastRoll(r.event); render(); });
+            const adj = adjust.get(c.id) || 0;                   // one roll, then the box clears
+            adjust.delete(c.id); render();
+            return knightsIn ? attackDialog(c, key, adj)
+              : post(`/api/combat/${c.id}/roll`, { what: "attack", key, adjust: adj }).then((r) => { ctx.showLastRoll(r.event); render(); });
           } },
           icon("swords"), "Attack"));
     }
@@ -626,11 +687,11 @@ export default {
     // knight's result; the app decides whether the enemy's blow lands.
     const OUT = { critical: "Critical", success: "Success", failure: "Failure", fumble: "Fumble" };
 
-    async function attackDialog(c, i, outnumbered = 0) {
+    async function attackDialog(c, i, adj = 0) {
       const knights = cs.combatants.filter((o) => o.side === "party" && !o.down);
       if (!knights.length) return toast("No knights in the fight", "err");
       let target = (byName(c.engaged_with)?.side === "party" ? byName(c.engaged_with) : knights[0]).id;
-      const roll = (await post(`/api/combat/${c.id}/roll`, { what: "attack", key: i, outnumbered })).event;
+      const roll = (await post(`/api/combat/${c.id}/roll`, { what: "attack", key: i, adjust: adj })).event;
       ctx.showLastRoll(roll);
       const d = roll.data, ok = d.outcome === "critical" || d.outcome === "success";
       const go = async (knight, close) => {

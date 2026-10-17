@@ -294,13 +294,27 @@ def test_brawling_override_saved_and_used(client):
     assert r == {"default": 10, "source": "STR ÷ 2, at least 10 for a knight", "damage": 5}
 
 
-def test_outnumbered_pill_takes_five_off_one_roll(client):
-    cs = _fight(client)
+def test_knights_share_a_foe_outnumbered_automatic_and_adjust(client):
+    cs = _fight(client, knights=("Sir Bors", "Sir Cai", "Dame Lynet"))
     foe = _foes(cs)[0]
-    ev = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 1, "outnumbered": True}))["event"]
-    assert "−5 outnumbered" in ev["data"]["label"]
-    plain = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 1}))["event"]
-    assert "outnumbered" not in plain["data"]["label"]
-    assert ev["data"]["shown"] != plain["data"]["shown"]          # 15 −5 = 10 vs 15
-    three = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 1, "outnumbered": -10}))["event"]
-    assert "−10 outnumbered" in three["data"]["label"]
+    ok(client.post("/api/combat/link", json={"cid": foe["id"], "knight": "Sir Bors"}))      # nobody on it: engages
+    ok(client.post("/api/combat/link", json={"cid": foe["id"], "knight": "Sir Cai"}))
+    ok(client.post("/api/combat/link", json={"cid": foe["id"], "knight": "Dame Lynet"}))
+    row = next(c for c in _foes(ok(client.get("/api/combat"))["combat"]) if c["id"] == foe["id"])
+    assert row["linked"] == ["Sir Bors", "Sir Cai", "Dame Lynet"] and row["outnumbered"] == -10
+    knights = {k["display_name"]: k for k in ok(client.get("/api/combat"))["combat"]["combatants"] if k["side"] == "party"}
+    assert all(foe["display_name"] in k["engaged_by"] for k in knights.values())
+    ev = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 1, "adjust": 3}))["event"]
+    assert "−10 outnumbered" in ev["data"]["label"] and "+3" in ev["data"]["label"]
+    # the players' board shows the foe in each knight's lane
+    t = ok(client.get("/api/table"))
+    assert sum(1 for k in t["knights"] for f in k["lane"]["foes"] if f["id"] == foe["id"]) == 3
+    # one knight breaks off: −5
+    ok(client.post("/api/combat/unlink", json={"knight": "Sir Bors"}))
+    row = next(c for c in _foes(ok(client.get("/api/combat"))["combat"]) if c["id"] == foe["id"])
+    assert row["linked"] == ["Sir Cai", "Dame Lynet"] and row["outnumbered"] == -5 and row["engaged_with"] == "Sir Cai"
+    # Distribute never splits a shared foe; moving it (engage) leaves one knight
+    ok(client.post("/api/combat/distribute"))
+    assert next(c for c in _foes(ok(client.get("/api/combat"))["combat"]) if c["id"] == foe["id"])["linked"] == ["Sir Cai", "Dame Lynet"]
+    ok(client.post(f"/api/combat/{foe['id']}/engage", json={"with": "Sir Bors"}))
+    assert next(c for c in _foes(ok(client.get("/api/combat"))["combat"]) if c["id"] == foe["id"])["linked"] == ["Sir Bors"]

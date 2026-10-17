@@ -17,7 +17,7 @@ COMBAT_STATE_TYPES = {
     "combat.promote", "combat.modifier", "combat.engage", "combat.removed",
     "combat.round", "combat.ended", "combat.blow",
     "combat.mounted", "combat.horse", "combat.height", "combat.captured",
-    "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round", "combat.distribute", "combat.wield",
+    "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round", "combat.distribute", "combat.wield", "combat.link",
 }
 
 
@@ -51,6 +51,18 @@ def apply(state, ev, promotion_cfg=None):
         return state
     if t == "combat.added":
         state["combatants"].append(Combatant.from_dict(d["combatant"]))
+        return state
+    if t == "combat.link":                    # a knight joins (or leaves) foes others may be fighting
+        k = d.get("knight", "")
+        for c in state["combatants"]:
+            if c.id in (d.get("add") or []) and k not in c.linked():
+                if c.engaged_with:
+                    c.engaged_also = [*c.engaged_also, k]
+                else:
+                    c.engaged_with = k
+            if c.id in (d.get("remove") or []) and k in c.linked():
+                rest = [n for n in c.linked() if n != k]
+                c.engaged_with, c.engaged_also = (rest[0], rest[1:]) if rest else ("", [])
         return state
     if t == "combat.wield":
         for c in state["combatants"]:
@@ -93,8 +105,9 @@ def apply(state, ev, promotion_cfg=None):
             c.demote()
     elif t == "combat.modifier":
         c.modifier = int(d.get("value", 0))
-    elif t == "combat.engage":
+    elif t == "combat.engage":                # moves the foe: one knight, or none
         c.engaged_with = d.get("with", "")
+        c.engaged_also = []
     elif t == "combat.removed":
         state["combatants"].remove(c)
     elif t == "combat.mounted":
@@ -134,7 +147,7 @@ def gm_view(c):
     d.update(status=c.status, down=c.down, display_name=c.display_name,
              log_name=c.log_name, armor_total=c.armor_total(),
              armour_text=c.describe_armour(), looks=c.describe_looks(),
-             wound_state=c.wound_state(), side=getattr(c, "side", "foe"))
+             wound_state=c.wound_state(), side=getattr(c, "side", "foe"), linked=c.linked())
     if d["side"] != "party":
         key, _ = c.wielded()
         d.update(wielding=key, brawl=c.brawl())
@@ -148,7 +161,7 @@ def table_view(c):
            "wound_state": c.wound_state(), "elite": c.elite,
            "named": getattr(c, "named", False), "npc": getattr(c, "npc", False),
            "category": getattr(c, "category", "human"),
-           "engaged_with": c.engaged_with}
+           "engaged_with": c.engaged_with, "linked": c.linked()}
     if side == "party":
         out.update(player=getattr(c, "player", ""), party_id=getattr(c, "party_id", None))
     else:
@@ -227,7 +240,7 @@ def _derive(state, rows, view):
         r = by_id[c.id]
         if getattr(c, "side", "foe") == "party":
             mine = [f for f in cs if getattr(f, "side", "foe") != "party"
-                    and f.status == "active" and f.engaged_with == c.display_name]
+                    and f.status == "active" and c.display_name in f.linked()]
             n = len(mine)
             limit = B.mo_limit(any(f.mounted for f in mine))
             chips = []
@@ -247,6 +260,8 @@ def _derive(state, rows, view):
                 r.update(mo_mod=B.multiple_opponents(n), mo_n=n,
                          height_chips=[{"foe": ch["foe"], "text": f"{ch['mod']:+d} Height".replace("-", "−")} for ch in chips])
             continue
+        on_me = [knights[n] for n in c.linked() if n in knights and knights[n].status == "active"]
+        r["outnumbered"] = -5 * (len(on_me) - 1) if len(on_me) > 1 else 0     # core p.148
         knight = knights.get(c.engaged_with)
         if knight is not None:
             fm, km = B.height(c.mounted, knight.mounted, c.height_override, c.attacks_horse)
@@ -272,10 +287,9 @@ def serialise(state, view):
     rows = [fn(c) for c in state["combatants"]]
     _derive(state, rows, view)
     for r in rows:   # who is fighting each combatant (the reverse of engaged_with)
+        me = r["display_name"] if view == "gm" else r["name"]
         r["engaged_by"] = [o["display_name"] if view == "gm" else o["name"] for o in rows
-                           if o is not r and o.get("engaged_with") and
-                           o["engaged_with"] == (r["display_name"] if view == "gm" else r["name"])
-                           and o["status"] == "active"]
+                           if o is not r and me in (o.get("linked") or []) and o["status"] == "active"]
     out = {"active": state["active"], "name": state["name"], "round": state["round"],
            "started_event": state.get("started_event"), "battle": state.get("battle"),
            "players": state.get("players", 0),
@@ -288,7 +302,7 @@ def serialise(state, view):
             types=_types(state["combatants"]),
             gm_notes=next((d["text"] for d in out["descriptions"] if d.get("type") == "GM notes"), ""),
             defeated=[c.id for c in foes if c.status in DEFEATED],
-            pool=[c.id for c in foes if c.status == "active" and c.engaged_with not in knights],
+            pool=[c.id for c in foes if c.status == "active" and not any(n in knights for n in c.linked())],
             uncredited=[c.id for c in foes if c.status in DEFEATED and credit_of(state, c) is None
                         and c.id not in state.get("credits", {})])
     out["glory"] = glory_tally(state)

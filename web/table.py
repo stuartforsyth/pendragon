@@ -162,7 +162,7 @@ def knight_cards(events, fl, combat, battle=None):
                  # No Height or horse chips: a foe going for the horse is the GM's secret
                  # (its Height chip would give it away); knights see their own Height.
                  "chips": ["Disarmed"] if f.get("disarmed") else []}
-                for f in rows if f["side"] != "party" and f.get("engaged_with") == k["name"] and f["status"] == "active"]
+                for f in rows if f["side"] != "party" and k["name"] in (f.get("linked") or []) and f["status"] == "active"]
         cards.append({"pid": pid, "name": k["name"], "player": k.get("player", ""), "mounted": k.get("mounted", True),
                       "status": k["status"],
                       "glory": {"value": ((battle or {}).get("glory") or {}).get(pid, 0) if linked

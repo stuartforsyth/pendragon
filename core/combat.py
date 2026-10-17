@@ -105,6 +105,7 @@ class Combatant:
     extra_rounds = 0
     position = None
     wielding = 0            # index into attacks, or "brawl" (disarmed)
+    engaged_also = ()       # more knights fighting this foe, besides engaged_with
     brawling_override = None
     brawl_bonus = 0         # a promoted champion's skill bonus
 
@@ -313,6 +314,10 @@ class Combatant:
         c.party_id = member.get("id")
         c.player = member.get("player", "")
         return c
+
+    def linked(self):
+        """Every knight this foe is fighting: engaged_with first, then the rest."""
+        return [n for n in [self.engaged_with, *self.engaged_also] if n]
 
     # -- weapons -----------------------------------------------------------
 

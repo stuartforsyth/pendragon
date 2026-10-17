@@ -25,9 +25,11 @@ def test_field_drag_both_ways_and_waiting(page, app_url):
     # a foe dragged onto a knight
     page.locator(f'.ftok[data-id="{foes[0]["id"]}"]').drag_to(page.locator(".ftok.is-knight", has_text="Sir Bors"))
     expect(page.locator(".cbt-link")).to_have_count(1)
+    page.wait_for_timeout(300)
     # a knight dragged onto a waiting foe
     page.locator(".ftok.is-knight", has_text="Sir Cai").drag_to(page.locator(f'.ftok[data-id="{foes[1]["id"]}"]'))
     expect(page.locator(".cbt-link")).to_have_count(2)
+    page.wait_for_timeout(300)
     # a foe dropped on an engaged foe joins its knight
     page.locator(f'.ftok[data-id="{foes[2]["id"]}"]').drag_to(page.locator(f'.cbt-field .ftok[data-id="{foes[0]["id"]}"]'))
     expect(page.locator(".cbt-link")).to_have_count(3)
@@ -55,3 +57,21 @@ def test_field_click_token_opens_controls(page, app_url):
     # the List view is one click away
     page.locator(".seg").get_by_role("button", name="List").click()
     expect(page.locator(".cbt-lanes")).to_be_visible()
+
+
+def test_three_knights_on_one_foe(page, app_url):
+    _start(page, app_url)
+    foe = [c for c in _cs(page, app_url)["combatants"] if c["side"] != "party"][0]
+    target = lambda: page.locator(f'.ftok[data-id="{foe["id"]}"]')
+    for n, name in enumerate(("Sir Bors", "Sir Cai", "Dame Lynet"), 1):
+        page.locator(".ftok.is-knight", has_text=name).drag_to(target())
+        expect(page.locator(".cbt-link")).to_have_count(n)          # wait for the redraw before the next drag
+    target().click()
+    expect(page.locator(".cbt-drawer .out-tag")).to_have_text("−10 outnumbered")
+    page.locator(".cbt-drawer").get_by_title("Close").click()
+    # a knight dragged onto open ground breaks off
+    field = page.locator(".cbt-field").bounding_box()
+    page.locator(".ftok.is-knight", has_text="Sir Bors").drag_to(page.locator(".cbt-field"), target_position={"x": 8, "y": field["height"] - 8})
+    expect(page.locator(".cbt-link")).to_have_count(2)
+    row = {c["id"]: c for c in _cs(page, app_url)["combatants"]}[foe["id"]]
+    assert row["linked"] == ["Sir Cai", "Dame Lynet"] and row["outnumbered"] == -5
