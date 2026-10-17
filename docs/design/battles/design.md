@@ -839,3 +839,21 @@ from pills).
 29. **Turn-1 charge roll when the first charge is off** (friendly failure/fumble or the
     switch). RAW: the Table 6.3 roll happens "except turn 1". **Rec.:** step ③ is
     always skipped on turn 1. With the first charge off, turn 1 has no charge.
+
+
+---
+
+## 14. UX pass (stage 3½) — APPROVED 2026-10-17
+
+Approved hi-fi mockups: `mockups/battles-ux-mockups.html`; walkthrough and rationale:
+`mockups/walkthrough.md`. The build must match the mockups. These UX choices amend §6:
+
+1. Answering a step completes it — no Next buttons; the step collapses to its result, the next opens (cascade undo on reopen unchanged).
+2. Step ① is implicit: the turn opens on ② Set Encounter; "Retire to the Rear instead" is a secondary button (and the at-the-rear choices replace the stepper while resting).
+3. ③ Charge and ④ Intensity share one row; a skipped half greys out.
+4. ⑤ Picks are card-first: tap a card, then the knight(s); crit toggles on the knight token; Opportunities locked until a crit pick; spent ones greyed; GM-only Min/Loss/KV on the cards. "Commander chooses ▸" moves to ⑥ (no separate Done).
+5. ⑥ auto-completes when there is only one candidate.
+6. ⑦ shows the GM-only minimum check ("Morale 14 ≥ Minimum 5 ✓") before the Loss.
+7. ⑧ postures default to each knight's previous-turn posture from turn 2 (visibly highlighted; one tap to change; "Confirm postures"); first-charge turns force R/V.
+8. Reminders at the step that needs them: turn script at ②; Force token glows at ②, Negate at ⑦; posture rounds in tracker lanes; countercharge/barrage banners in the fight; "−5 Battle this turn" at ③.
+9. Keyboard: C/S/F/X outcome chips, R/V/P/K postures, Enter = the open step's main action.
