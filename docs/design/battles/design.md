@@ -1,6 +1,6 @@
 # Battles: compiled design (stage 3)
 
-Status: **draft for approval**, compiled 2026-10-17 from `breakdown.md` and
+Status: **§13 resolved (all recommendations accepted); awaiting user approval of the design**, compiled 2026-10-17 from `breakdown.md` and
 `pieces/01–09`. Those piece files hold the user's decisions and win any conflict
 with this document. Anything here that no piece decided is either marked
 *implementation choice* (no effect on what the user sees) or asked in
@@ -749,9 +749,9 @@ from pills).
 
 ---
 
-## 13. Questions for the user
+## 13. Questions for the user — RESOLVED
 
-Each question has a recommendation (**Rec.**).
+**2026-10-17: the user accepted every recommendation below (all 29).** Treat each **Rec.** as a decision; the two scenario-rule extensions flagged in §12 (countercharge on each day's first turn; participation Glory × days fought) are confirmed as labelled scenario rules.
 
 1. **Morale reaching 0 outside step ⑦.** RAW: "must retire when Morale hits 0"
    (gm.battle.battlefield-position-and-surrender). Only the step ⑦ minimum check
