@@ -23,5 +23,6 @@ sessions/
 data/party.json
 data/cast.json
 data/pinned_rules.json
+data/feedback.json
 data/*.tmp
 .run/

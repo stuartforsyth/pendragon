@@ -39,13 +39,14 @@ def slugify(text):
 
 
 class Session:
-    def __init__(self, sid, title, created=None, ended=None, events=None, path=None):
+    def __init__(self, sid, title, created=None, ended=None, events=None, path=None, backup=None):
         self.id = sid
         self.title = title
         self.created = created or _now()
         self.ended = ended
         self.events = events or []
         self.path = path            # None = unsaved scratch log
+        self.backup = backup        # scratch only: kept on disk so a server restart loses nothing
 
     @property
     def scratch(self):
@@ -65,12 +66,13 @@ class Session:
                 "ended": self.ended, "events": self.events}
 
     def save(self):
-        if self.path is None:
+        target = self.path or self.backup
+        if target is None:
             return
-        tmp = self.path + ".tmp"
+        tmp = target + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:
             json.dump(self.to_json(), fh, ensure_ascii=False, indent=1)
-        os.replace(tmp, self.path)
+        os.replace(tmp, target)
 
     def append(self, etype, text, *, title="", data=None, visibility="public",
                masked=False):
@@ -141,9 +143,24 @@ class SessionStore:
         elif os.path.exists(self._pointer()):
             os.remove(self._pointer())
 
-    @staticmethod
-    def _scratch():
-        return Session("scratch", "Unsaved — no session started")
+    def _scratch_path(self):
+        return os.path.join(self.dir, ".scratch.json")
+
+    def _scratch(self, fresh=False):
+        """The no-session log. Not a session file (never listed or resumable),
+        but backed up on disk so restarting the server doesn't wipe a fight or
+        battle run without a session. Starting or ending a session clears it."""
+        path = self._scratch_path()
+        if fresh and os.path.exists(path):
+            os.remove(path)
+        events = []
+        if os.path.isfile(path):
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    events = json.load(fh).get("events", [])
+            except (OSError, ValueError):
+                events = []
+        return Session("scratch", "Unsaved — no session started", events=events, backup=path)
 
     def load(self, sid):
         if not re.fullmatch(r"[a-z0-9-]+", sid or ""):
@@ -179,6 +196,7 @@ class SessionStore:
         sid, n = base, 2
         while os.path.exists(self._path(sid)):
             sid, n = f"{base}-{n}", n + 1
+        self._scratch(fresh=True)                   # the scratch log is left behind
         self.active = Session(sid, title, path=self._path(sid))
         self.active.append("session.started", f"Session begins: {title}", title=title)
         self._write_pointer(sid)
@@ -192,12 +210,14 @@ class SessionStore:
         s.ended = _now()
         s.save()
         self._write_pointer("")
-        self.active = self._scratch()
+        self.active = self._scratch(fresh=True)
         return s
 
     def resume(self, sid):
         if not self.active.scratch and self.active.id != sid:
             self.end()
+        if self.active.scratch:
+            self._scratch(fresh=True)
         s = self.load(sid)
         s.ended = None
         s.append("session.resumed", f"Session resumes: {s.title}", title=s.title)

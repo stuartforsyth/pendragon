@@ -68,3 +68,31 @@ def test_pin_rules(client):
 def test_static_files_are_always_revalidated(client):
     r = client.get("/static/js/gm.js")
     assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
+
+
+def test_unsaved_work_survives_a_server_restart(tmp_path):
+    from web.sessions import SessionStore
+    store = SessionStore(str(tmp_path))
+    assert store.active.scratch
+    store.active.append("roll.dice", "3d6: 11")
+    again = SessionStore(str(tmp_path))                  # the server restarts with no session started
+    assert again.active.scratch and [e["text"] for e in again.active.events] == ["3d6: 11"]
+    assert not any(m["id"] == "scratch" for m in again.list())
+    again.start("Session 2")                             # a real session leaves the scratch log behind
+    again.end()
+    assert SessionStore(str(tmp_path)).active.events == []
+
+
+def test_feedback_queue_records_where_it_came_from(client):
+    from web import feedback as FB
+    ok(client.post("/api/combat/start", json={"encounter": "Pictish Knifemen"}))
+    r = ok(client.post("/api/feedback", json={"kind": "bug", "message": "Attack does nothing",
+                                              "page": {"route": "#/combat", "tool": "Combat", "picked": "Pictish Knifemen 2"}}))
+    item = r["item"]
+    assert item["id"] == 1 and item["status"] == "new" and item["page"]["picked"] == "Pictish Knifemen 2"
+    assert item["where"]["combat"]["name"] and item["where"]["session"]["last_event"] >= 1
+    assert client.post("/api/feedback", json={"message": "  "}).status_code == 400
+    data = str(client.tmp / "data")
+    assert FB.mark(data, [1], "done", "Fixed") == [1]
+    mine = ok(client.get("/api/feedback"))["items"]
+    assert mine[0]["status"] == "done" and mine[0]["note"] == "Fixed"

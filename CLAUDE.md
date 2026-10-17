@@ -23,6 +23,9 @@ vanilla JS, no build step) that replaces the original Tkinter desktop app.
 - Legacy Tk app: archived in `archive/legacy-tk/` (`pendragon.py` + its tabs and
   `run.sh`/`run.bat`). Not maintained; don't change it for new features.
 - Design decisions: `docs/web-app.md`.
+- **Feedback queue:** Stuart reports bugs and changes from the GM console's Feedback tab
+  (`data/feedback.json`, with the route, session and event it came from). Work through it with
+  the `/feedback` skill (`.venv/bin/python -m web.feedback list`).
 
 ## Answering rules questions — corpus first, then the PDFs
 
