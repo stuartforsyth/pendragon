@@ -33,16 +33,21 @@ docs/design/{mechanic}/
    rules say (cite corpus ids/pages), what already exists in the app, and a first-guess
    scope tag: **app** (automate/track it), **assist** (prompt or reference only), or
    **paper/VTT** (the GM handles it elsewhere — not implemented).
-3. **UX audit of what exists.** Run a throwaway instance on copies of the data
+3. **Template vs launch.** If the mechanic has saved setups (a prepared battle, a feast…),
+   sort every input into **template** (the scenario, reusable for any group) or **launch**
+   (this group: anything that needs players' inputs or selections — who takes part, who
+   leads, their Passions/Morale, their rolls). Player-dependent choices never go in the
+   template or its editor; they are entered when it is launched.
+4. **UX audit of what exists.** Run a throwaway instance on copies of the data
    (`PENDRAGON_DATA_DIR` / `PENDRAGON_SESSIONS_DIR`), put it in a realistic state (a real
    fight, a populated log), and screenshot every GM screen and Table view the mechanic will
    touch, at the GM's laptop size and the screenshared Table size. Critique them honestly in
    `ux-audit.md`: what is hard to scan, buried, repeated, mis-sized or missing, judged against
    how the GM and players use it mid-session. Existing UI built in an earlier iteration is not
    a constraint — propose improving it (the battles audit led to the combat tracker redesign).
-4. Also list the cross-cutting concerns: events needed, what the Table (players' screen) may
+5. Also list the cross-cutting concerns: events needed, what the Table (players' screen) may
    show and what stays secret, GM-only controls, undo.
-5. **Gate:** show the user the piece list and order; adjust until they agree. Then number
+6. **Gate:** show the user the piece list and order; adjust until they agree. Then number
    the pieces.
 
 ## 2 — Grill each piece
