@@ -129,3 +129,8 @@ span.chip-height { cursor: default; }
 .chip-horse { color: var(--ink-dim); }
 .chip-horse.on { color: var(--or-bright); border-color: var(--or-deep); background: rgba(212,168,75,.1); }
 .tag-captured { margin-left: 6px; font-size: 11px; color: var(--azure); }
+
+/* ---------- Glory (S3) ---------- */
+.cbt-glory { color: var(--or); font-weight: 800; font-size: 13px; white-space: nowrap; }
+.dcredit { color: var(--or); font-size: 12px; font-weight: 700; }
+.dwho { color: var(--gules); font-size: 12px; font-weight: 700; }

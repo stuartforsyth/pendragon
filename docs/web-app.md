@@ -88,6 +88,15 @@ the horse (`combat.horse`) loses its −5, and the GM can negate Height for a
 two-handed spear (`combat.height`). Knight lanes show their own Height and
 Multiple Opponents reminders; captives are flagged with `combat.captured`.
 
+**Glory ledger.** A defeated foe's Glory (Table A.1: unconscious, slain, fled or
+surrendered) goes to the knight it was fighting when it fell. This is derived on
+replay, so striking the defeating event removes it. A foe that fell unengaged
+prompts "Who defeated them?" (`glory.reassigned`, also used to reassign);
+**Award Glory** (`glory.awarded`) covers rewards and deeds. The Table's fight
+view shows one lane per knight built from reusable board components
+(`static/js/board.js`): knight card with Glory counter, reminder chips and the
+last thing that happened to them (from events' server-only `touches`).
+
 Player knights are run on paper: the app never tracks their Hit Points,
 armour, wounds or death. It only tracks the enemies.
 

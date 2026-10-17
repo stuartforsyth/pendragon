@@ -447,7 +447,7 @@ Existing tests: `test_enemy_attack_on_knight` is unaffected because `_start_with
 
 ---
 
-## S3 — Glory ledger + Table fight view with reusable knight cards (size **L**)
+## S3 — Glory ledger + Table fight view with reusable knight cards (size **L**) — ✅ DONE 2026-10-17
 
 **Goal.**
 - Glory for each defeated foe goes automatically to the knight it was engaged with when it fell.

@@ -29,6 +29,10 @@ _SAFE_DATA = {
     "combat.started": ("name",),
     "combat.round": ("round",),
     "combat.ended": ("name",),
+    "combat.mounted": ("mounted",),
+    "combat.captured": (),
+    "glory.awarded": ("knight_name", "amount", "reason"),
+    "glory.reassigned": ("knight_name", "foe", "amount"),
 }
 
 
@@ -66,6 +70,61 @@ def card(ev, fl):
 CUTOFF_TYPES = ("table.cleared", "session.started")
 
 
+_NUM_WORD = {2: "two", 3: "three", 4: "four", 5: "five"}
+
+
+def _effects(k):
+    """A knight's reminder chips — what the player applies on paper."""
+    out = []
+    if not k.get("mounted", True):
+        out.append({"key": "on_foot", "label": "On foot", "tone": "state"})
+    seen = set()
+    for ch in k.get("height_chips", []):
+        if ch["text"] in seen:
+            continue
+        seen.add(ch["text"])
+        out.append({"key": "height", "label": ch["text"], "tone": "boon" if ch["text"].startswith("+") else "harm"})
+    n = k.get("mo_n", 0)
+    if n > 1:
+        out.append({"key": "mo", "label": f"−{5 * (n - 1)} {_NUM_WORD.get(n, n)} foes", "tone": "harm"})
+    return out
+
+
+def knight_cards(events, fl, combat):
+    """The players' knight cards for the fight view (reusable by battles,
+    feasts and hunts): Glory, reminder chips, the last things that happened
+    to each knight, and their lane of foes. Built here so ``touches`` — the
+    event-to-knight links — never leave the server."""
+    if not combat:
+        return []
+    rows = combat["combatants"]
+    start = combat.get("started_event") or 0
+    cards = []
+    for k in (r for r in rows if r["side"] == "party"):
+        pid = k.get("party_id")
+        happened, last = [], None
+        for ev in reversed(events):
+            if len(happened) >= 3 and last is not None:
+                break
+            if ev["type"] in META_TYPES or ev.get("visibility") == "gm" or fl.get(ev["id"], {}).get("struck"):
+                continue
+            d = ev.get("data", {})
+            if pid not in (d.get("touches") or []):
+                continue
+            if len(happened) < 3:
+                happened.append(d.get("table_text", ev.get("text", "")))
+            if last is None and d.get("glory_amount") and ev["id"] >= start:
+                last = {"amount": d["glory_amount"], "text": d.get("table_text", "")}
+        foes = [{"id": f["id"], "name": f["name"], "wound_state": f["wound_state"],
+                 "chips": [x for x in (f.get("height_chip"), "⇣ horse" if f.get("attacks_horse") and k.get("mounted") else "") if x]}
+                for f in rows if f["side"] != "party" and f.get("engaged_with") == k["name"] and f["status"] == "active"]
+        cards.append({"pid": pid, "name": k["name"], "player": k.get("player", ""), "mounted": k.get("mounted", True),
+                      "status": k["status"],
+                      "glory": {"value": (combat.get("glory") or {}).get(pid, 0), "scope": "fight", "last": last},
+                      "effects": _effects(k), "happened": happened, "lane": {"foes": foes}})
+    return cards
+
+
 def build(session, combat, pinned_mode="auto"):
     fl = flags(session.events)
     feed = []
@@ -80,4 +139,5 @@ def build(session, combat, pinned_mode="auto"):
     auto = "combat" if combat and combat.get("active") else "chronicle"
     mode = auto if pinned_mode == "auto" else pinned_mode
     return {"session": {"title": session.title, "scratch": session.scratch},
-            "mode": mode, "pinned": pinned_mode, "feed": feed, "combat": combat}
+            "mode": mode, "pinned": pinned_mode, "feed": feed, "combat": combat,
+            "knights": knight_cards(session.events, fl, combat)}

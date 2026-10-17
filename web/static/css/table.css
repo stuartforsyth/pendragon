@@ -256,3 +256,29 @@ body {
 .face.bonus { border-color: var(--or); background: #fff3d6; box-shadow: 0 2px 0 var(--or); }
 .blowsteps { margin-top: 12px; font-family: var(--f-caps); font-size: 19px; letter-spacing: .06em; color: var(--ink-2); text-align: center; }
 .blowfx { margin-top: 8px; font-family: var(--f-display); font-size: 30px; color: var(--gules); text-align: center; }
+
+/* ---------- fight view: lanes by knight (S3) ---------- */
+.fightview { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(300px, 1fr); gap: 28px; min-height: 0; }
+.fightview .lanes { display: grid; gap: 10px; align-content: start; min-height: 0; overflow: hidden; }
+.fv-banner { justify-self: start; font-family: var(--f-caps); font-weight: 700; font-size: 16px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--gules); border: 1.5px solid var(--gules); background: rgba(142, 34, 25, .06); padding: 4px 14px; border-radius: 4px; }
+.tlane { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); background: rgba(251, 244, 226, .55); border: 1px solid var(--parch-dark); border-radius: 9px; overflow: hidden; }
+.tlane .kcard { border: 0; border-right: 1px solid var(--parch-dark); border-radius: 0; background: rgba(36, 80, 127, .05); }
+.tlane.solo { grid-template-columns: 1fr; }
+.tlane-foes { display: flex; flex-wrap: wrap; gap: 8px; align-content: start; padding: 10px 12px; }
+.tlane-none { font-style: italic; color: var(--ink-soft); font-size: 16px; align-self: center; }
+.tfoe { display: flex; align-items: center; gap: 8px; border: 1px solid var(--parch-dark); border-radius: 6px; padding: 4px 10px 4px 5px; background: #f6ecd2; font-size: 17px; }
+.tfoe .shield { width: 24px; height: 28px; }
+.tfoe b { font-family: var(--f-caps); font-size: 15px; }
+.tfoe .wd { font-style: italic; color: var(--ink-soft); }
+.tfoe.s-unhurt .wd { color: var(--vert); }
+.tfoe.s-wounded .wd { color: #8a5a12; }
+.tfoe.s-badly-wounded .wd { color: var(--gules); font-weight: 600; }
+.tfoe.elite b { color: var(--or); }
+.tfoe.hit { animation: hit .7s; }
+.tchip { font-family: var(--f-caps); font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 3px; border: 1px solid var(--parch-dark); color: var(--ink-2); }
+.fv-foot { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; font-size: 17px; color: var(--ink-soft); padding: 4px 2px; }
+.fv-foot .lbl { font-family: var(--f-caps); font-size: 12px; letter-spacing: .25em; text-transform: uppercase; }
+.fv-foot s { color: var(--ink-2); text-decoration-color: var(--gules); }
+.fv-foot .dcr { color: var(--or); }
+@media (max-width: 1000px) { .fightview { grid-template-columns: 1fr; } .tlane { grid-template-columns: 1fr; } }

@@ -116,6 +116,46 @@ export default {
     // foe type; one line per foe; defeated foes collapse into a strip.
     const openFoes = new Set();      // foe lines expanded to show their full stats
 
+    // Post a change; if it defeated a foe nobody was fighting, ask who gets the Glory.
+    async function act(path, body) {
+      const r = await post(path, body);
+      if (r?.prompt?.kind === "who_defeated") whoDefeated(r.prompt.cid, r.prompt.name);
+      return r;
+    }
+
+    async function whoDefeated(cid, name) {
+      const knights = cs.combatants.filter((o) => o.side === "party");
+      await modal(`Who defeated ${name}?`, (close) => [
+        h("p", { class: "muted" }, "They weren't fighting anyone. Their Glory goes to:"),
+        h("div", { class: "row", style: { flexWrap: "wrap" } },
+          knights.map((k) => h("button", { class: "btn", onclick: async () => { await post(`/api/combat/${cid}/credit`, { knight: k.party_id }); close(); } }, k.display_name)),
+          h("button", { class: "btn ghost", onclick: async () => { await post(`/api/combat/${cid}/credit`, { knight: null }); close(); } }, "Nobody (no Glory)")),
+      ]);
+    }
+
+    async function awardGlory() {
+      const knights = cs?.combatants.filter((o) => o.side === "party") || [];
+      const list = knights.length ? knights.map((k) => ({ id: k.party_id, name: k.display_name }))
+        : party.filter((m) => m.active !== false).map((m) => ({ id: m.id, name: m.name }));
+      if (!list.length) return toast("No knights to award", "err");
+      await modal("Award Glory", (close) => {
+        const who = h("select", { class: "input" }, list.map((k) => h("option", { value: k.id }, k.name)));
+        const amt = h("input", { class: "input", type: "number", placeholder: "Glory, e.g. 50" });
+        const why = h("input", { class: "input", placeholder: "What for — e.g. seized the standard" });
+        const go = async () => {
+          if (!amt.value || !why.value.trim()) return toast("Enter the Glory and what it's for", "err");
+          await post("/api/glory", { knight: who.value, amount: amt.value, reason: why.value });
+          close();
+        };
+        why.addEventListener("keydown", (e) => e.key === "Enter" && go());
+        return [h("label", { class: "field" }, h("span", {}, "Knight"), who),
+          h("label", { class: "field" }, h("span", {}, "Glory"), amt),
+          h("label", { class: "field" }, h("span", {}, "For"), why),
+          h("div", { class: "foot" }, h("button", { class: "btn ghost", onclick: () => close() }, "Cancel"),
+            h("button", { class: "btn primary", onclick: go }, icon("star"), "Award"))];
+      });
+    }
+
     function running() {
       const knights = cs.combatants.filter((c) => c.side === "party");
       const foes = cs.combatants.filter((c) => c.side !== "party");
@@ -133,6 +173,7 @@ export default {
             h("div", { class: "round-box" }, h("span", { class: "label" }, "Round"), h("span", { class: "round-n" }, cs.round)),
             h("button", { class: "btn primary", onclick: () => post("/api/combat/round") }, icon("hourglass"), "Next round"),
             h("button", { class: "btn", onclick: (e) => addMenu(e.currentTarget, availableKnights) }, icon("plus"), "Add"),
+            h("button", { class: "btn", onclick: awardGlory, title: "Award Glory by hand (an Opportunity's reward, a deed)" }, icon("star"), "Award Glory"),
             h("button", { class: "btn danger", onclick: endCombat }, icon("flag"), "End fight")),
           h("div", { class: "row", style: { marginTop: "10px" } },
             h("span", { class: "tag gules" }, `${up} of ${foes.length} foes standing`),
@@ -223,6 +264,7 @@ export default {
               title: k.mo.over ? `More than ${k.mo.limit} ${k.mo.limit === 2 ? "mounted foes" : "foes on foot"} can't all attack one knight` : "Multiple Opponents: the knight applies this to each opponent" },
               `⚠ ${k.mo.n} foes · −${-k.mo.mod} vs each`) : null,
             heightReminders(k.height_chips || [])),
+          h("span", { class: "cbt-glory", title: "Glory won this fight" }, `✦ ${cs.glory?.[k.party_id] ?? 0} this fight`),
           k.down ? h("button", { class: "btn ghost sm", onclick: () => mark(null) }, "Back in the fight")
             : [h("button", { class: "btn ghost sm", onclick: () => mark("unconscious") }, "Down"),
                h("button", { class: "btn ghost sm", onclick: () => mark("fled") }, "Out")]),
@@ -301,7 +343,7 @@ export default {
       if (!v) return;
       input.value = "";
       input.blur();
-      await post(`/api/combat/${c.id}/hp`, { delta: v });
+      await act(`/api/combat/${c.id}/hp`, { delta: v });
     }
 
     function modInput(c) {
@@ -324,12 +366,15 @@ export default {
         down.map((c) => h("button", { class: "cbt-chip-foe down", title: "Revive or reactivate",
           onclick: (e) => menu(e.currentTarget, [
             [c.status === "fled" ? "Reactivate (back in the fight)" : "Revive", () => post(`/api/combat/${c.id}/status`, { out: null }), { icon: "heart" }],
-            c.status !== "dead" ? ["Slay", () => post(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }] : false,
+            c.status !== "dead" ? ["Slay", () => act(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }] : false,
             c.ransom ? ["Roll ransom", () => post(`/api/combat/${c.id}/ransom`), { icon: "d6" }] : false,
             ...(["unconscious", "surrendered"].includes(c.status) ? [null, ...captiveMenu(c)] : []),
             c.captured_by ? ["Release the captive", () => post(`/api/combat/${c.id}/captured`, { by: null })] : false,
+            null, ["Reassign Glory…", () => whoDefeated(c.id, c.display_name), { icon: "star" }],
           ].filter((x) => x !== undefined && x !== false && x !== "")) },
           `${FATE[c.status][0]} ${c.display_name}`, h("span", { class: "faint small" }, ` · ${FATE[c.status][1]}`),
+          c.credit ? h("span", { class: "dcredit" }, ` ✦${c.credit.glory} ${c.credit.name}`)
+            : cs.uncredited?.includes(c.id) ? h("span", { class: "dwho" }, " Who defeated them?") : null,
           c.captured_by_name ? h("span", { class: "tag-captured" }, `captured by ${c.captured_by_name}`) : null)));
     }
 
@@ -398,7 +443,7 @@ export default {
         const shield = h("input", { type: "checkbox", checked: shieldDefault });
         const apply = async () => {
           if (dmg.value === "") return dmg.focus();
-          const r = await post("/api/combat/blow", { target: c.id, damage: dmg.value, shield: shield.checked });
+          const r = await act("/api/combat/blow", { target: c.id, damage: dmg.value, shield: shield.checked });
           ctx.showLastRoll(r.event);
           close();
         };
@@ -453,9 +498,9 @@ export default {
       const items = [];
       if (!isKnight) items.push([c.elite ? "Demote" : `Promote to ${c.promotion_title || "champion"}`, () => post(`/api/combat/${c.id}/promote`), { icon: "star" }]);
       items.push([c.status === "unconscious" || c.status === "dead" ? "Revive" : "Knock out",
-        () => post(`/api/combat/${c.id}/status`, { out: c.status === "unconscious" || c.status === "dead" ? null : "unconscious" }), { icon: "heart" }]);
-      if (c.status !== "dead") items.push(["Slay", () => post(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }]);
-      if (!isKnight && c.status !== "surrendered") items.push(["Surrenders", () => post(`/api/combat/${c.id}/status`, { out: "surrendered" }), { icon: "flag" }]);
+        () => act(`/api/combat/${c.id}/status`, { out: c.status === "unconscious" || c.status === "dead" ? null : "unconscious" }), { icon: "heart" }]);
+      if (c.status !== "dead") items.push(["Slay", () => act(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }]);
+      if (!isKnight && c.status !== "surrendered") items.push(["Surrenders", () => act(`/api/combat/${c.id}/status`, { out: "surrendered" }), { icon: "flag" }]);
       if (!isKnight) {
         items.push(null);
         items.push([c.mounted ? "Dismount (on foot)" : "Mount (mounted)", () => post(`/api/combat/${c.id}/mounted`, { mounted: !c.mounted }), { icon: "shield" }]);
@@ -463,8 +508,8 @@ export default {
         items.push([c.height_override ? "Height: automatic" : "Height: negated (spear/halberd)", () => post(`/api/combat/${c.id}/height`, { override: c.height_override ? null : "none" })]);
         if (["unconscious", "surrendered"].includes(c.status)) items.push(...captiveMenu(c));
       }
-      items.push([c.status === "fled" ? "Reactivate (resume tracking)" : "Deactivate (fled / not tracked)",
-        () => post(`/api/combat/${c.id}/status`, { out: c.status === "fled" ? null : "fled" }), { icon: "flag" }]);
+      items.push([c.status === "fled" ? "Reactivate (resume tracking)" : "Driven off / fled (Glory)",
+        () => act(`/api/combat/${c.id}/status`, { out: c.status === "fled" ? null : "fled" }), { icon: "flag" }]);
       if (!isKnight) {
         items.push(null);
         items.push([`Surrender check (Valorous ${c.valorous})`, () => post(`/api/combat/${c.id}/surrender`), { icon: "d20" }]);
@@ -478,7 +523,7 @@ export default {
     // ------------------------------------------------------------ wiring
     const refreshSoon = debounce(refresh, 50);
     ctx.onEvent((evs, { reset }) => {
-      if (reset || evs.some((e) => e.type.startsWith("combat.") || e.type.startsWith("meta."))) refreshSoon();
+      if (reset || evs.some((e) => e.type.startsWith("combat.") || e.type.startsWith("glory.") || e.type.startsWith("meta."))) refreshSoon();
     });
 
     await loadLibrary();

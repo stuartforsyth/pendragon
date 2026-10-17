@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from web.routes import cast, combat, library, npc, party, rolls, rules, session
+from web.routes import cast, combat, glory, library, npc, party, rolls, rules, session
 from web.state import AppState
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -24,7 +24,7 @@ def create_app(root=ROOT, sessions_dir=None, data_dir=None):
     templates = Jinja2Templates(directory=os.path.join(HERE, "templates"))
     app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")), name="static")
 
-    for module in (session, rolls, npc, cast, party, combat, library, rules):
+    for module in (session, rolls, npc, cast, party, combat, glory, library, rules):
         app.include_router(module.router)
 
     @app.get("/", response_class=HTMLResponse)

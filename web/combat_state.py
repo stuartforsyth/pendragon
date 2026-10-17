@@ -10,11 +10,14 @@ correct state — that is how "undo" works.
 from core import battle as B
 from core.combat import Combatant
 
+DEFEATED = B.DEFEATED
+
 COMBAT_STATE_TYPES = {
     "combat.started", "combat.added", "combat.hp", "combat.status",
     "combat.promote", "combat.modifier", "combat.engage", "combat.removed",
     "combat.round", "combat.ended", "combat.blow",
     "combat.mounted", "combat.horse", "combat.height", "combat.captured",
+    "glory.reassigned", "glory.awarded",
 }
 
 
@@ -27,7 +30,7 @@ def apply(state, ev, promotion_cfg=None):
         return {"active": True, "name": d.get("name", "Encounter"),
                 "round": 1, "players": d.get("players", 0),
                 "descriptions": d.get("descriptions", []),
-                "started_event": ev["id"],
+                "started_event": ev["id"], "credits": {}, "manual": {},
                 "combatants": [Combatant.from_dict(c) for c in d.get("combatants", [])]}
     if state is None or not state["active"]:
         return state
@@ -40,9 +43,19 @@ def apply(state, ev, promotion_cfg=None):
     if t == "combat.added":
         state["combatants"].append(Combatant.from_dict(d["combatant"]))
         return state
+    if t.startswith("glory."):
+        if d.get("fight") != state["started_event"]:
+            return state
+        if t == "glory.reassigned":
+            state.setdefault("credits", {})[d.get("cid")] = d.get("knight")
+        elif d.get("knight"):
+            manual = state.setdefault("manual", {})
+            manual[d["knight"]] = manual.get(d["knight"], 0) + int(d.get("amount", 0))
+        return state
     c = next((x for x in state["combatants"] if x.id == d.get("cid")), None)
     if c is None:
         return state
+    was_defeated = c.status in DEFEATED
     if getattr(c, "side", "foe") == "party" and t in ("combat.hp", "combat.blow"):
         return state                    # knights' health is the players' business
     if t == "combat.hp":
@@ -73,6 +86,14 @@ def apply(state, ev, promotion_cfg=None):
         c.height_override = d.get("override")
     elif t == "combat.captured":
         c.captured_by = d.get("by")
+    # Glory credit (Q10, derived): remember who the foe was fighting when it
+    # fell; striking the defeating event replays without it.
+    if getattr(c, "side", "foe") != "party" and state["combatants"].count(c):
+        now = c.status in DEFEATED
+        if now and not was_defeated:
+            c.defeated_with = c.engaged_with
+        elif was_defeated and not now:
+            c.defeated_with = ""
     return state
 
 
@@ -105,11 +126,10 @@ def table_view(c):
            "category": getattr(c, "category", "human"),
            "engaged_with": c.engaged_with}
     if side == "party":
-        out.update(player=getattr(c, "player", ""))
+        out.update(player=getattr(c, "player", ""), party_id=getattr(c, "party_id", None))
+    else:
+        out.update(attacks_horse=c.attacks_horse)
     return out
-
-
-DEFEATED = {"unconscious", "dead", "fled", "surrendered"}
 
 
 def _types(combatants):
@@ -145,6 +165,34 @@ def _height_word(foe_mod, knight_mod, foe, knight):
     return ""
 
 
+def credit_of(state, c):
+    """Who a defeated foe's Glory goes to: a reassignment, else the knight it
+    was fighting when it fell, else nobody. Returns (party_id, name) or None."""
+    if getattr(c, "side", "foe") == "party" or c.status not in DEFEATED:
+        return None
+    knights = [k for k in state["combatants"] if getattr(k, "side", "foe") == "party"]
+    credits = state.get("credits", {})
+    if c.id in credits:
+        pid = credits[c.id]
+        k = next((k for k in knights if k.party_id == pid), None)
+        return (pid, k.display_name) if pid and k else None
+    k = next((k for k in knights if k.display_name == c.defeated_with), None) if c.defeated_with else None
+    return (k.party_id, k.display_name) if k else None
+
+
+def glory_tally(state):
+    """Glory earned this fight per knight: defeated foes credited to them plus
+    manual awards made during the fight."""
+    tally = {k.party_id: 0 for k in state["combatants"] if getattr(k, "side", "foe") == "party"}
+    for c in state["combatants"]:
+        cr = credit_of(state, c)
+        if cr:
+            tally[cr[0]] = tally.get(cr[0], 0) + B.glory_for(c)
+    for pid, n in state.get("manual", {}).items():
+        tally[pid] = tally.get(pid, 0) + n
+    return tally
+
+
 def _derive(state, rows, view):
     """Height per engaged pair, Multiple Opponents per knight, captor names —
     computed from the pills on every serialise, never stored."""
@@ -176,6 +224,8 @@ def _derive(state, rows, view):
             fm, km = B.height(c.mounted, knight.mounted, c.height_override, c.attacks_horse)
         else:
             fm = km = 0
+        cr = credit_of(state, c)
+        r["credit"] = {"knight": cr[0], "name": cr[1], "glory": B.glory_for(c)} if cr else None
         captor = next((k.display_name for k in knights.values()
                        if getattr(k, "party_id", None) == c.captured_by), None) if c.captured_by else None
         r["mounted"] = c.mounted
@@ -198,6 +248,7 @@ def serialise(state, view):
                            o["engaged_with"] == (r["display_name"] if view == "gm" else r["name"])
                            and o["status"] == "active"]
     out = {"active": state["active"], "name": state["name"], "round": state["round"],
+           "started_event": state.get("started_event"),
            "players": state.get("players", 0),
            "descriptions": state.get("descriptions", []) if view == "gm" else [],
            "combatants": rows}
@@ -208,5 +259,8 @@ def serialise(state, view):
             types=_types(state["combatants"]),
             gm_notes=next((d["text"] for d in out["descriptions"] if d.get("type") == "GM notes"), ""),
             defeated=[c.id for c in foes if c.status in DEFEATED],
-            pool=[c.id for c in foes if c.status == "active" and c.engaged_with not in knights])
+            pool=[c.id for c in foes if c.status == "active" and c.engaged_with not in knights],
+            uncredited=[c.id for c in foes if c.status in DEFEATED and credit_of(state, c) is None
+                        and c.id not in state.get("credits", {})])
+    out["glory"] = glory_tally(state)
     return out

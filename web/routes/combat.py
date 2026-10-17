@@ -54,6 +54,41 @@ def _height(cs, c):
     return B.height(c.mounted, k.mounted, c.height_override, c.attacks_horse)[0]
 
 
+# -- Glory for defeated foes (derived on replay; see web.combat_state) --------
+
+def _knight_pid(cs, name):
+    k = next((k for k in cs["combatants"] if not _is_foe(k) and k.display_name == name), None)
+    return k.party_id if k else None
+
+
+def _defeat_note(cs, was_defeated, after):
+    """When this change defeats a foe, the Table line names the Glory and the
+    knight it goes to: (suffix, extra data)."""
+    if not _is_foe(after) or was_defeated or not B.is_defeated(after.status):
+        return "", {}
+    pid = _knight_pid(cs, after.engaged_with)
+    if not pid:
+        return "", {}
+    g = B.glory_for(after)
+    return (f" — +{g} Glory, {after.engaged_with}" if g else ""), {"touches": [pid], "glory_amount": g}
+
+
+def _who_defeated(state, cid, was_defeated):
+    """A foe that fell while fighting nobody: ask the GM who gets its Glory."""
+    if was_defeated:
+        return None
+    cs = state.combat_state()
+    c = next((x for x in cs["combatants"] if x.id == cid), None) if cs else None
+    if c is None or not _is_foe(c) or not B.is_defeated(c.status):
+        return None
+    if not any(not _is_foe(k) for k in cs["combatants"]):
+        return None
+    from web.combat_state import credit_of
+    if credit_of(cs, c) is None and c.id not in cs.get("credits", {}):
+        return {"kind": "who_defeated", "cid": cid, "name": c.display_name}
+    return None
+
+
 def _descriptions(combatants):
     seen, out = set(), []
     for c in combatants:
@@ -230,6 +265,7 @@ async def hp(request: Request, cid: str, body: dict):
     delta = to_int(body.get("delta"), "delta")
     if not delta:
         bad("Enter damage as a negative number or healing as a positive one")
+    was = B.is_defeated(c.status)
     old, msg = c.apply_hp(delta)          # on the replayed copy, just for the text
     text = f"{c.log_name}: {old} → {c.cur_hp} Hit Points ({delta:+d}){msg}"
     if _is_foe(c):
@@ -245,9 +281,10 @@ async def hp(request: Request, cid: str, body: dict):
             table = f"{c.display_name} recovers — {c.wound_state()}"
     else:
         table = text
-    ev = state.record("combat.hp", text, title=c.display_name,
-                      data={"cid": cid, "delta": delta, "table_text": table})
-    return {"event": ev}
+    suffix, extra = _defeat_note(cs, was, c)
+    ev = state.record("combat.hp", text + suffix, title=c.display_name,
+                      data={"cid": cid, "delta": delta, "table_text": table + suffix, **extra})
+    return {"event": ev, "prompt": _who_defeated(state, cid, was)}
 
 
 _STATUS_TEXT = {
@@ -272,16 +309,20 @@ async def status(request: Request, cid: str, body: dict):
         line = {None: "{n} is back in the fight", "unconscious": "{n} is down",
                 "fled": "{n} is out of the fight"}[out].format(n=c.display_name)
         ev = state.record("combat.status", line, title=c.display_name,
-                          data={"cid": cid, "out": out, "table_text": line})
+                          data={"cid": cid, "out": out, "table_text": line, "touches": [c.party_id]})
         return {"event": ev}
     if c.status == "fled" and out is None:
         log, table = "{n} resumes the fight — active again", "{n} returns to the fight"
     else:
         log, table = _STATUS_TEXT[out]
-    ev = state.record("combat.status", log.format(n=c.log_name), title=c.display_name,
+    was = B.is_defeated(c.status)
+    after = Combatant.from_dict(c.to_dict())
+    after.set_out(out)
+    suffix, extra = _defeat_note(cs, was, after)
+    ev = state.record("combat.status", log.format(n=c.log_name) + suffix, title=c.display_name,
                       data={"cid": cid, "out": out,
-                            "table_text": table.format(n=c.display_name)})
-    return {"event": ev}
+                            "table_text": table.format(n=c.display_name) + suffix, **extra})
+    return {"event": ev, "prompt": _who_defeated(state, cid, was)}
 
 
 @router.post("/api/combat/{cid}/promote")
@@ -327,8 +368,11 @@ async def engage(request: Request, cid: str, body: dict):
         table = f"{c.display_name} engages {who}" + (f" — {looks}" if looks else "")
     else:
         text = table = f"{c.display_name} no longer engaged"
-    ev = state.record("combat.engage", text, title=c.display_name,
-                      data={"cid": cid, "with": who, "table_text": table})
+    data = {"cid": cid, "with": who, "table_text": table}
+    pid = _knight_pid(cs, who) if _is_foe(c) else None
+    if pid:
+        data["touches"] = [pid]
+    ev = state.record("combat.engage", text, title=c.display_name, data=data)
     return {"event": ev}
 
 
@@ -411,6 +455,32 @@ async def captured(request: Request, cid: str, body: dict):
     line = f"{c.display_name} is taken captive by {k.display_name}"
     ev = state.record("combat.captured", line, title=c.display_name,
                       data={"cid": cid, "by": k.party_id, "table_text": line, "touches": [k.party_id]})
+    return {"event": ev}
+
+
+@router.post("/api/combat/{cid}/credit")
+async def credit(request: Request, cid: str, body: dict):
+    """Give a defeated foe's Glory to a knight (or to nobody): the answer to
+    "Who defeated them?" and the strip's "Reassign Glory"."""
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    if not _is_foe(c) or not B.is_defeated(c.status):
+        bad("Only a defeated foe's Glory can be credited")
+    pid = body.get("knight")
+    k = None
+    if pid:
+        k = next((x for x in cs["combatants"] if not _is_foe(x) and x.party_id == pid), None)
+        if k is None:
+            bad("That knight isn't in the fight")
+    g = B.glory_for(c)
+    line = (f"+{g} Glory · {k.display_name} defeated {c.display_name}" if k
+            else f"No Glory for {c.display_name}")
+    data = {"fight": cs["started_event"], "cid": cid, "knight": pid or None,
+            "knight_name": k.display_name if k else "", "foe": c.display_name, "amount": g if k else 0,
+            "table_text": line}
+    if k:
+        data.update(touches=[pid], glory_amount=g)
+    ev = state.record("glory.reassigned", line, title="Glory", data=data)
     return {"event": ev}
 
 
@@ -500,7 +570,10 @@ async def blow(request: Request, body: dict):
     critical/reckless dice, rebating, armour and shield/parry are applied and
     the wound lands on the target. Every number is shown to the players."""
     state, cs = _active(request)
-    return {"event": record_blow(state, cs, body)}
+    target = _combatant(cs, body["target"]) if body.get("target") else None
+    was = bool(target and B.is_defeated(target.status))
+    ev = record_blow(state, cs, body)
+    return {"event": ev, "prompt": _who_defeated(state, target.id, was) if target else None}
 
 
 def record_blow(state, cs, body):
@@ -558,9 +631,11 @@ def record_blow(state, cs, body):
     hit = ("CRITICAL " if b["critical"] else "") + ("reckless " if b["reckless"] else "")
     head = f"{who}’s {what or 'blow'}" if who else (what or "A blow")
     breakdown = blow_breakdown(b)
+    suffix, gextra = "", {}
     if target:
         tgt = Combatant.from_dict(target.to_dict())      # a copy, just for the text
         old, msg = tgt.apply_hp(-b["wound"]) if b["wound"] else (tgt.cur_hp, "")
+        suffix, gextra = _defeat_note(cs, B.is_defeated(target.status), tgt)
         consequences = []
         if b["knockdown"] == "automatic":
             consequences.append(f"KNOCKED DOWN ({b['full']} > twice Knockdown {target.knockdown})")
@@ -585,8 +660,8 @@ def record_blow(state, cs, body):
             "attacker": who, "weapon": what, "target": target.display_name if target else "",
             "blow": b, "breakdown": breakdown, "shield_broken": b["shield_broken"],
             "major": bool(target and "Major" in msg), "mortal": bool(target and "Mortal" in msg),
-            "table_text": table}
-    return state.record("combat.blow", text, title=title, data=data)
+            "table_text": table + suffix, **gextra}
+    return state.record("combat.blow", text + suffix, title=title, data=data)
 
 
 def _report_blow_on_knight(state, attacker, knight, weapon, expr, rolled, extra, body):
@@ -606,7 +681,7 @@ def _report_blow_on_knight(state, attacker, knight, weapon, expr, rolled, extra,
                         data={"cid": knight.id, "delta": 0, "attacker": who, "weapon": weapon or "",
                               "target": knight.display_name, "blow": b, "to_knight": True,
                               "knight_shield": shield, "breakdown": blow_breakdown(b),
-                              "table_text": text})
+                              "table_text": text, "touches": [knight.party_id]})
 
 
 # -- an enemy attacks a knight: Table 7.1 from the two results ----------------
@@ -642,7 +717,8 @@ async def attack(request: Request, body: dict):
     ev = state.record("combat.attack",
                       f"{foe.display_name} {roll['data']['outcome']} vs {knight.display_name} {k_text} → {verdict}",
                       title=f"{foe.display_name} vs {knight.display_name}",
-                      data={"verdict": verdict, "result": r["result"], "knight_shield": r["knight_shield"]})
+                      data={"verdict": verdict, "result": r["result"], "knight_shield": r["knight_shield"],
+                            "touches": [knight.party_id]})
     blow_ev = None
     if r["foe_strike"]:
         blow_ev = record_blow(state, state.combat_state(), {

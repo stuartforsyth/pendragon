@@ -1,0 +1,36 @@
+/* Reusable players' board components (web/static/js/board.js) — the Table's
+   parchment palette from table.css. */
+
+.kcard {
+  background: rgba(251, 244, 226, .85); border: 1px solid var(--parch-dark); border-radius: 8px;
+  padding: 9px 12px; display: grid; gap: 6px; align-content: start;
+}
+.kcard.down { opacity: .6; }
+.kc-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.kshield { width: 34px; height: 39px; flex: none; }
+.kc-id { min-width: 0; flex: 1; }
+.kc-name { font-family: var(--f-caps); font-weight: 700; font-size: 19px; line-height: 1.1; color: var(--azure);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kc-player { font-style: italic; font-size: 15px; color: var(--ink-soft); }
+
+.glory-counter { position: relative; text-align: right; display: grid; justify-items: end; }
+.glory-counter .gl-label { font-family: var(--f-caps); font-size: 11px; letter-spacing: .22em; color: var(--ink-soft); text-transform: uppercase; }
+.glory-counter .gl-value { font-family: var(--f-prose); font-weight: 600; font-size: 28px; line-height: 1; color: var(--or); font-variant-numeric: lining-nums; }
+.glory-counter .gl-plus { position: absolute; right: 0; top: -14px; font-family: var(--f-prose); font-weight: 600; font-size: 18px; color: var(--vert); opacity: 0; }
+.glory-counter.rose .gl-value { animation: gl-tick .9s ease-out; }
+.glory-counter.rose .gl-plus { animation: gl-plus 2.4s ease-out; }
+@keyframes gl-tick { 0% { transform: scale(1.5); color: var(--vert); } 100% { transform: scale(1); } }
+@keyframes gl-plus { 0% { opacity: 0; transform: translateY(8px); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+
+.fx-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.fx { font-family: var(--f-caps); font-size: 12px; font-weight: 600; letter-spacing: .03em; padding: 1px 8px; border-radius: 3px; border: 1px solid; }
+.fx.harm { color: var(--gules); border-color: var(--gules); background: rgba(142, 34, 25, .07); }
+.fx.boon { color: var(--vert); border-color: var(--vert); background: rgba(47, 107, 62, .08); }
+.fx.state { color: var(--ink-2); border-color: var(--parch-dark); background: #f6ecd2; }
+
+.happened { font-size: 16px; line-height: 1.3; color: var(--ink-2); }
+.happened i { font-style: normal; font-family: var(--f-caps); font-size: 11px; letter-spacing: .2em; color: var(--ink-soft); margin-right: 6px; text-transform: uppercase; }
+
+@media (prefers-reduced-motion: reduce) {
+  .glory-counter.rose .gl-value, .glory-counter.rose .gl-plus { animation: none; }
+}

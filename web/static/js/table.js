@@ -2,6 +2,7 @@
 // only what players may see (see web/table.py); this file just makes it sing.
 
 import { h, clear, icon, debounce } from "./lib.js";
+import { knightCard } from "./board.js";
 
 const $ = (id) => document.getElementById(id);
 let last = { heroId: null, states: {} };
@@ -196,45 +197,66 @@ function chronicle(p) {
     h("div", { class: "feed" }, h("h2", {}, "Earlier"), rest.slice(0, 10).map(mini)));
 }
 
-function fighter(f) {
+// The latest roll, big, for the Fray column.
+function latestRollCard(p) {
+  const latestRoll = p.feed.find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow");
+  if (!latestRoll) return [null, p.feed.slice(0, 7)];
+  const d = latestRoll.data || {};
+  const n = latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? (d.to_knight ? d.blow?.damage : d.blow?.wound)
+    : d.total ?? (latestRoll.type === "sealed" ? "?" : d.roll ?? "");
+  const num = h("div", { class: "bign" }, n);
+  if (latestRoll.id !== last.heroId && typeof n === "number") tumble(num, n);
+  last.heroId = latestRoll.id;
+  const card = h("div", { class: "card latest" },
+    h("div", { class: "rollline" }, num, h("div", { style: { minWidth: 0 } },
+      h("div", { class: "lt" }, latestRoll.title || (latestRoll.type === "sealed" ? "A secret roll" : "Roll")),
+      d.outcome ? [h("span", { class: `ribbon ${d.outcome}` }, OUT[d.outcome]), d.shown ? h("div", { class: "lx" }, `against ${d.shown}`) : null]
+        : latestRoll.type === "combat.blow" ? h("div", { class: "lx" }, `${d.target ? "on " + d.target + " · " : ""}${d.blow.full} rolled${d.blow.rebated ? ", rebated" : ""}${d.blow.critical ? " · CRITICAL" : ""}${d.mortal ? " · Slain!" : d.major ? " · Major Wound!" : ""}${d.blow.knockdown === "automatic" ? " · Knocked down!" : d.blow.knockdown === "check" ? " · Knockdown check!" : ""}`)
+        : h("div", { class: "lx" }, latestRoll.text))));
+  return [card, p.feed.filter((c) => c !== latestRoll).slice(0, 6)];
+}
+
+const FATE_WORD = { dead: "slain", fled: "fled", surrendered: "surrendered", unconscious: "unconscious" };
+
+// A foe on the players' board: shield, name, wound word, Height/horse chips.
+function foeTile(f, p) {
+  const c = p.combat.combatants.find((x) => x.id === f.id) || f;
   const prev = last.states[f.id];
   const hit = prev && prev !== f.wound_state;
   last.states[f.id] = f.wound_state;
-  const stCls = `s-${(f.side === "party" ? ({ unconscious: "unconscious", fled: "fled" }[f.status] || "unhurt") : f.wound_state).toLowerCase().replace(/\s+/g, "-")}`;
-  return h("div", { class: `card fighter ${stCls} ${f.elite ? "elite" : ""} ${f.npc ? "npc" : f.named ? "named" : ""} ${hit ? "hit" : ""}` },
-    shield(f),
-    h("div", { class: "nm" }, f.name, f.elite ? h("span", { class: "crown" }, "♛") : null),
-    h("div", { class: "st" }, f.side === "party" ? (f.wound_state || (f.player ? `played by ${f.player}` : "")) : f.wound_state),
-    f.engaged_with ? h("div", { class: "eng" }, `⚔ fighting ${f.engaged_with}`)
-      : f.engaged_by?.length ? h("div", { class: "eng" }, `⚔ fought by ${f.engaged_by.join(", ")}`) : null);
+  const ws = (f.wound_state || "").toLowerCase().replace(/\s+/g, "-");
+  return h("div", { class: `tfoe s-${ws} ${c.elite ? "elite" : ""} ${hit ? "hit" : ""}` },
+    shield(c), h("b", {}, f.name), h("span", { class: "wd" }, f.wound_state),
+    (f.chips || []).map((x) => h("span", { class: "tchip" }, x)));
 }
 
-function battle(p) {
+// The fight view: one lane per knight (their card, then the foes on them),
+// a Defeated / Waiting footer, and the Fray with the latest roll.
+function fight(p) {
   const cs = p.combat;
   if (!cs) return chronicle(p);
-  const knights = cs.combatants.filter((c) => c.side === "party");
+  const knights = p.knights || [];
   const foes = cs.combatants.filter((c) => c.side !== "party");
-  const latestRoll = p.feed.find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow");
-  const others = p.feed.filter((c) => c !== latestRoll).slice(0, 7);
-  let latest = null;
-  if (latestRoll) {
-    const d = latestRoll.data || {};
-    const n = latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? (d.to_knight ? d.blow?.damage : d.blow?.wound)
-      : d.total ?? (latestRoll.type === "sealed" ? "?" : d.roll ?? "");
-    const num = h("div", { class: "bign" }, n);
-    if (latestRoll.id !== last.heroId && typeof n === "number") tumble(num, n);
-    last.heroId = latestRoll.id;
-    latest = h("div", { class: "card latest" },
-      h("div", { class: "rollline" }, num, h("div", { style: { minWidth: 0 } },
-        h("div", { class: "lt" }, latestRoll.title || (latestRoll.type === "sealed" ? "A secret roll" : "Roll")),
-        d.outcome ? [h("span", { class: `ribbon ${d.outcome}` }, OUT[d.outcome]), d.shown ? h("div", { class: "lx" }, `against ${d.shown}`) : null]
-          : latestRoll.type === "combat.blow" ? h("div", { class: "lx" }, `${d.target ? "on " + d.target + " · " : ""}${d.blow.full} rolled${d.blow.rebated ? ", rebated" : ""}${d.blow.critical ? " · CRITICAL" : ""}${d.mortal ? " · Slain!" : d.major ? " · Major Wound!" : ""}${d.blow.knockdown === "automatic" ? " · Knocked down!" : d.blow.knockdown === "check" ? " · Knockdown check!" : ""}`)
-          : h("div", { class: "lx" }, latestRoll.text))));
-  }
-  return h("div", { class: "battle" },
-    h("div", { class: `sides ${knights.length && foes.length ? "" : "solo"}` },
-      knights.length ? h("section", { class: "host knights" }, h("h2", {}, "The Knights"), h("div", { class: "grid" }, knights.map(fighter))) : null,
-      foes.length ? h("section", { class: "host foes" }, h("h2", {}, "The Foe"), h("div", { class: "grid" }, foes.map(fighter))) : null),
+  const [latest, others] = latestRollCard(p);
+  const horses = foes.some((f) => f.status === "active" && f.attacks_horse &&
+    cs.combatants.find((k) => k.side === "party" && k.name === f.engaged_with)?.mounted);
+  const defeated = foes.filter((f) => FATE_WORD[f.status]);
+  const engagedNames = new Set(knights.map((k) => k.name));
+  const waiting = foes.filter((f) => f.status === "active" && !engagedNames.has(f.engaged_with));
+  const lanes = knights.length
+    ? knights.map((k) => h("div", { class: "tlane" }, knightCard(k),
+        h("div", { class: "tlane-foes" }, k.lane.foes.length ? k.lane.foes.map((f) => foeTile(f, p))
+          : h("span", { class: "tlane-none" }, k.status === "active" ? "No foe engaged" : ""))))
+    : [h("div", { class: "tlane solo" }, h("div", { class: "tlane-foes" }, foes.filter((f) => f.status === "active").map((f) => foeTile({ ...f, chips: [] }, p))))];
+  return h("div", { class: "fightview" },
+    h("div", { class: "lanes" },
+      horses ? h("div", { class: "fv-banner" }, "They go for the horses!") : null,
+      lanes,
+      defeated.length || waiting.length ? h("div", { class: "fv-foot" },
+        defeated.length ? [h("span", { class: "lbl" }, "Defeated"), defeated.map((f) => h("span", { class: "dft" },
+          h("s", {}, f.name), ` ${FATE_WORD[f.status]}`, f.credit ? h("span", { class: "dcr" }, ` ✦${f.credit.glory} ${f.credit.name}`) : null,
+          f.captured_by_name ? h("span", { class: "dcr" }, ` · captive of ${f.captured_by_name}`) : null))] : null,
+        waiting.length ? [h("span", { class: "lbl" }, "Waiting"), h("span", {}, waiting.map((f) => f.name).join(", "))] : null) : null),
     h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), latest, others.map(mini)));
 }
 
@@ -245,7 +267,7 @@ function render(p) {
   clear($("mode"), combat
     ? [h("span", {}, p.combat.active ? p.combat.name : `${p.combat.name} — ended`), h("span", { class: "round" }, "Round ", h("span", { class: "rn" }, p.combat.round))]
     : h("span", {}, "The Chronicle"));
-  clear($("view"), combat ? battle(p) : chronicle(p));
+  clear($("view"), combat ? fight(p) : chronicle(p));
 }
 
 // ---------------------------------------------------------------- live
