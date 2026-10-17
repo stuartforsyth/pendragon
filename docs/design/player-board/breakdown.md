@@ -1,6 +1,14 @@
 # Player board improvements — breakdown (stage 1)
 
-Status: **draft, awaiting user agreement on the piece list.**
+Status: **RESCOPED 2026-10-17 after mockup v1 review.**
+
+User direction: not a VTT and never intended to become one. The app's job is the UX for tracking
+complicated multi-turn mechanics — combat, battles, (planned) feasts and hunts. Everything else is
+role-play and must need no setup (no scene structure, per-roll knight tagging, consequence lines,
+or per-session sheets for ordinary play) — that setup costs play time and locks the game into a
+path when players go off-script or the GM deviates from a scenario. Mockup v1 over-reached
+(pieces 1–4 below as originally proposed are dropped/reduced); the board work now focuses on the
+mechanic modes.
 Goal (user): make the Table easier for players to follow what has happened, and whether it affected their knight. Battle/fight board is designed in docs/design/battles (piece 8) — this covers the rest of play and shared parts.
 
 ## User direction (2026-10-17)

@@ -115,6 +115,12 @@ not silently made.
 
 ## Notes
 
+- **Scope: only the mechanics that need tracking.** This process is for complicated, multi-turn
+  mechanics that need tracking or scoring (combat, battles, feasts, hunts). Role-play around
+  them stays untracked: never design setup, tagging or scaffolding the GM must do for ordinary
+  play. Anything scripted must be optional, with an on-the-fly path, so the game can follow
+  players off-script or the GM away from a scenario.
+
 - **Players roll and resolve at the table; the app is not a VTT.** The GM screenshares the
   Table; players roll physical dice, work out their own results (success, crit, sums,
   averages such as starting Morale) and tell the GM. That table-side work is part of the fun —
