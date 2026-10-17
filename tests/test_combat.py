@@ -81,3 +81,10 @@ def test_every_library_encounter_builds(rules):
     for name, defn in e.themes.items():
         e.generate_from_definition(to_editable(defn), 3)
         assert e.combatants, name
+
+
+def test_per_player_counts_round_half_up():
+    # Battle cards say "rounded normally": 1.5 per knight for 3 knights is 4.5 -> 5, not 4.
+    defn = {"roster": [{"adversary": "A", "count": 1.5, "per_player": True}]}
+    assert resolve_roster(defn, 3) == [("A", 5, False)]
+    assert resolve_roster(defn, 7) == [("A", 11, False)]

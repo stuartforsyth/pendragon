@@ -75,11 +75,11 @@ def resolve_roster(defn, n_players):
         count = line.get("count", 1)
         if "per_player" in line:                    # new self-scaling line
             if line["per_player"]:
-                n = max(1, round(_to_float(count, 1.0) * n_players))
+                n = max(1, _rhu(_to_float(count, 1.0) * n_players))
             else:
                 n = max(0, _to_int(count, 0))
         elif count == "per_player":                 # legacy global-scaled line
-            n = max(1, round(n_players * legacy_factor))
+            n = max(1, _rhu(n_players * legacy_factor))
         else:                                       # legacy fixed line
             n = max(0, _to_int(count, 0))
         if n:
@@ -394,7 +394,7 @@ class Encounter:
                     self.promote(c)
         else:  # legacy random-pool theme
             core = defn.get("core", list(self.templates))
-            count = max(1, round(n_players * defn.get("per_player", 1.0)))
+            count = max(1, _rhu(n_players * defn.get("per_player", 1.0)))
             for _ in range(count):
                 self.add_one(random.choice(core))
             leader = defn.get("leader")
