@@ -1,0 +1,386 @@
+<title>Pendragon Combat Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800&family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: four 16:9 frames stacked, each a scaled stage (container units) — two GM screens
+   in the app's "great hall at night" palette, two players' boards in its parchment palette. */
+:root {
+  color-scheme: dark;
+  --page: #0d0b0a; --page-ink: #d9cdb8; --page-dim: #8d806c;
+  /* GM console tokens (web/static/css/gm.css) */
+  --bg: #121010; --panel: #1c1917; --panel-2: #241f1b; --line: #3a312a; --line-2: #4a3f35;
+  --ink: #efe6d4; --ink-2: #c9bba3; --ink-dim: #9a8b75;
+  --or: #d4a84b; --or-bright: #f0c96b; --vert: #5fae74; --gules: #d0574b; --gules-deep: #8f2e26; --azure: #6c9fd8;
+  /* Table tokens (web/static/css/table.css) */
+  --parch: #efe3c6; --parch-2: #e6d5b0; --parch-dark: #cdb68a; --t-ink: #2a1d14; --t-ink-2: #4e3a28; --t-soft: #7a6247;
+  --t-gules: #8e2219; --t-or: #b08a36; --t-orb: #d2a645; --t-azure: #24507f; --t-vert: #2f6b3e;
+  --f-display: "Cinzel", Georgia, serif; --f-deco: "Cinzel Decorative", "Cinzel", Georgia, serif;
+  --f-prose: "EB Garamond", Garamond, Georgia, serif; --f-ui: "Alegreya Sans", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--page-ink); font: 16px/1.5 var(--f-prose); }
+.wrap { max-width: 1280px; margin: 0 auto; padding-block: 28px 60px; padding-inline: 16px; display: grid; gap: 34px; }
+header h1 { font: 700 clamp(26px, 4vw, 40px)/1.1 var(--f-display); margin: 0; color: var(--or-bright); letter-spacing: .04em; text-wrap: balance; }
+header p { margin: 8px 0 0; color: var(--page-dim); max-width: 70ch; }
+figure { margin: 0; display: grid; gap: 10px; }
+figcaption { display: grid; gap: 4px; max-width: 80ch; }
+figcaption b { font: 600 15px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--or); }
+figcaption span { color: var(--page-dim); font-size: 15.5px; }
+.frame { position: relative; width: 100%; aspect-ratio: 16 / 9; container-type: inline-size; overflow: hidden; border-radius: 10px; border: 1px solid #2c2520; }
+.frame.gm { background: radial-gradient(ellipse at 40% 45%, #201b18, var(--bg) 70%); color: var(--ink); font-family: var(--f-ui); }
+.frame.tb { background: radial-gradient(ellipse at 45% 45%, #f7eed8, var(--parch) 55%, #d9c49b 100%); color: var(--t-ink); font-family: var(--f-prose); border-color: #6b5434; }
+.links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.abs { position: absolute; }
+
+/* ---- shared token pieces ---- */
+.tok { position: absolute; transform: translate(-50%, calc(var(--fh) / -2)); display: grid; justify-items: center; gap: .3cqw; text-align: center; }
+.tok .face { position: relative; display: grid; place-items: center; }
+.tok .face svg { width: 100%; height: 100%; display: block; }
+.tok .nm { font-weight: 700; white-space: nowrap; line-height: 1.1; }
+.tok .sub { white-space: nowrap; line-height: 1.1; }
+.pill { display: inline-block; border-radius: 99px; padding: .1cqw .7cqw; font-size: .85cqw; font-weight: 700; border: 1px solid; white-space: nowrap; }
+
+/* GM tokens */
+.gm .tok .nm { font-size: 1.15cqw; color: var(--ink); }
+.gm .tok .sub { font-size: .9cqw; color: var(--ink-dim); }
+.gm .knight { --fh: 6cqw; } .gm .knight .face { width: 5.2cqw; height: 6cqw; }
+.gm .foe { --fh: 5cqw; } .gm .foe .face { width: 5cqw; height: 5cqw; }
+.gm .foe.big { --fh: 10cqw; } .gm .foe.big .face { width: 10cqw; height: 10cqw; }
+.gm .pill.mt { color: var(--azure); border-color: rgba(108,159,216,.5); }
+.gm .pill.ft { color: var(--ink-2); border-color: var(--line-2); }
+.gm .pill.mo { color: var(--or-bright); border-color: rgba(212,168,75,.5); }
+.gm .pill.ig { color: var(--ink-dim); border-color: var(--line-2); border-style: dashed; }
+.gm .tok.sel .face::after { content: ""; position: absolute; inset: -.6cqw; border-radius: 50%; border: .2cqw solid var(--or-bright); box-shadow: 0 0 1.4cqw rgba(240,201,107,.55); }
+.gm .tok.down { opacity: .45; filter: grayscale(.7); }
+.gm .tok.ghost { opacity: .8; }
+
+.topbar { position: absolute; left: 2.2cqw; right: 2.2cqw; top: 1.6cqw; display: flex; align-items: center; gap: 1cqw; }
+.topbar .ttl { display: grid; }
+.topbar .ttl small { font: 700 .8cqw var(--f-ui); letter-spacing: .2em; color: var(--ink-dim); text-transform: uppercase; }
+.topbar .ttl b { font: 700 1.9cqw var(--f-display); color: var(--or-bright); letter-spacing: .04em; }
+.topbar .rnd { margin-left: 1.4cqw; padding-left: 1.4cqw; border-left: 1px solid var(--line-2); font: 700 .8cqw var(--f-ui); color: var(--ink-dim); letter-spacing: .2em; display: grid; justify-items: center; }
+.topbar .rnd b { font: 700 1.9cqw var(--f-display); color: var(--ink); letter-spacing: 0; }
+.topbar .sp { flex: 1; }
+.btn { font: 700 .95cqw var(--f-ui); border: 1px solid var(--line-2); border-radius: .5cqw; padding: .45cqw 1cqw; color: var(--ink); background: var(--panel); white-space: nowrap; }
+.btn.pri { background: linear-gradient(#e2b85a, #c39236); color: #1d140b; border-color: #e7c06b; }
+.btn.dng { color: #f3c2bb; border-color: #6d3530; }
+.btn.tog { color: var(--ink-2); }
+.btn.tog i { display: inline-block; width: 1.6cqw; height: .9cqw; border-radius: 99px; background: var(--line-2); vertical-align: -.1cqw; margin-right: .4cqw; position: relative; }
+.btn.tog i::after { content: ""; position: absolute; left: .1cqw; top: .1cqw; width: .7cqw; height: .7cqw; border-radius: 50%; background: var(--ink-dim); }
+.hint { position: absolute; left: 2.2cqw; bottom: 1.4cqw; font-size: .95cqw; color: var(--ink-dim); }
+.hint b { color: var(--ink-2); }
+
+/* control card */
+.card { position: absolute; right: 1.8cqw; top: 7.2cqw; width: 25cqw; bottom: 1.8cqw; background: var(--panel); border: 1px solid var(--line-2); border-radius: .8cqw; padding: 1.2cqw 1.3cqw; display: grid; align-content: start; gap: .9cqw; box-shadow: 0 1cqw 3cqw rgba(0,0,0,.5); }
+.card h3 { margin: 0; font: 700 1.5cqw var(--f-display); color: var(--ink); letter-spacing: .03em; }
+.card .row { display: flex; align-items: center; gap: .7cqw; flex-wrap: wrap; }
+.card .lab { font: 700 .75cqw var(--f-ui); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-dim); }
+.hp { height: .7cqw; border-radius: 99px; background: #2b2420; overflow: hidden; flex: 1; }
+.hp i { display: block; height: 100%; background: linear-gradient(90deg, #4f8a5e, #79b585); }
+.hp i.w { background: linear-gradient(90deg, #a0752c, #d4a84b); }
+.num { font: 700 1.05cqw var(--f-ui); color: var(--ink); font-variant-numeric: tabular-nums; }
+.wpn { flex: 1; border: 1px solid var(--line-2); border-radius: .5cqw; padding: .45cqw .8cqw; font-size: 1cqw; color: var(--ink); display: flex; gap: .5cqw; align-items: baseline; }
+.wpn b { color: var(--or-bright); }
+.wpn s { text-decoration: none; color: var(--ink-dim); margin-left: auto; }
+.against { display: grid; gap: .45cqw; }
+.against div { display: flex; align-items: center; gap: .6cqw; font-size: 1cqw; padding: .4cqw .6cqw; border: 1px solid var(--line); border-radius: .5cqw; }
+.against div.off { opacity: .55; border-style: dashed; }
+.against .chk { width: 1.1cqw; height: 1.1cqw; border-radius: .25cqw; background: var(--or); display: grid; place-items: center; color: #1d140b; font-size: .8cqw; font-weight: 800; }
+.against .off .chk { background: transparent; border: 1px solid var(--line-2); color: transparent; }
+.against em { margin-left: auto; font-style: normal; color: var(--ink-dim); font-size: .85cqw; }
+.cbtns { display: grid; grid-template-columns: 1fr 1fr; gap: .6cqw; }
+.cbtns .btn { text-align: center; }
+.note { font-size: .9cqw; color: var(--ink-dim); line-height: 1.35; }
+
+/* pool / fallen strips */
+.strip { position: absolute; display: flex; align-items: center; gap: .8cqw; font-size: .95cqw; color: var(--ink-dim); }
+.strip .lab { font: 700 .75cqw var(--f-ui); letter-spacing: .2em; text-transform: uppercase; }
+.fallen { color: var(--ink-dim); }
+.fallen s { color: var(--ink-2); }
+.fallen b { color: var(--or); font-weight: 700; }
+
+/* ---- the players' board ---- */
+.tb .tok .nm { font: 700 1.25cqw var(--f-display); color: var(--t-azure); letter-spacing: .02em; }
+.tb .tok .sub { font-size: 1.1cqw; font-style: italic; color: var(--t-soft); }
+.tb .foe .nm { color: var(--t-gules); }
+.tb .knight { --fh: 6.9cqw; } .tb .knight .face { width: 6cqw; height: 6.9cqw; filter: drop-shadow(0 .4cqw .6cqw rgba(60,35,10,.35)); }
+.tb .foe { --fh: 5.4cqw; } .tb .foe .face { width: 5.4cqw; height: 5.4cqw; filter: drop-shadow(0 .4cqw .6cqw rgba(60,35,10,.35)); }
+.tb .foe.big { --fh: 12cqw; } .tb .foe.big .face { width: 12cqw; height: 12cqw; }
+.tb .glory { font: 700 1.2cqw var(--f-display); color: var(--t-or); }
+.tb .ws { font: italic 500 1.25cqw var(--f-prose); color: var(--t-vert); }
+.tb .ws.hurt { color: #8a5a12; } .tb .ws.bad { color: var(--t-gules); }
+.tb .tok.hit .face { animation: hit 1.6s ease-out infinite; }
+.tb .tok.down { opacity: .5; filter: grayscale(.6); }
+.tb .tok.down .face { transform: rotate(-80deg); }
+@keyframes hit { 0%, 100% { transform: none; } 6% { transform: translateX(-.5cqw) rotate(-4deg); } 12% { transform: translateX(.4cqw) rotate(3deg); } 18% { transform: none; } }
+
+.tb-head { position: absolute; left: 2.4cqw; right: 2.4cqw; top: 1.4cqw; display: flex; align-items: center; gap: 1.2cqw; }
+.tb-head .crest { width: 3.2cqw; height: 3.6cqw; }
+.tb-head b { font: 700 2.4cqw var(--f-deco); color: var(--t-gules); letter-spacing: .02em; }
+.tb-head .rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--t-or), transparent); }
+.tb-head .rnd { font: 700 1.8cqw var(--f-display); color: var(--t-gules); border: .15cqw solid var(--t-gules); border-radius: .4cqw; padding: .1cqw 1cqw; }
+.tb-head .ev { font: 600 1.05cqw var(--f-display); letter-spacing: .3em; text-transform: uppercase; color: var(--t-soft); }
+
+.blow { position: absolute; display: flex; gap: 1.3cqw; align-items: center; background: rgba(251,244,226,.93); border: .2cqw solid var(--t-orb); border-radius: .8cqw; padding: 1cqw 1.4cqw; box-shadow: 0 0 0 .3cqw rgba(210,166,69,.35), 0 0 2.4cqw rgba(210,166,69,.7); }
+.blow .seal { position: relative; width: 7cqw; height: 7cqw; flex: none; display: grid; place-items: center; }
+.blow .seal svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.blow .seal b { position: relative; font: 600 3.2cqw var(--f-prose); color: #fbf4e2; font-variant-numeric: lining-nums; }
+.blow .ban { font: 700 1cqw var(--f-display); letter-spacing: .3em; text-transform: uppercase; color: #2a1d14; background: linear-gradient(90deg, #b08a36, #f1d27a 50%, #b08a36); padding: .2cqw .8cqw; display: inline-block; margin-bottom: .4cqw; }
+.blow p { margin: 0; font-size: 1.45cqw; line-height: 1.25; color: var(--t-ink); }
+.blow small { display: block; margin-top: .3cqw; font-size: 1.05cqw; color: var(--t-soft); }
+.blow .fx { display: inline-block; margin-top: .4cqw; font: 700 .95cqw var(--f-display); letter-spacing: .06em; color: #fbf4e2; background: var(--t-gules); border-radius: .25cqw; padding: .1cqw .6cqw; }
+
+.kband { position: absolute; left: 2.4cqw; right: 2.4cqw; bottom: 1.6cqw; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2cqw; }
+.kband > div { background: rgba(251,244,226,.8); border: 1px solid var(--parch-dark); border-radius: .6cqw; padding: .6cqw .9cqw; display: grid; grid-template-columns: 1fr auto; gap: .1cqw .8cqw; }
+.kband b { font: 700 1.2cqw var(--f-display); color: var(--t-azure); }
+.kband .g { font: 600 1.6cqw var(--f-prose); color: var(--t-or); grid-row: span 2; align-self: center; text-align: right; }
+.kband .g small { display: block; font: 600 .7cqw var(--f-display); letter-spacing: .25em; color: var(--t-soft); }
+.kband i { font-size: 1.05cqw; color: var(--t-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* dice tray on the board */
+.tray { position: absolute; left: 0; right: 0; height: 9cqw; pointer-events: none; perspective: 60cqw; }
+.die { position: absolute; width: 3.2cqw; height: 3.2cqw; transform-style: preserve-3d; }
+.die .f { position: absolute; inset: 0; border-radius: .5cqw; background: #fbf4e2; border: .12cqw solid #b9a27a; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: .35cqw; box-shadow: inset 0 0 .6cqw rgba(120,90,40,.35); }
+.die.red .f { background: #9b2a20; border-color: #5e140e; }
+.die.gold .f { background: #e8c869; border-color: #8a6a2a; }
+.die .f i { width: .55cqw; height: .55cqw; border-radius: 50%; background: #2a1d14; align-self: center; justify-self: center; }
+.die.red .f i { background: #fbf4e2; }
+.die .f1 { transform: translateZ(1.6cqw); } .die .f6 { transform: rotateY(180deg) translateZ(1.6cqw); }
+.die .f2 { transform: rotateY(90deg) translateZ(1.6cqw); } .die .f5 { transform: rotateY(-90deg) translateZ(1.6cqw); }
+.die .f3 { transform: rotateX(90deg) translateZ(1.6cqw); } .die .f4 { transform: rotateX(-90deg) translateZ(1.6cqw); }
+.rolling .die { animation: tumble var(--d, 1.6s) cubic-bezier(.15,.6,.3,1) both; }
+@keyframes tumble { 0% { transform: translate(var(--sx), -6cqw) rotateX(720deg) rotateY(540deg) rotateZ(200deg); } 70% { transform: translate(0, 0) rotateX(var(--rx2)) rotateY(var(--ry2)); } 85% { transform: translate(0, -.6cqw) rotateX(var(--rx)) rotateY(var(--ry)); } 100% { transform: translate(0, 0) rotateX(var(--rx)) rotateY(var(--ry)); } }
+.d20 { position: absolute; width: 6cqw; height: 6cqw; display: grid; place-items: center; }
+.d20 svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.d20 b { position: relative; font: 700 2.2cqw var(--f-display); color: #2a1d14; }
+.rolling .d20 { animation: spin20 1.7s cubic-bezier(.15,.6,.3,1) both; }
+@keyframes spin20 { 0% { transform: translate(-30cqw, -5cqw) rotate(-900deg) scale(.7); } 75% { transform: translate(0, 0) rotate(8deg) scale(1.05); } 100% { transform: none; } }
+.replay { position: absolute; right: 1.6cqw; bottom: 1.4cqw; font: 700 max(11px, .95cqw) var(--f-ui); background: rgba(251,244,226,.9); color: var(--t-ink); border: 1px solid var(--parch-dark); border-radius: 99px; padding: .3cqw 1cqw; cursor: pointer; z-index: 3; }
+.replay:focus-visible { outline: 2px solid var(--t-gules); }
+.fray { position: absolute; right: 2.4cqw; top: 6.6cqw; width: 22cqw; display: grid; gap: .8cqw; }
+.fray .h { font: 600 1cqw var(--f-display); letter-spacing: .3em; text-transform: uppercase; color: var(--t-soft); }
+.fray .m { background: rgba(251,244,226,.85); border: 1px solid var(--parch-dark); border-left: .3cqw solid var(--t-gules); border-radius: .5cqw; padding: .6cqw .9cqw; font-size: 1.1cqw; line-height: 1.25; }
+.fray .m.r { border-left-color: var(--t-or); }
+.fray .m b { font: 700 1cqw var(--f-display); display: block; color: var(--t-ink); letter-spacing: .03em; }
+.fray .m .res { font: 700 1cqw var(--f-display); color: #fbf4e2; background: var(--t-gules); border-radius: .2cqw; padding: 0 .4cqw; margin-right: .3cqw; }
+.fray .m .ok { font: 700 1cqw var(--f-display); color: var(--t-vert); margin-right: .3cqw; }
+
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 26px; }
+.legend div { border-top: 1px solid #2c2520; padding-top: 10px; }
+.legend b { display: block; font: 600 14px var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--or); margin-bottom: 4px; }
+.legend p { margin: 0; color: var(--page-dim); font-size: 15.5px; }
+@media (prefers-reduced-motion: reduce) { .rolling .die, .rolling .d20, .tb .tok.hit .face, .glowline { animation: none !important; } }
+.glowline { animation: pulse 2.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: .75; } 50% { opacity: 1; } }
+.flow { stroke-dasharray: 2 3; animation: flow 1.1s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -5; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Combat board</h1>
+    <p>A concept for the combat rework: tokens instead of rows, engagements drawn as glowing red lines, and dice that roll across the players' board. Your party, mid-fight. This is a sketch to agree the direction before designing each piece. Nothing here is clickable except the dice replay.</p>
+  </header>
+
+  <figure>
+    <div class="frame gm" id="gm-lake"></div>
+    <figcaption><b>1 · GM screen: three knights on the lake monster</b>
+      <span>One engagement: the three knights fight the monster together. The monster is selected, so its card is open on the right. It takes −10 on each exchange (−5 per knight after the first). Sir Emrys is <i>ignored</i> this round: his line is dashed, he gets an unopposed action, and the monster takes only −5. <b>Attack all</b> rolls the monster's attack once for each checked knight in turn.</span></figcaption>
+  </figure>
+
+  <figure>
+    <div class="frame tb" id="tb-lake"><button class="replay" type="button" data-replay="tb-lake">Roll the dice again</button></div>
+    <figcaption><b>2 · Players' board: the same moment</b>
+      <span>The same picture in parchment and ink. No numbers on the monster, only how hurt it looks. The dice tumble across the board and land on the values the app rolled: Dame Cwylog's 5D6 plus the gold +4D6 for her critical. The blow is told as a sentence, and the monster shakes when struck.</span></figcaption>
+  </figure>
+
+  <figure>
+    <div class="frame gm" id="gm-picts"></div>
+    <figcaption><b>3 · GM screen: three Knifemen on each knight</b>
+      <span>Three engagements, one per knight. A Knifeman is being dragged from <i>Waiting</i> onto Sir Emrys: drop it and the line locks in. Dragging a knight onto a Knifeman does the same thing. Fallen foes leave their engagement and line up below with the Glory they earned. The Knifemen's horse attacks show here for you, and never on the board.</span></figcaption>
+  </figure>
+
+  <figure>
+    <div class="frame tb" id="tb-picts"><button class="replay" type="button" data-replay="tb-picts">Roll the dice again</button></div>
+    <figcaption><b>4 · Players' board: the Knifemen</b>
+      <span>Each knight with the foes on them. A gold d20 lands for a foe's attack roll, with no damage yet. The board gives no hint that the Knifemen are going for the horses.</span></figcaption>
+  </figure>
+
+  <div class="legend">
+    <div><b>Engage</b><p>Drag any token onto any other: a knight onto a foe, or a foe onto a knight. To unlink, drag a token away, or use ✕ on its line. One gesture is one log entry, so one strike undoes it.</p></div>
+    <div><b>Layout</b><p>The app arranges each engagement as a cluster: a lone foe in the middle with knights around it, or a knight in the middle with foes around them. No map, no distances.</p></div>
+    <div><b>The card</b><p>Click a token to open its card: weapon in hand, Attack (or Attack all), Hit, ±HP, Disarmed, status, horse, Height, modifier. Everything the rows do today, one token at a time.</p></div>
+    <div><b>Dice</b><p>A 3D dice engine, bundled into the app so it works offline, rolls the server's real numbers: never a separate re-roll. With reduced motion on, the result simply appears.</p></div>
+  </div>
+</div>
+
+<script>
+const SHIELD = '<svg viewBox="0 0 44 50"><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="#24507f"/><path d="M6 32 22 18l16 14" fill="none" stroke="#d2a645" stroke-width="4"/><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="none" stroke="#4e3a28" stroke-width="2"/></svg>';
+const MEDAL = (fill, ring, glyph, pct, ringCol) => {
+  const r = 46, c = 2 * Math.PI * r, arc = c * pct;
+  return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="41" fill="${fill}" stroke="${ring}" stroke-width="3"/>${glyph}` +
+    (pct != null ? `<circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="5"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${ringCol}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${arc} ${c}" transform="rotate(-90 50 50)"/>` : "") + "</svg>";
+};
+const SERPENT = (col) => `<path d="M26 70c8-4 10-14 4-20s-4-16 6-20 22 2 24 12-6 14-2 20 14 6 18-2" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round"/><circle cx="40" cy="31" r="3" fill="${col}"/><path d="M33 26l-6-6M45 25l3-8" stroke="${col}" stroke-width="3" stroke-linecap="round"/>`;
+const DAGGER = (col) => `<path d="M50 20v42M42 58h16M50 62v14" stroke="${col}" stroke-width="5" stroke-linecap="round"/><path d="M50 18l4 8h-8z" fill="${col}"/>`;
+
+function tok(t, gm) {
+  const el = document.createElement("div");
+  el.className = `tok ${t.kind} ${t.big ? "big" : ""} ${t.cls || ""}`;
+  el.style.left = (t.x / 160 * 100) + "%"; el.style.top = (t.y / 90 * 100) + "%";
+  let face;
+  if (t.kind === "knight") face = SHIELD;
+  else if (t.monster) face = MEDAL(gm ? "#22302c" : "#e9dcc0", gm ? "#5d7b70" : "#2f5e57", SERPENT(gm ? "#9fd0c2" : "#2f5e57"), gm ? t.pct : null, t.pct > .5 ? "#79b585" : "#d4a84b");
+  else face = MEDAL(gm ? "#2b201a" : "#f3e7cc", gm ? "#7a4a3a" : "#8e2219", DAGGER(gm ? "#e2b7a8" : "#8e2219"), gm ? t.pct : null, t.pct > .5 ? "#79b585" : t.pct > .25 ? "#d4a84b" : "#d0574b");
+  el.innerHTML = `<div class="face">${face}</div><div class="nm">${t.name}</div>${t.sub ? `<div class="sub">${t.sub}</div>` : ""}${t.pills || ""}`;
+  return el;
+}
+
+function links(frame, pairs, gm) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 160 90"); svg.setAttribute("preserveAspectRatio", "none"); svg.classList.add("links");
+  const id = frame.id + "-g";
+  svg.innerHTML = `<defs><filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${gm ? .9 : .7}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  for (const p of pairs) {
+    const l = document.createElementNS(ns, "line");
+    l.setAttribute("x1", p[0].x); l.setAttribute("y1", p[0].y); l.setAttribute("x2", p[1].x); l.setAttribute("y2", p[1].y);
+    const col = gm ? "#e2483b" : "#a3241a";
+    l.setAttribute("stroke", p.ignored ? (gm ? "#6f6455" : "#9a845f") : col);
+    l.setAttribute("stroke-width", p.ignored ? .35 : (p.hot ? .9 : .6));
+    l.setAttribute("stroke-linecap", "round");
+    if (p.ignored) l.setAttribute("stroke-dasharray", "1.2 1.4");
+    else { l.setAttribute("filter", `url(#${id})`); l.classList.add("glowline"); if (p.flow) l.classList.add("flow"); }
+    svg.appendChild(l);
+  }
+  frame.prepend(svg);
+}
+
+function add(frame, html, cls, style) { const d = document.createElement("div"); d.className = cls; if (style) Object.assign(d.style, style); d.innerHTML = html; frame.appendChild(d); return d; }
+
+/* ---------- frame 1: GM, lake monster ---------- */
+(() => {
+  const f = document.getElementById("gm-lake");
+  add(f, `<div class="ttl"><small>In combat</small><b>The Lake Monster</b></div><div class="rnd">ROUND<b>2</b></div><span class="sp"></span>
+    <span class="btn pri">⧗ Next round</span><span class="btn">+ Add</span><span class="btn tog"><i></i>Rebated (for love)</span><span class="btn dng">⚑ End fight</span>`, "topbar");
+  const M = { x: 62, y: 50 }, K = [{ x: 22, y: 26 }, { x: 16, y: 52 }, { x: 22, y: 78 }];
+  links(f, [[K[0], M], Object.assign([K[1], M], { hot: true, flow: true }), Object.assign([K[2], M], { ignored: true })], true);
+  const ks = [["Sir Erik the Cruel", "Jason", '<span class="pill mt">Mounted</span>'], ["Dame Cwylog", "Michael", '<span class="pill ft">On foot</span>'], ["Sir Emrys", "Paul", '<span class="pill ig">ignored this round</span>']];
+  ks.forEach((k, i) => f.appendChild(tok({ kind: "knight", x: K[i].x, y: K[i].y, name: k[0], sub: k[1], pills: k[2] }, true)));
+  f.appendChild(tok({ kind: "foe", monster: true, big: true, x: M.x, y: M.y, name: "The Lake Monster", sub: "61 / 80 · Wounded", pct: 61 / 80, cls: "sel",
+    pills: '<span class="pill mo">−5 vs each · 1 ignored</span>' }, true));
+  add(f, `<h3>The Lake Monster</h3>
+    <div class="row"><div class="hp"><i style="width:76%"></i></div><span class="num">61 / 80</span></div>
+    <div class="lab">In its jaws</div>
+    <div class="row"><div class="wpn">⚔ Bite <b>18</b> · 8D6 <s>▾</s></div></div>
+    <div class="lab">Attack all — one exchange each</div>
+    <div class="against">
+      <div><span class="chk">✓</span>Sir Erik the Cruel<em>18 −5 = 13</em></div>
+      <div><span class="chk">✓</span>Dame Cwylog<em>18 −5 = 13</em></div>
+      <div class="off"><span class="chk">✓</span>Sir Emrys<em>ignored · unopposed</em></div>
+    </div>
+    <div class="cbtns"><span class="btn pri">⚔ Attack all (2)</span><span class="btn">Attack one ▾</span><span class="btn dng">⛨ Hit by…</span><span class="btn">±HP</span></div>
+    <div class="note">Armour 10 · Knockdown 30 · Major Wound 24. Glory 250, shared by the knights who defeat it (Table A.1).</div>`, "card");
+  add(f, `<b>Drag</b> a token onto another to engage · <b>✕</b> on a line to part them · click a token for its card`, "hint");
+})();
+
+/* ---------- frame 2: board, lake monster ---------- */
+function tbHead(f, ev, round) {
+  add(f, `<svg class="crest" viewBox="0 0 44 50"><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="#8e2219"/><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="none" stroke="#d2a645" stroke-width="2"/></svg>
+    <b>Pendragon</b><span class="rule"></span><span class="ev">${ev}</span><span class="rnd">Round ${round}</span>`, "tb-head");
+}
+function die(tray, x, y, v, cls, delay) {
+  const R = { 1: [0, 0], 2: [0, -90], 3: [-90, 0], 4: [90, 0], 5: [0, 90], 6: [0, 180] }[v];
+  const pips = { 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
+  const face = (n) => `<div class="f f${n}">${Array.from({ length: 9 }, (_, i) => pips[n].includes(i + 1) ? "<i></i>" : "<span></span>").join("")}</div>`;
+  const d = document.createElement("div");
+  d.className = `die ${cls || ""}`;
+  d.style.left = x + "cqw"; d.style.top = y + "cqw";
+  d.style.setProperty("--rx", R[0] + "deg"); d.style.setProperty("--ry", R[1] + "deg");
+  d.style.setProperty("--rx2", (R[0] + 20) + "deg"); d.style.setProperty("--ry2", (R[1] - 25) + "deg");
+  d.style.setProperty("--sx", (-40 - Math.random() * 20) + "cqw"); d.style.setProperty("--d", (1.4 + delay) + "s");
+  d.innerHTML = [1, 2, 3, 4, 5, 6].map(face).join("");
+  tray.appendChild(d);
+}
+(() => {
+  const f = document.getElementById("tb-lake");
+  tbHead(f, "The Lake Monster", 2);
+  const M = { x: 64, y: 44 }, K = [{ x: 28, y: 22 }, { x: 22, y: 46 }, { x: 28, y: 70 }];
+  links(f, [[K[0], M], Object.assign([K[1], M], { hot: true }), [K[2], M]], false);
+  [["Sir Erik the Cruel", "Jason"], ["Dame Cwylog", "Michael"], ["Sir Emrys", "Paul"]].forEach((k, i) =>
+    f.appendChild(tok({ kind: "knight", x: K[i].x, y: K[i].y, name: k[0], sub: `played by ${k[1]}` }, false)));
+  f.appendChild(tok({ kind: "foe", monster: true, big: true, x: M.x, y: M.y, name: "The Lake Monster", cls: "hit", pills: '<span class="ws hurt">Badly wounded</span>' }, false));
+  add(f, `<div class="seal"><svg viewBox="0 0 100 100"><path d="M50 3c8 9 16 2 22 10s-1 16 8 22 4 16 9 24-6 14-5 22-12 9-17 15-14 0-17 0-11 6-17 0-17-7-17-15-9-14-4-22 1-16 9-24-1-15 8-22 14 0 22-10Z" fill="#8e2219"/></svg><b>33</b></div>
+    <div><span class="ban">★ Critical hit! ★</span><p>A critical blow! Dame Cwylog’s sword inflicts 33 points of damage on the Lake Monster, who is badly wounded.</p><small>43 rolled − 10 armour = 33</small></div>`,
+    "blow", { left: "40%", right: "2.4cqw", top: "66%" });
+  add(f, `<div><b>Sir Erik the Cruel</b><i>Last: dodged the monster’s bite</i></div><div class="g"><small>GLORY</small>0</div>`, "kband-x", { display: "none" });
+  const tray = add(f, "", "tray rolling", { top: "12%" });
+  [[48, 3, 4], [52, 4.6, 6], [56, 2.6, 3], [60, 4.2, 5], [64, 2.4, 2], [70, 3.4, 6, "gold"], [74, 4.8, 4, "gold"], [78, 2.8, 5, "gold"], [82, 4, 3, "gold"]]
+    .forEach(([x, y, v, c], i) => die(tray, x, y, v, c, i * .06));
+})();
+
+/* ---------- frame 3: GM, Knifemen ---------- */
+(() => {
+  const f = document.getElementById("gm-picts");
+  add(f, `<div class="ttl"><small>In combat · The Battle of Bedegraine · Day 1 · Turn 1</small><b>Pictish Knifemen</b></div><div class="rnd">ROUND<b>1</b></div><span class="sp"></span>
+    <span class="btn pri">⧗ Next round</span><span class="btn">⇆ Distribute foes equally</span><span class="btn tog"><i></i>Rebated (for love)</span><span class="btn dng">⚑ End fight</span>`, "topbar");
+  const C = [{ x: 28, y: 26 }, { x: 78, y: 26 }, { x: 128, y: 26 }];
+  const ANG = { 3: [0.08, 0.5, 0.92], 2: [0.2, 0.8] };
+  const around = (c, n, r) => ANG[n].map((a) => ({ x: c.x + r * Math.cos(Math.PI * a), y: c.y + 14 + r * .75 * Math.sin(Math.PI * a) }));
+  const pairs = [], toks = [];
+  const knights = [["Sir Erik the Cruel", "Mounted"], ["Dame Cwylog", "Mounted"], ["Sir Emrys", "On foot"]];
+  const foes = [[["1", .7], ["2", 1], ["3", .3]], [["4", 1], ["5", .55], ["6", 1]], [["7", 1], ["8", 1]]];
+  knights.forEach((k, i) => {
+    toks.push(tok({ kind: "knight", x: C[i].x, y: C[i].y, name: k[0], pills: `<span class="pill ${k[1] === "Mounted" ? "mt" : "ft"}">${k[1]}</span>` +
+      (foes[i].length > 1 ? ` <span class="pill mo">⚠ ${foes[i].length} foes · −${(foes[i].length - 1) * 5} vs each</span>` : "") }, true));
+    around(C[i], foes[i].length, 19).forEach((p, j) => {
+      pairs.push([C[i], p]);
+      toks.push(tok({ kind: "foe", x: p.x, y: p.y, name: "Knifeman " + foes[i][j][0], pct: foes[i][j][1], sub: k[1] === "Mounted" ? "⇣ horse · no Height" : "Dagger 15" }, true));
+    });
+  });
+  const ghost = { x: 104, y: 70 };
+  pairs.push(Object.assign([C[2], ghost], { flow: true }));
+  links(f, pairs, true);
+  toks.forEach((t) => f.appendChild(t));
+  f.appendChild(tok({ kind: "foe", x: ghost.x, y: ghost.y, name: "Knifeman 9", sub: "dragging…", pct: 1, cls: "ghost" }, true));
+  add(f, `<span class="lab">Waiting</span><span>Knifeman 9 (being dragged)</span>`, "strip", { left: "2.2cqw", bottom: "5.4cqw" });
+  add(f, `<span class="lab">Fallen</span><span class="fallen"><s>Knifeman 10</s> slain · <b>✦5</b> Sir Erik</span><span class="fallen"><s>Knifeman 11</s> fled · <b>✦5</b> Dame Cwylog</span>`, "strip", { left: "2.2cqw", bottom: "2.4cqw" });
+})();
+
+/* ---------- frame 4: board, Knifemen ---------- */
+(() => {
+  const f = document.getElementById("tb-picts");
+  tbHead(f, "Bedegraine · Day 1 · Turn 1", 1);
+  const C = [{ x: 21, y: 18 }, { x: 59, y: 18 }, { x: 97, y: 18 }];
+  const around = (c, n, r) => [0.06, 0.5, 0.94].map((a) => ({ x: c.x + r * Math.cos(Math.PI * a), y: c.y + 15 + r * .85 * Math.sin(Math.PI * a) }));
+  const pairs = [], toks = [];
+  const knights = [["Sir Erik the Cruel", "Jason"], ["Dame Cwylog", "Michael"], ["Sir Emrys", "Paul"]];
+  const words = [[["Wounded", "hurt"], ["Unhurt", ""], ["Badly wounded", "bad"]], [["Unhurt", ""], ["Wounded", "hurt"], ["Unhurt", ""]], [["Unhurt", ""], ["Unhurt", ""], ["Unhurt", ""]]];
+  knights.forEach((k, i) => {
+    toks.push(tok({ kind: "knight", x: C[i].x, y: C[i].y, name: k[0], sub: `played by ${k[1]}` }, false));
+    around(C[i], 3, 15).forEach((p, j) => {
+      pairs.push(Object.assign([C[i], p], { hot: i === 1 && j === 1 }));
+      toks.push(tok({ kind: "foe", x: p.x, y: p.y, name: "Knifeman " + (i * 3 + j + 1), cls: i === 1 && j === 1 ? "hit" : "", pills: `<span class="ws ${words[i][j][1]}">${words[i][j][0]}</span>` }, false));
+    });
+  });
+  links(f, pairs, false);
+  toks.forEach((t) => f.appendChild(t));
+  add(f, `<div class="h">The Fray</div>
+    <div class="m r"><b>Knifeman 5 — Dagger</b><span class="ok">17 Success</span>vs 15</div>
+    <div class="m"><b>Dame Cwylog → Knifeman 5</b><span class="res">9 wound</span>Dame Cwylog’s sword inflicts 9 points of damage on Knifeman 5, who is wounded.</div>
+    <div class="m"><b>Sir Erik the Cruel → Knifeman 1</b><span class="res">6 wound</span>Sir Erik the Cruel’s lance inflicts 6 points of damage on Knifeman 1, who is wounded.</div>`, "fray");
+  add(f, `<div><b>Sir Erik the Cruel</b><span class="g"><small>GLORY</small>5</span><i>Last: his lance wounds Knifeman 1</i></div>
+    <div><b>Dame Cwylog</b><span class="g"><small>GLORY</small>5</span><i>Last: her sword wounds Knifeman 5</i></div>
+    <div><b>Sir Emrys</b><span class="g"><small>GLORY</small>0</span><i>Last: three Knifemen close in</i></div>`, "kband");
+  const tray = add(f, "", "tray rolling", { top: "56%" });
+  const d = document.createElement("div"); d.className = "d20"; d.style.left = "52cqw"; d.style.top = "-2cqw";
+  d.innerHTML = `<svg viewBox="0 0 100 100"><path d="M50 4 92 28v44L50 96 8 72V28Z" fill="#f1d27a" stroke="#8a6a2a" stroke-width="3"/><path d="M50 4 22 62h56ZM8 28l14 34L8 72M92 28 78 62l14 10M22 62l28 34 28-34" fill="none" stroke="#8a6a2a" stroke-width="1.6" opacity=".7"/></svg><b>17</b>`;
+  tray.appendChild(d);
+})();
+
+/* replay the dice */
+document.querySelectorAll("[data-replay]").forEach((b) => b.addEventListener("click", () => {
+  const tray = document.getElementById(b.dataset.replay).querySelector(".tray");
+  tray.classList.remove("rolling"); void tray.offsetWidth; tray.classList.add("rolling");
+}));
+</script>
