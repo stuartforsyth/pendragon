@@ -185,7 +185,7 @@ def test_build_bedegraine_in_the_editor_and_play_it(page, app_url):
     day1.get_by_role("button", name="Fixed").click()
     day1.locator("input[type=number]").first.fill("14")
     day1.locator("input[type=number]").nth(1).fill("5")
-    day1.locator("summary", has_text="Battle deck").click()
+    expect(day1.locator(".deck-picker")).to_be_visible()             # the deck is unfolded while editing
     for name in ("Pictish Knifemen", "Pictish Javeliniers", "Pictish Pikemen"):
         day1.locator(".dp-row", has_text=name).locator("input").click()
     page.get_by_role("button", name="Add day").click()

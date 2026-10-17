@@ -3,7 +3,7 @@
 // Battle tool at Mustering. Library edits are not logged, as for encounters.
 
 import { h, clear, api, post, put, del, enc, icon, confirmBox, toast, useCss } from "../lib.js";
-import { dayCard } from "../components.js";
+import { dayCard, examplesBanner } from "../components.js";
 
 // Table 6.1 (mirrors core/battle.py SIZES).
 const SIZES = [
@@ -42,6 +42,7 @@ export default {
     clear(el,
       h("div", { class: "tool-head" }, h("div", {}, h("h1", {}, "Battles"),
         h("p", { class: "lede" }, "Prepare battles ahead of the session: size, days, each day's deck and turn scripts. Launch one into the Battle tool."))),
+      examplesBanner({ onAdded: async () => { toast("Battle cards added", "ok"); await refreshLibrary(); if (draft && !dirty()) renderEditor(); } }),
       h("div", { class: "split bt-split" },
         h("aside", { class: "panel bt-lib" }, search, h("div", { class: "row", style: { justifyContent: "flex-end" } }, countEl), listEl,
           h("div", { class: "bt-lib-btns" },

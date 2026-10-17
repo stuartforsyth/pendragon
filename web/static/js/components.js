@@ -98,7 +98,7 @@ export function dayCard(day, size, { readOnly = false, onChange, decks = [], lab
   d.notes ??= "";
   const S = DC_SIZES[size] || DC_SIZES.clash;
   const root = h("div", { class: `panel day-card ${readOnly ? "readonly" : ""}` });
-  let deckOpen = false;
+  let deckOpen = !readOnly;            // the deck shows unfolded while editing
   const sumEl = h("span", { class: "faint small" });
   const drawSum = () => { sumEl.textContent = `${d.intensity.mode === "fixed" ? `Intensity ${d.intensity.value ?? "—"}` : `Intensity ${S.intensity}`} · ${d.turns ?? S.turns} turns`; };
   const emit = () => { drawSum(); if (!readOnly) onChange?.(dcClone(d)); };
@@ -150,7 +150,7 @@ export function dayCard(day, size, { readOnly = false, onChange, decks = [], lab
       cmdRow("friendly", "Friendly"), cmdRow("enemy", "Enemy")) : null;
 
     // Deck
-    const deckSec = h("details", { class: "dc-sec dc-deck", open: deckOpen || null },
+    const deckSec = h("details", { class: "dc-sec dc-deck", open: (deckOpen || !readOnly) || null },
       h("summary", {}, h("span", { class: "label" }, "Battle deck"), h("span", { class: "faint small" }, ` ${dcDeckSummary(d.deck)}`)),
       readOnly
         ? h("div", { class: "dc-deck-list" }, dcKeys(d.deck).length
@@ -299,4 +299,35 @@ export function knightChip(k, { onMounted, onPosition } = {}) {
     k.position && k.position !== "conroi" ? h("button", { class: "kpos", onclick: (e) => onPosition?.(k, e.currentTarget) }, POS_LABEL[k.position]) : null,
     k.posture ? h("span", { class: "kposture" }, k.posture) : null,
     k.passion_used ? h("span", { class: "faint small" }, "Passion used") : null);
+}
+
+// ---------------------------------------------------------------- examples banner
+/**
+ * "N battle cards that ship with the app aren't in your library — Add them":
+ * shown wherever battles are set up, so the cards and Opportunities don't
+ * hide behind Encounters → Examples…. Adds only; never overwrites the GM's
+ * own entries. Renders nothing when the library is up to date.
+ */
+export function examplesBanner({ onAdded } = {}) {
+  const box = h("div", { class: "examples-banner", hidden: true });
+  (async () => {
+    let r;
+    try { r = await (await fetch("/api/library/examples")).json(); } catch { return; }
+    const newCards = (r.missing?.encounters || []).length;
+    const roles = (r.fields || []).filter((f) => f.kind === "encounters" && f.fields.includes("battle_role")).length;
+    const battles = (r.missing?.battles || []).length;
+    if (!newCards && !roles && !battles) return;
+    const bits = [newCards && `${newCards} battle card${newCards === 1 ? "" : "s"} (Opportunities and their foes)`,
+      roles && `battle roles for ${roles} of your card encounters`, battles && `${battles} example battle${battles === 1 ? "" : "s"}`].filter(Boolean);
+    clear(box, h("div", {}, h("b", {}, "Battle cards missing from your library. "),
+      `The app ships ${bits.join(", ")}. Adding them never changes your own entries.`),
+      h("button", { class: "btn primary sm", onclick: async (e) => {
+        e.target.disabled = true;
+        const res = await fetch("/api/library/examples/merge", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        if (res.ok) { box.hidden = true; onAdded?.(); }
+        else e.target.disabled = false;
+      } }, "Add them"));
+    box.hidden = false;
+  })();
+  return box;
 }

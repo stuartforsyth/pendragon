@@ -28,14 +28,35 @@ def _free_port():
         return s.getsockname()[1]
 
 
+def old_library():
+    """A working combat.json like a GM's from before battles shipped: card
+    encounters without battle roles, no Opportunities, no example battles."""
+    d = json.loads(open(f"{ROOT}/data/examplecombat.json", encoding="utf-8").read())
+    d.pop("battles", None)
+    for k in [k for k, e in d["encounters"].items() if e.get("battle_role") == "opportunity"]:
+        del d["encounters"][k]
+    for e in d["encounters"].values():
+        for f in ("battle_role", "morale_loss", "missile", "rules"):
+            e.pop(f, None)
+    return d
+
+
 @pytest.fixture
-def app_url(tmp_path):
+def library():
+    """Override in a test module to start from a different working library."""
+    return None
+
+
+@pytest.fixture
+def app_url(tmp_path, library):
     import uvicorn
     from web.app import create_app
     data = tmp_path / "data"
     data.mkdir()
     for f in ("rules.json", "examplecombat.json"):
         shutil.copy(f"{ROOT}/data/{f}", data / f)
+    if library is not None:
+        (data / "combat.json").write_text(json.dumps(library, ensure_ascii=False))
     (data / "party.json").write_text(json.dumps(KNIGHTS))
     app = create_app(ROOT, sessions_dir=str(tmp_path / "sessions"), data_dir=str(data))
     port = _free_port()

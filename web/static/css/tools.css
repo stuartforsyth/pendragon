@@ -116,3 +116,9 @@
 .pill-mounted { all: unset; cursor: pointer; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 9px; border: 1px solid var(--ink-faint); color: var(--ink-dim); }
 .pill-mounted.on { border-color: var(--azure); color: var(--azure); }
 .pill-mounted:focus-visible { outline: 2px solid var(--or); }
+
+/* "battle cards missing" banner */
+.examples-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 12px;
+  padding: 10px 14px; border: 1px solid var(--or-deep); border-radius: 10px; background: rgba(212,168,75,.08); color: var(--ink-2); font-size: 14px; }
+.examples-banner b { color: var(--or-bright); }
+.examples-banner[hidden] { display: none; }

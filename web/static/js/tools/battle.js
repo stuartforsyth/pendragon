@@ -4,7 +4,7 @@
 // Players roll and resolve at the table; the GM records outcomes here.
 
 import { h, clear, api, post, icon, modal, confirmBox, toast, useCss, debounce, menu } from "../lib.js";
-import { dayCard, deckPicker, outcomeChips, amountEntry, moraleStrip, knightChip } from "../components.js";
+import { dayCard, deckPicker, outcomeChips, amountEntry, moraleStrip, knightChip, examplesBanner } from "../components.js";
 
 const SIZES = {
   fight: { label: "Fight", turns: 1, dice: "1D6+2", army: false },
@@ -52,6 +52,10 @@ export default {
         : !live ? launchPanel() : b.status === "mustering" ? mustering() : running()));
     }
 
+    // One banner per render; it checks the library itself and hides when up to date.
+    let bannerEl = null;
+    const banner = () => (bannerEl ||= examplesBanner({ onAdded: () => { bannerEl = null; toast("Battle cards added", "ok"); load(); } }));
+
     // ------------------------------------------------------------ idle: launch
     function launchPanel() {
       const here = b && b.status === "paused" ? [{ battle_id: b.id, session_id: session.id, session_title: "this session",
@@ -61,6 +65,7 @@ export default {
       return [
         h("div", { class: "tool-head" }, h("div", {}, h("h1", {}, "Battle"),
           h("p", { class: "lede" }, "Launch a battle — Size is all it needs — or resume one paused at the end of a session."))),
+        banner(),
         rows.length ? h("div", { class: "panel" }, h("h3", {}, "Paused battles"),
           rows.map((p) => h("div", { class: "bl-row" },
             h("span", {}, h("b", {}, p.name), ` · Day ${p.day} · Turn ${p.turn}`, p.morale ? ` · Morale ${p.morale[0]} / ${p.morale[1]}` : "",
@@ -379,10 +384,12 @@ export default {
     function setBody() {
       const keys = deckKeys("foe");
       if (ui.flavour === null) ui.flavour = "";
+      const missingBanner = banner();
       const fl = h("input", { class: "input", placeholder: "Flavour line for the Table (defaults to the card's description)", value: ui.flavour,
         oninput: (e) => { ui.flavour = e.target.value; } });
       const forceAvail = b.tokens.force === "available";
       return [
+        missingBanner,
         keys.length ? h("div", { class: "cards" }, keys.map((k) => {
           const c = cardOf(k);
           return h("button", { class: "gcard", title: c.description || k, onmouseenter: () => { if (!ui.flavour) fl.placeholder = c.description || fl.placeholder; },
