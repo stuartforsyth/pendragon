@@ -80,3 +80,24 @@ export function moraleGauge(m, { compact = false } = {}) {
       h("span", { class: "mg-word" }, m.band),
       m.last ? h("span", { class: "mg-why" }, `${m.last.delta > 0 ? "+" : m.last.delta < 0 ? "−" : ""}${Math.abs(m.last.delta)} · ${m.last.reason}`) : null));
 }
+
+/** A battle card as players see it: kind, a device, the name and the GM's
+ * flavour line — never the card's mechanics. Opportunities get a gold frame. */
+export function cardFrame(c, { kind, small = false, token = null, crit = false } = {}) {
+  const device = c.opportunity
+    ? '<circle cx="30" cy="30" r="26" fill="none" stroke="#b08a36" stroke-width="2"/><path d="M14 40 17 20l8 9 5-12 5 12 8-9 3 20Z" fill="#b08a36"/>'
+    : '<circle cx="30" cy="30" r="26" fill="none" stroke="#4e3a28" stroke-width="2"/><path d="M18 42 42 18M42 42 18 18" stroke="#8e2219" stroke-width="3"/><path d="M16 44l4-1-3-3zM44 44l-4-1 3-3z" fill="#8e2219"/>';
+  return h("div", { class: `pcard ${c.opportunity ? "opp" : ""} ${small ? "small" : ""}` },
+    h("span", { class: "kind" }, kind || (c.opportunity ? "★ Opportunity" : "")),
+    h("span", { class: "dev" }, svg(device, `viewBox="0 0 60 60" width="${small ? 56 : 76}" height="${small ? 56 : 76}" aria-hidden="true"`)),
+    h("div", {}, h("div", { class: "cname" }, c.name), c.flavour ? h("div", { class: "flav" }, c.flavour) : null),
+    token ? h("div", { class: "toks" }, h("span", { class: `ttok ${crit ? "crit" : ""}` }, knightShield(), token, crit ? " · critical" : "")) : null);
+}
+
+/** Today's battlefield: every card name; in play outlined, spent struck. */
+export function deckSpread(deck) {
+  return h("div", { class: "deck" }, h("span", { class: "dl" }, "Today's battlefield"),
+    h("div", { class: "drow" },
+      (deck.foes || []).map((c) => h("span", { class: `dcard ${c.in_play ? "on" : ""}` }, c.name)),
+      (deck.opportunities || []).map((c) => h("span", { class: `dcard opp ${c.in_play ? "on" : ""} ${c.spent ? "spent" : ""}` }, c.name))));
+}

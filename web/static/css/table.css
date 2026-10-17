@@ -312,3 +312,17 @@ body {
 .fv-morale b { font-family: var(--f-prose); font-size: 26px; font-weight: 600; font-variant-numeric: lining-nums; }
 .fv-morale .mw { font-family: var(--f-caps); font-weight: 700; font-size: 13px; letter-spacing: .22em; color: var(--gules); text-transform: uppercase; }
 .fv-morale.band-steady .mw { color: var(--vert); } .fv-morale.band-shaken .mw { color: #8a5a12; }
+
+/* battle view, full (S9) */
+.battleview { grid-template-rows: minmax(0, 1fr) auto; }
+.battleview .mgauge { min-height: 360px; }
+.bv-knights { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.resbanner { justify-self: center; font-family: var(--f-caps); font-weight: 700; font-size: 18px; letter-spacing: .16em; text-transform: uppercase;
+  padding: 6px 18px; border-radius: 4px; border: 1.5px solid; }
+.resbanner.harm { color: var(--gules); border-color: var(--gules); background: rgba(142,34,25,.06); }
+.resbanner.boon { color: var(--vert); border-color: var(--vert); background: rgba(47,107,62,.06); }
+.resbanner.state { color: var(--ink-2); border-color: var(--parch-dark); background: rgba(251,244,226,.7); }
+.slots { display: flex; justify-content: center; align-items: center; gap: 22px; padding-bottom: 14px; flex-wrap: wrap; }
+.bv-script.minus5 { border-left-color: var(--gules); font-style: normal; font-family: var(--f-caps); font-size: 18px; }
+.battleview { height: 100%; min-height: 0; }
+.battleview .fray { overflow: hidden; }

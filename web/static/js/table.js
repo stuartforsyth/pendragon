@@ -2,7 +2,7 @@
 // only what players may see (see web/table.py); this file just makes it sing.
 
 import { h, clear, icon, debounce } from "./lib.js";
-import { knightCard, moraleGauge } from "./board.js";
+import { knightCard, moraleGauge, cardFrame, deckSpread } from "./board.js";
 
 const $ = (id) => document.getElementById(id);
 let last = { heroId: null, states: {}, titleCard: null };
@@ -271,15 +271,24 @@ function fight(p) {
 // The battle view (between fights): title band, the Morale gauge, the
 // centre stage (title card, revealed turn scripts; cards arrive with the turn
 // loop), and the Fray.
-const STATUS_LINE = { mustering: "The conroi musters", paused: "The battle is paused", turn: "", rear: "At the rear" };
+const STATUS_LINE = { mustering: "The conroi musters", paused: "The battle is paused", rear: "At the rear" };
 function battleView(p) {
   const b = p.battle;
   if (!b) return chronicle(p);
   const titleFresh = b.title_card && b.title_card.id !== last.titleCard;
   last.titleCard = b.title_card?.id;
+  const tt = b.this_turn || {};
   const centre = [];
-  if (STATUS_LINE[b.status]) centre.push(h("div", { class: "bv-status" }, STATUS_LINE[b.status]));
-  if (b.status === "mustering" || titleFresh) {
+  if (b.banner) centre.push(h("div", { class: `resbanner ${b.banner.tone}` }, b.banner.text));
+  else if (STATUS_LINE[b.status]) centre.push(h("div", { class: "bv-status" }, STATUS_LINE[b.status]));
+  const cards = [];
+  if (tt.set) cards.push(cardFrame(tt.set, { kind: tt.picks?.length ? "The GM sets" : "This turn", small: tt.picks?.length > 0 }));
+  for (const pk of tt.picks || []) {
+    if (pk.name === tt.set?.name) continue;
+    cards.push(cardFrame(pk, { kind: pk.opportunity ? "★ Opportunity" : "Picked", token: pk.knight_name.split(" ").slice(-1)[0], crit: pk.crit }));
+  }
+  if (cards.length) centre.push(h("div", { class: `slots ${tt.selected ? "chosen" : ""}` }, cards));
+  else if (b.status === "mustering" || titleFresh || !tt.set) {
     centre.push(h("div", { class: `bv-title ${titleFresh ? "fresh" : ""}` },
       h("div", { class: "bv-kicker" }, b.size_label, b.days > 1 ? ` · ${b.days} days` : ""),
       h("div", { class: "bv-name" }, b.name),
@@ -288,11 +297,13 @@ function battleView(p) {
       flourish(),
       h("div", { class: "bv-day" }, `Day ${b.day}`, b.intensity ? ` · Intensity ${b.intensity}` : "")));
   }
-  for (const t of b.revealed_scripts || []) centre.push(h("div", { class: "bv-script" }, t));
+  for (const r of b.results || []) centre.push(h("div", { class: `bv-script ${r.kind}` }, r.text));
+  if (b.deck && (b.deck.foes.length || b.deck.opportunities.length)) centre.push(deckSpread(b.deck));
   return h("div", { class: "battleview" },
     moraleGauge(b.morale),
     h("div", { class: "bv-centre" }, centre),
-    h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), p.feed.slice(0, 7).map(mini)));
+    h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), p.feed.slice(0, 6).map(mini)),
+    (p.battle_knights || []).length ? h("div", { class: "bv-knights" }, p.battle_knights.map((k) => knightCard(k, { compact: true }))) : null);
 }
 
 function render(p) {

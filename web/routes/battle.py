@@ -452,8 +452,14 @@ def _today_deck(b, role="foe"):
     return list(deck.get("opportunities" if role == "opportunity" else "foes", []))
 
 
+_STEP_TITLE = {"field": "The conroi", "set": "This turn", "charge": "The charge", "intensity": "Intensity",
+               "picks": "A pick", "select": "The commander's choice", "morale": "Morale", "postures": "Posture",
+               "rest": "At the rear", "fight": "The fight", "end": "End of the turn"}
+
+
 def _rec(state, b, etype, text, step, data, table=None, title=None, visibility="public"):
-    return state.record(etype, text, title=title or _name(b), visibility=visibility,
+    title = title or (_STEP_TITLE.get(step) if step else None) or ("Passion" if etype == "battle.passion" else _name(b))
+    return state.record(etype, text, title=title, visibility=visibility,
                         data={**data, "table_text": table or text, "battle": _link(b, step)})
 
 

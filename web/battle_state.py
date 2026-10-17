@@ -525,28 +525,79 @@ def gm_view(b, party):
     return out
 
 
+_BANNER = {"critical": ("The foe comes on in strength — doubled!", "harm"), "success": ("The Encounter stands", "state"),
+           "fumble": ("Fortune smiles — an Opportunity?", "boon"), "failure": ("Intensity fails · choose your fate", "harm")}
+
+
 def table_view(b, party):
-    """What players may see: never the definition, decks' mechanics or dice."""
+    """What players may see (the battle view). Never: Minimum, Loss, KV, the
+    cards' mechanics, the definition, unrevealed scripts, dice or tokens."""
     if b is None:
         return None
     names = _names(party)
     size = b["definition"].get("size", "clash")
     m = b["morale"]
-    return {"id": b["id"], "name": b["definition"].get("name", "Battle"), "where": b["definition"].get("where", ""),
-            "against": b["definition"].get("against", ""), "size_label": B.SIZES.get(size, {}).get("label", size),
-            "status": b["status"], "day": b["day"], "days": len(b["definition"].get("days", [])),
-            "turn": b["turn"], "turns_today": _day_def(b).get("turns"),
-            "intensity": b["intensity"].get(str(b["day"])),
-            "morale": {"current": m["current"], "start": m["start"], "band": B.morale_band(m["current"], m["start"]),
-                       "last": m.get("last")} if m else None,
-            "commander_name": "GM" if b["commander"] == "gm" else names.get(b["commander"], {}).get("name"),
-            "title_card": {"id": b.get("last_title_event")} if b.get("last_title_event") else None,
-            "revealed_scripts": [s["text"] for s in b["revealed_scripts"] if s.get("day") == b["day"]],
-            "charge_result": ((b.get("t") or {}).get("charge") or {}).get("result")
-                             or ("first_charge" if b["status"] == "turn" and first_charge_turn(b) else None),
-            "glory": battle_glory(b),
-            "barrage": ((b.get("t") or {}).get("barrage") or {}).get("rounds"),
-            "countercharge": ((b.get("t") or {}).get("countercharge") or {}).get("yes")}
+    t = b.get("t") or new_turn()
+    nm = lambda pid: names.get(pid, {}).get("name", "A knight")
+    out = {"id": b["id"], "name": b["definition"].get("name", "Battle"), "where": b["definition"].get("where", ""),
+           "against": b["definition"].get("against", ""), "size_label": B.SIZES.get(size, {}).get("label", size),
+           "status": b["status"], "day": b["day"], "days": len(b["definition"].get("days", [])),
+           "turn": b["turn"], "turns_today": _day_def(b).get("turns"),
+           "intensity": b["intensity"].get(str(b["day"])),
+           "morale": {"current": m["current"], "start": m["start"], "band": B.morale_band(m["current"], m["start"]),
+                      "last": m.get("last")} if m else None,
+           "commander_name": "GM" if b["commander"] == "gm" else names.get(b["commander"], {}).get("name"),
+           "title_card": {"id": b.get("last_title_event")} if b.get("last_title_event") else None,
+           "charge_result": (t.get("charge") or {}).get("result")
+                            or ("first_charge" if b["status"] == "turn" and first_charge_turn(b) else None),
+           "glory": battle_glory(b),
+           "barrage": (t.get("barrage") or {}).get("rounds"),
+           "countercharge": (t.get("countercharge") or {}).get("yes")}
+    # the turn's story
+    banner = None
+    if (t.get("morale") or {}).get("kind") == "forced_retire":
+        banner = {"text": "Not enough Morale — Retire to the Rear", "tone": "harm"}
+    elif (t.get("charge") or {}).get("result") == "enemy_charge" and not t.get("select"):
+        banner = {"text": "Enemy knights charge you!", "tone": "harm"}
+    elif t.get("intensity") and not t.get("morale"):
+        text, tone = _BANNER[t["intensity"]["outcome"]]
+        banner = {"text": text, "tone": tone}
+    elif b["status"] == "rear":
+        banner = {"text": "The conroi rests at the rear", "tone": "state"}
+    out["banner"] = banner
+    card_flav = lambda c: (c or {}).get("description", "")
+    is_opp = lambda c: (c or {}).get("role") == "opportunity"
+    out["this_turn"] = {
+        "set": {"name": t["set"]["encounter"], "flavour": t["set"].get("flavour") or card_flav(t["set"].get("card")),
+                "opportunity": False} if t.get("set") else None,
+        "picks": [{"name": p["encounter"], "flavour": card_flav(p.get("card")), "opportunity": is_opp(p.get("card")),
+                   "knight_name": nm(pid), "crit": bool(p.get("crit"))} for pid, p in (t.get("picks") or {}).items()],
+        "selected": (t.get("select") or {}).get("encounter")}
+    dd = _day_def(b)
+    in_play = {x for x in [(t.get("set") or {}).get("encounter"), (t.get("select") or {}).get("encounter")] if x}
+    in_play |= {p["encounter"] for p in (t.get("picks") or {}).values()}
+    out["deck"] = {"foes": [{"name": k, "in_play": k in in_play} for k in dd.get("deck", {}).get("foes", [])],
+                   "opportunities": [{"name": k, "in_play": k in in_play, "spent": k in b.get("spent_opportunities", [])}
+                                     for k in dd.get("deck", {}).get("opportunities", [])]}
+    results = []
+    if (t.get("intensity") or {}).get("outcome") in ("success", "critical"):
+        for sc in dd.get("scripts", []):
+            if sc.get("turn") == b["turn"] and sc.get("if_intensity"):
+                results.append({"kind": "script", "text": sc["text"]})
+    for sc in b["revealed_scripts"]:
+        if sc.get("day") == b["day"]:
+            results.append({"kind": "script", "text": sc["text"]})
+    if b["turn"] == 1 and b["army"].get(str(b["day"]), {}).get("friendly") == "fumble":
+        results.append({"kind": "minus5", "text": "−5 Battle this turn for the whole army"})
+    out["results"] = results
+    out["revealed_scripts"] = [r["text"] for r in results if r["kind"] == "script"]
+    out["knights_raw"] = [{"pid": pid, "name": nm(pid), "player": names.get(pid, {}).get("player", ""),
+                           "commander": pid == b["commander"], **{k: v for k, v in b["knights"].get(pid, {}).items()
+                                                                if k in ("mounted", "position", "posture", "passion_used", "passion_name")},
+                           "posture_now": (t.get("postures") or {}).get(pid, {}).get("posture"),
+                           "prev_posture": b.get("prev_postures", {}).get(pid)}
+                          for pid in b["conroi"]]
+    return out
 
 
 def snapshot(b, combat):

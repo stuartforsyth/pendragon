@@ -202,7 +202,7 @@ def test_table_never_sees_army_die_or_definition(client):
     ok(client.post("/api/battle/army-roll", json={"side": "enemy", "roll_for_me": {"battle": 15, "mods": 2}}))
     _muster(client, pids)
     raw = client.get("/api/table").text
-    for secret in ("value_rolled", '"mods"', "crests the hill", "morale_minimum", "Knights of Gorre"):
+    for secret in ("value_rolled", '"mods"', "crests the hill", "morale_minimum", "1D6+3"):
         assert secret not in raw, secret
 
 
@@ -645,3 +645,97 @@ def test_table_fight_view_battle_header_has_no_numbers(client):
         assert secret not in raw, secret
     card = t["knights"][0]
     assert card["glory"]["scope"] == "battle" and any(e["key"] == "posture" for e in card["effects"])
+
+
+# -- S9: the players' battle view ----------------------------------------------------
+
+def _tb(client):
+    return ok(client.get("/api/table"))
+
+
+def test_table_battle_view_cards_and_deck_names_only(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Knights of Gorre", flavour="stern northerners on chargers")
+    t = _tb(client)
+    assert t["battle"]["this_turn"]["set"] == {"name": "Knights of Gorre", "flavour": "stern northerners on chargers", "opportunity": False}
+    for c in t["battle"]["deck"]["foes"] + t["battle"]["deck"]["opportunities"]:
+        assert set(c) <= {"name", "in_play", "spent"}
+    raw = client.get("/api/table").text
+    for secret in ("morale_minimum", "morale_loss", '"kv', "has_roster", "definition"):
+        assert secret not in raw, secret
+
+
+def test_spent_opportunity_flag_on_table(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="failure")
+    _step(client, "pick", knight=pids[0], encounter="Clash of Champions", crit=True)
+    _step(client, "select", encounter="Clash of Champions")
+    opp = next(c for c in _tb(client)["battle"]["deck"]["opportunities"] if c["name"] == "Clash of Champions")
+    assert opp["spent"] and opp["in_play"]
+
+
+def test_picks_carry_knight_names_and_crit(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="failure")
+    _step(client, "pick", knight=pids[1], encounter="Clash of Champions", crit=True)
+    pk = _tb(client)["battle"]["this_turn"]["picks"][0]
+    assert pk["knight_name"] == "Sir Cai" and pk["crit"] and pk["opportunity"]
+    assert _tb(client)["battle"]["banner"]["text"].startswith("Intensity fails")
+
+
+def _scripted(client, if_intensity):
+    pids = _party(client, "Sir Bors")
+    b = ok(client.get("/api/battles/blank?size=clash"))["battle"]
+    b["name"] = "Scripted"
+    b["days"][0]["deck"] = {"foes": ["Pictish Knifemen"], "opportunities": []}
+    b["days"][0]["scripts"] = [{"turn": 1, "text": "The wolves howl in the wood", "if_intensity": if_intensity}]
+    ok(client.put("/api/battles", json={"battle": b}))
+    ok(client.post("/api/battle/start", json={"key": "Scripted"}))
+    _muster(client, pids)
+    return pids
+
+
+def test_if_intensity_script_revealed_only_after_success(client):
+    _scripted(client, True)
+    _step(client, "set", encounter="Pictish Knifemen")
+    assert "wolves" not in client.get("/api/table").text
+    _step(client, "intensity", outcome="success")
+    assert "wolves" in client.get("/api/table").text
+    ok(client.post("/api/battle/undo", json={"step": "intensity"}))
+    _step(client, "intensity", outcome="failure")
+    assert "wolves" not in client.get("/api/table").text
+
+
+def test_unconditional_script_only_after_show(client):
+    _scripted(client, False)
+    assert "wolves" not in client.get("/api/table").text
+    ok(client.post("/api/battle/script", json={"day": 1, "index": 0}))
+    assert "wolves" in client.get("/api/table").text
+
+
+def test_knight_chips_from_battle_state(client):
+    pids = _running(client)
+    _step(client, "passion", knight=pids[0], used=True, name="Love (Family)")
+    ok(client.post(f"/api/battle/knight/{pids[1]}", json={"position": "rear"}))
+    cards = {k["pid"]: k for k in _tb(client)["battle_knights"]}
+    labels0 = [e["label"] for e in cards[pids[0]]["effects"]]
+    assert "Commander" in labels0 and "Passion: Love (Family)" in labels0
+    assert "At the rear" in [e["label"] for e in cards[pids[1]]["effects"]]
+
+
+def test_last_line_from_battle_events(client):
+    pids = _running(client)
+    _step(client, "passion", knight=pids[0], used=True, name="Honor")
+    card = next(k for k in _tb(client)["battle_knights"] if k["pid"] == pids[0])
+    assert card["happened"][0] == "Sir Bors draws on Honor"
+
+
+def test_banner_follows_latest_step(client):
+    pids = _running(client, start=10)
+    _step(client, "set", encounter="Knights of Gorre")
+    _step(client, "intensity", outcome="success")
+    assert _tb(client)["battle"]["banner"]["text"] == "The Encounter stands"
+    _step(client, "morale", kind="forced_retire")
+    assert _tb(client)["battle"]["banner"]["text"] == "Not enough Morale — Retire to the Rear"

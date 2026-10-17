@@ -161,3 +161,11 @@ adds the KV Morale gain (half up per Encounter, a GM ruling). Barrage and
 countercharge are recorded before the fight. The tracker shows a battle frame
 (Morale strip, banners, posture rounds, +1 round, Back to battle) and the
 Table's fight view a battle header with compact Morale.
+
+Between fights the Table's **battle view** tells the turn's story: a result
+banner, the GM's card beside the knights' picks (card frames with name and
+flavour only, Opportunities gold), today's battlefield as names (in play
+outlined, spent struck through), revealed turn scripts, the Morale gauge, the
+Fray, and a knights row (battle Glory, chips such as Commander / May charge /
+posture / Passion / At the rear, and the LAST line). `battle_state.table_view`
+sends only these fields — never Minimum, Loss, KV, card mechanics, dice or tokens.

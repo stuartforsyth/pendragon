@@ -1208,7 +1208,7 @@ Opportunity at the table, then End turn").
 
 ---
 
-## S9 — Table battle view: cards, deck spread, knights row, LAST lines, step results, Fray (size **M/L**)
+## S9 — Table battle view: cards, deck spread, knights row, LAST lines, step results, Fray (size **M/L**) — ✅ DONE 2026-10-17
 
 **Goal.** Between fights, players see the turn's story (`#t-battle`):
 - the result banner
