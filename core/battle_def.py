@@ -117,7 +117,8 @@ def clean_battle(d, encounters=None):
         if oc not in OUTCOME_LABEL:
             raise ValueError("Unknown preset outcome")
         out["outcome"] = oc
-    out["commander"] = "gm" if d.get("commander") == "gm" else None
+    c = d.get("commander")
+    out["commander"] = str(c) if c else None      # "gm" or a party knight's id; pre-selected at Mustering
     ac = d.get("army_commanders") or {}
     for side in _SIDES:
         s = ac.get(side) or {}
