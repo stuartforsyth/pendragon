@@ -13,7 +13,7 @@ def test_roll_damage_and_critical_look_different(page, table, app_url):
     table.goto(app_url + "/table")
     latest = table.locator(".fray .latest")
 
-    r.post(app_url + "/api/roll/check", data={"label": "Sword", "value": 1})        # never a critical
+    r.post(app_url + "/api/roll/check", data={"label": "Sword", "value": 0})        # never a critical
     expect(latest.locator(".badge.die")).to_be_visible()
     expect(latest.locator(".kw")).to_have_text("Roll")
     expect(latest.locator(".critbanner")).to_have_count(0)

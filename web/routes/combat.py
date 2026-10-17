@@ -435,8 +435,8 @@ async def horse(request: Request, cid: str, body: dict):
     k = _engaged_knight(cs, c)
     line = (f"{c.display_name} goes for {k.display_name + chr(39) + 's' if k else 'the'} horse" if on
             else f"{c.display_name} turns from the horse to the rider")
-    ev = state.record("combat.horse", line, title=c.display_name,
-                      data={"cid": cid, "on": on, "table_text": line})
+    ev = state.record("combat.horse", line, title=c.display_name, visibility="gm",   # a surprise for the players
+                      data={"cid": cid, "on": on})
     return {"event": ev}
 
 
@@ -797,8 +797,10 @@ def _report_blow_on_knight(state, attacker, knight, weapon, expr, rolled, extra,
     head = f"{who}’s {weapon or 'blow'}" if who else (weapon or "A blow")
     crit = "CRITICAL " if b["critical"] else ""
     protect = "armour + shield/parry apply" if shield else "armour only, no shield/parry"
-    text = f"{head} {crit}hits {knight.display_name} for {b['damage']} damage ({blow_breakdown(b).rsplit(' → ', 1)[0]}) — {protect}"
-    story = blow_narrative(attacker=who, weapon=weapon, target=knight.display_name, amount=b["damage"],
+    at_horse = bool(attacker is not None and attacker.attacks_horse and knight.mounted)   # the players' surprise
+    text = f"{head} {crit}hits {knight.display_name}{chr(8217) + 's horse' if at_horse else ''} for {b['damage']} damage ({blow_breakdown(b).rsplit(' → ', 1)[0]}) — {protect}"
+    story = blow_narrative(attacker=who, weapon=weapon, target=f"{knight.display_name}’s horse" if at_horse else knight.display_name,
+                           amount=b["damage"],
                            to_knight=True, critical=b["critical"], unarmed=unarmed)
     return state.record("combat.blow", text, title=f"{who + ' → ' if who else ''}{knight.display_name}",
                         data={"cid": knight.id, "delta": 0, "attacker": who, "weapon": weapon or "",

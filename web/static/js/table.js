@@ -269,7 +269,7 @@ function latestRollCard(p) {
 
 const FATE_WORD = { dead: "slain", fled: "fled", surrendered: "surrendered", unconscious: "unconscious" };
 
-// A foe on the players' board: shield, name, wound word, Height/horse chips.
+// A foe on the players' board: shield, name, wound word, Disarmed.
 function foeTile(f, p) {
   const c = p.combat.combatants.find((x) => x.id === f.id) || f;
   const prev = last.states[f.id];
@@ -289,8 +289,6 @@ function fight(p) {
   const knights = p.knights || [];
   const foes = cs.combatants.filter((c) => c.side !== "party");
   const [latest, others] = latestRollCard(p);
-  const horses = foes.some((f) => f.status === "active" && f.attacks_horse &&
-    cs.combatants.find((k) => k.side === "party" && k.name === f.engaged_with)?.mounted);
   const defeated = foes.filter((f) => FATE_WORD[f.status]);
   const engagedNames = new Set(knights.map((k) => k.name));
   const waiting = foes.filter((f) => f.status === "active" && !engagedNames.has(f.engaged_with));
@@ -300,8 +298,8 @@ function fight(p) {
           : h("span", { class: "tlane-none" }, k.status === "active" ? "No foe engaged" : ""))))
     : [h("div", { class: "tlane solo" }, h("div", { class: "tlane-foes" }, foes.filter((f) => f.status === "active").map((f) => foeTile({ ...f, chips: [] }, p))))];
   const bt = cs.battle && p.battle && p.battle.id === cs.battle.id ? p.battle : null;
-  const banners = [horses ? "They go for the horses!" : null,
-    bt?.countercharge ? "They countercharge!" : null,
+  // Which foes go for the horses is the GM's secret: the players find out when a horse is struck.
+  const banners = [bt?.countercharge ? "They countercharge!" : null,
     bt?.barrage ? `${bt.barrage} round${bt.barrage === 1 ? "" : "s"} of arrows before contact` : null].filter(Boolean);
   return h("div", { class: "fightview" },
     h("div", { class: "lanes" },

@@ -126,14 +126,22 @@ def test_captured_defaults_to_engaged_knight(client):
     assert row["captured_by_name"] == "Sir Bors"
 
 
-def test_table_shows_height_chip_not_numbers(client):
+def test_table_hides_foe_numbers_and_horse_secrets(client):
     cs = _fight(client, encounter="Bandit ambush", knights=("Sir Bors",))
     bandit = _foes(cs)[0]
     ok(client.post(f"/api/combat/{bandit['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{bandit['id']}/horse", json={"on": True}))
     t = next(c for c in ok(client.get("/api/table"))["combat"]["combatants"] if c["id"] == bandit["id"])
-    assert t["height_chip"] == "−5 Height"
-    for secret in ("cur_hp", "max_hp", "attacks", "height"):
+    for secret in ("cur_hp", "max_hp", "attacks", "height", "height_chip", "attacks_horse"):
         assert secret not in t
+    table = ok(client.get("/api/table"))
+    assert not any("horse" in (c.get("text") or "") for c in table["feed"])        # the GM's secret
+    assert all(not f["chips"] for k in table["knights"] for f in k["lane"]["foes"])
+    gm = next(c for c in ok(client.get("/api/combat"))["combat"]["combatants"] if c["id"] == bandit["id"])
+    assert gm["attacks_horse"] and gm["height_chip"] == "No Height"                 # the GM still sees it
+    # the reveal: the blow lands on the horse
+    blow = ok(client.post("/api/combat/blow", json={"attacker": bandit["id"], "attack": 0, "target": _knight(cs, "Sir Bors")["id"]}))["event"]
+    assert "Sir Bors’s horse" in blow["data"]["narrative"]
 
 
 def test_adversary_editor_keeps_flags(client):

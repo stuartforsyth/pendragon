@@ -152,7 +152,7 @@ def table_view(c):
     if side == "party":
         out.update(player=getattr(c, "player", ""), party_id=getattr(c, "party_id", None))
     else:
-        out.update(attacks_horse=c.attacks_horse, disarmed=c.wielding == "brawl")
+        out.update(disarmed=c.wielding == "brawl")         # attacks_horse stays GM-only
     return out
 
 
@@ -257,7 +257,8 @@ def _derive(state, rows, view):
         captor = next((k.display_name for k in knights.values()
                        if getattr(k, "party_id", None) == c.captured_by), None) if c.captured_by else None
         r["mounted"] = c.mounted
-        r["height_chip"] = _height_word(fm, km, c, knight)
+        if view == "gm":                       # "No Height" would betray a foe going for the horse
+            r["height_chip"] = _height_word(fm, km, c, knight)
         r["captured_by_name"] = captor
         if view == "gm":
             r["height"] = {"foe": fm, "knight": km}
