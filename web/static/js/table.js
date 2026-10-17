@@ -248,9 +248,17 @@ function fight(p) {
         h("div", { class: "tlane-foes" }, k.lane.foes.length ? k.lane.foes.map((f) => foeTile(f, p))
           : h("span", { class: "tlane-none" }, k.status === "active" ? "No foe engaged" : ""))))
     : [h("div", { class: "tlane solo" }, h("div", { class: "tlane-foes" }, foes.filter((f) => f.status === "active").map((f) => foeTile({ ...f, chips: [] }, p))))];
+  const bt = cs.battle && p.battle && p.battle.id === cs.battle.id ? p.battle : null;
+  const banners = [horses ? "They go for the horses!" : null,
+    bt?.countercharge ? "They countercharge!" : null,
+    bt?.barrage ? `${bt.barrage} round${bt.barrage === 1 ? "" : "s"} of arrows before contact` : null].filter(Boolean);
   return h("div", { class: "fightview" },
     h("div", { class: "lanes" },
-      horses ? h("div", { class: "fv-banner" }, "They go for the horses!") : null,
+      bt ? h("div", { class: "fv-head" }, h("span", { class: "fv-battle" }, `${bt.name} · Day ${bt.day} · Turn ${bt.turn}`),
+        bt.morale ? h("span", { class: `fv-morale band-${(bt.morale.band || "").toLowerCase()}` }, h("span", { class: "lbl" }, "Morale"),
+          h("span", { class: "mb" }, h("i", { style: { width: `${Math.round(100 * bt.morale.current / Math.max(1, bt.morale.start))}%` } })),
+          h("b", {}, bt.morale.current), h("span", { class: "mw" }, bt.morale.band)) : null) : null,
+      banners.length ? h("div", { class: "row", style: { gap: "10px", flexWrap: "wrap" } }, banners.map((x) => h("div", { class: "fv-banner" }, x))) : null,
       lanes,
       defeated.length || waiting.length ? h("div", { class: "fv-foot" },
         defeated.length ? [h("span", { class: "lbl" }, "Defeated"), defeated.map((f) => h("span", { class: "dft" },

@@ -394,19 +394,20 @@ class Encounter:
     def generate_from_theme(self, theme_name, n_players):
         return self.generate_from_definition(self.themes[theme_name], n_players)
 
-    def generate_from_definition(self, defn, n_players):
+    def generate_from_definition(self, defn, n_players, multiplier=1):
         """Build combatants from an encounter definition.
 
         Supports the new explicit roster shape (``roster`` + ``scaling`` +
         optional ``leader`` block) and the legacy pool shape (``core`` pool +
-        ``per_player`` + ``leader`` name).
+        ``per_player`` + ``leader`` name). ``multiplier`` scales each roster
+        line (a battle's Intensity critical doubles the foes); the leader stays single.
         """
         self.clear()
         if "roster" in defn:
             for adv, count, promote in resolve_roster(defn, n_players):
                 if adv not in self.templates:
                     continue
-                for _ in range(count):
+                for _ in range(count * multiplier):
                     c = self.add_one(adv)
                     if promote:
                         self.promote(c)
@@ -417,7 +418,7 @@ class Encounter:
                     self.promote(c)
         else:  # legacy random-pool theme
             core = defn.get("core", list(self.templates))
-            count = max(1, _rhu(n_players * defn.get("per_player", 1.0)))
+            count = max(1, _rhu(n_players * defn.get("per_player", 1.0))) * multiplier
             for _ in range(count):
                 self.add_one(random.choice(core))
             leader = defn.get("leader")

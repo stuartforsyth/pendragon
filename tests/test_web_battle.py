@@ -471,3 +471,177 @@ def test_table_never_sees_min_loss_or_intensity_die(client):
     feed = ok(client.get("/api/table"))["feed"]
     inten = next(c for c in feed if c["type"] == "battle.intensity")
     assert "roll" not in inten["data"] and "rolled" not in inten["text"]
+
+
+# -- S8: the linked fight --------------------------------------------------------
+
+def _to_fight(client, pids, encounter, intensity="success", postures=None, turn1=True):
+    _step(client, "set", encounter=encounter)
+    if not turn1:
+        _step(client, "charge", outcome="failure", engaged_last=True)
+    _step(client, "intensity", outcome=intensity)
+    _step(client, "morale", kind="loss", amount=1)
+    for p, pos in zip(pids, postures or ["valorous"] * len(pids)):
+        _step(client, "posture", knight=p, posture=pos, **({"amount": 1} if pos in ("reckless", "prudent") else {}),
+              **({"above_half": False} if pos == "cowardly" else {}))
+
+
+def _no_first_charge(client):
+    ok(client.post("/api/battle/settings", json={"day": 1, "patch": {"first_charge": False}}))
+
+
+def _three(client, start=21, turns=None):
+    pids = _party(client, "Sir Bors", "Sir Cai", "Sir Kay")
+    _quick(client, "clash")
+    _no_first_charge(client)
+    if turns:
+        ok(client.post("/api/battle/settings", json={"day": 1, "patch": {"turns": turns}}))
+    ok(client.post("/api/battle/deck", json={"day": 1, "add": DECK + ["Knights of Lothian", "Cambrian Archers", "Irish Kerns"]}))
+    _muster(client, pids, start=start)
+    return pids
+
+
+def _foes(client):
+    return [c for c in ok(client.get("/api/combat"))["combat"]["combatants"] if c["side"] != "party"]
+
+
+def test_fight_scaled_to_conroi_knights(client):
+    pids = _three(client)
+    _to_fight(client, pids, "Knights of Lothian")
+    ok(client.post("/api/battle/fight"))
+    assert len(_foes(client)) == 5                         # 1.5 × 3, half up
+    ok(client.post("/api/combat/end"))
+    _step(client, "end_turn")
+    _to_fight(client, pids, "Knights of Lothian", postures=["valorous", "valorous", "cowardly"], turn1=False)
+    _step(client, "countercharge", roll=4)
+    ok(client.post("/api/battle/fight"))
+    assert len(_foes(client)) == 3                         # the Cowardly knight doesn't count
+
+
+def test_intensity_crit_doubles_resolved_count(client):
+    pids = _three(client)
+    _to_fight(client, pids, "Knights of Lothian", intensity="critical")
+    ok(client.post("/api/battle/fight"))
+    cs = ok(client.get("/api/combat"))["combat"]
+    assert len(_foes(client)) == 10 and cs["battle"]["doubled"]
+
+
+def test_knight_snapshots_carry_pill_posture_rounds(client):
+    pids = _three(client)
+    ok(client.post(f"/api/battle/knight/{pids[2]}", json={"mounted": False}))
+    _to_fight(client, pids, "Pictish Knifemen", postures=["reckless", "valorous", "prudent"])
+    ok(client.post("/api/battle/fight"))
+    ks = {c["party_id"]: c for c in ok(client.get("/api/combat"))["combat"]["combatants"] if c["side"] == "party"}
+    assert (ks[pids[0]]["posture"], ks[pids[0]]["rounds"]) == ("reckless", 3)
+    assert ks[pids[2]]["mounted"] is False and ks[pids[2]]["rounds"] == 1
+
+
+def test_countercharge_auto_first_turn_and_roll_later(client):
+    pids = _three(client, turns=3)
+    _to_fight(client, pids, "Knights of Gorre")
+    ok(client.post("/api/battle/fight"))
+    assert any(e["type"] == "battle.countercharge" for e in ok(client.get("/api/session/events"))["events"])
+    ok(client.post("/api/combat/end"))
+    _step(client, "end_turn")
+    _to_fight(client, pids, "Knights of Gorre", turn1=False)
+    assert client.post("/api/battle/fight").status_code == 409            # check the countercharge first
+    _step(client, "countercharge", roll=5)
+    assert _battle(client)["t"]["countercharge"]["yes"] is False
+    ok(client.post("/api/battle/fight"))
+
+
+def test_barrage_required_for_missile_card_and_reach_lines(client):
+    pids = _three(client)
+    _to_fight(client, pids, "Cambrian Archers", postures=["reckless", "valorous", "prudent"])
+    assert client.post("/api/battle/fight").status_code == 409
+    ev = _step(client, "barrage", outcome="failure")["events"][0]
+    assert ev["data"]["rounds"] == 2
+    assert "reaches the archers" in ev["data"]["lines"][0] and "turns back" in ev["data"]["lines"][1]
+    ok(client.post("/api/battle/fight"))
+
+
+def test_end_turn_applies_kv_gain_half_up(client):
+    pids = _three(client, start=21)
+    _to_fight(client, pids, "Irish Kerns")
+    ok(client.post("/api/battle/fight"))
+    kerns = _foes(client)
+    for c in kerns[:4]:                                     # 4 × KV ⅛ = ½ → +1
+        ok(client.post(f"/api/combat/{c['id']}/status", json={"out": "dead"}))
+    assert client.post("/api/battle/step", json={"step": "end_turn"}).status_code == 409   # end the fight first
+    ok(client.post("/api/combat/end"))
+    assert _battle(client)["kv_gain"] == 1
+    _step(client, "end_turn")
+    assert _battle(client)["morale"]["current"] == 21      # 21 − 1 + 1, capped at 21
+
+
+def test_fought_days_and_cowardly_excluded(client):
+    pids = _three(client)
+    _to_fight(client, pids, "Pictish Knifemen", postures=["valorous", "valorous", "cowardly"])
+    ok(client.post("/api/battle/fight"))
+    ok(client.post("/api/combat/end"))
+    _step(client, "end_turn")
+    fd = _battle(client)["fought_days"]
+    assert fd.get(pids[0]) == [1] and pids[2] not in fd
+
+
+def test_cascade_undo_strikes_linked_fight_and_its_glory(client):
+    pids = _three(client)
+    _to_fight(client, pids, "Pictish Knifemen")
+    ok(client.post("/api/battle/fight"))
+    foe = _foes(client)[0]
+    ok(client.post(f"/api/combat/{foe['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{foe['id']}/status", json={"out": "dead"}))
+    ok(client.post("/api/combat/end"))
+    assert _battle(client)["glory_battle"][pids[0]] == 5
+    prev = ok(client.get("/api/battle/undo-preview?step=postures"))["targets"]
+    assert {"combat.started", "combat.status", "combat.ended"} <= {t["type"] for t in prev}
+    ok(client.post("/api/battle/undo", json={"step": "postures"}))
+    b = _battle(client)
+    assert b["step"]["current"] == "postures" and b["glory_battle"].get(pids[0], 0) == 0
+    assert not (ok(client.get("/api/combat"))["combat"] or {}).get("active")
+
+
+def test_resume_mid_fight_restores_combat_and_glory_once(client):
+    pids = _party(client, "Sir Bors", "Sir Cai")
+    a = ok(client.post("/api/session/start", json={"title": "One"}))["session"]["id"]
+    _quick(client, "clash")
+    _no_first_charge(client)
+    ok(client.post("/api/battle/deck", json={"day": 1, "add": DECK}))
+    _muster(client, pids)
+    _to_fight(client, pids, "Pictish Knifemen")
+    ok(client.post("/api/battle/fight"))
+    foe = _foes(client)[0]
+    ok(client.post(f"/api/combat/{foe['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{foe['id']}/hp", json={"delta": -3}))
+    ok(client.post(f"/api/combat/{foe['id']}/status", json={"out": "dead"}))
+    before = _battle(client)["glory_battle"]
+    ok(client.post("/api/session/end"))
+    ok(client.post("/api/session/start", json={"title": "Two"}))
+    p = ok(client.get("/api/battle/paused"))["paused"][0]
+    ok(client.post("/api/battle/resume", json={"battle_id": p["battle_id"], "session_id": a}))
+    cs = ok(client.get("/api/combat"))["combat"]
+    assert cs["active"] and next(c for c in cs["combatants"] if c["id"] == foe["id"])["status"] == "dead"
+    assert _battle(client)["glory_battle"] == before
+
+
+def test_alone_knight_gets_lane_not_scaling(client):
+    pids = _three(client)
+    ok(client.post(f"/api/battle/knight/{pids[2]}", json={"position": "alone"}))
+    _to_fight(client, pids[:2], "Knights of Lothian")
+    ok(client.post("/api/battle/fight"))
+    cs = ok(client.get("/api/combat"))["combat"]
+    assert len(_foes(client)) == 3                           # 1.5 × 2 knights with the conroi
+    assert any(c.get("party_id") == pids[2] and c.get("position") == "alone" for c in cs["combatants"])
+
+
+def test_table_fight_view_battle_header_has_no_numbers(client):
+    pids = _three(client)
+    _to_fight(client, pids, "Knights of Gorre")
+    ok(client.post("/api/battle/fight"))
+    t = ok(client.get("/api/table"))
+    assert t["mode"] == "combat" and t["combat"]["battle"]["id"] == t["battle"]["id"]
+    raw = client.get("/api/table").text
+    for secret in ("morale_minimum", "cur_hp", "knight_value", "kvs"):
+        assert secret not in raw, secret
+    card = t["knights"][0]
+    assert card["glory"]["scope"] == "battle" and any(e["key"] == "posture" for e in card["effects"])

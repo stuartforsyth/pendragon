@@ -151,3 +151,13 @@ step strikes it and everything after it this turn in **one** `meta.strike`
 with `targets` (Restore unstrikes them). Retiring, resting at the rear, forced
 retires, Opportunities once per battle and the Force/Negate tokens are handled
 here.
+
+Step ⑨ **Begin the fight** launches an ordinary tracked fight linked to the turn
+(`combat.started.data.battle`), scaled to the knights with the conroi (Cowardly
+knights don't count; Alone knights get a lane), doubled on an Intensity
+critical, with each knight's pill, posture and rounds. The battle reducer folds
+linked fights into plain summaries (defeats, KV, Glory, who fought); End turn
+adds the KV Morale gain (half up per Encounter, a GM ruling). Barrage and
+countercharge are recorded before the fight. The tracker shows a battle frame
+(Morale strip, banners, posture rounds, +1 round, Back to battle) and the
+Table's fight view a battle header with compact Morale.

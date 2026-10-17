@@ -2,8 +2,7 @@
 .enc-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60ch; }
 
 .cbt-head { border-bottom: 1px solid var(--line); margin-bottom: 6px; }
-.cbt-title { margin: 0; font-family: var(--f-display); font-size: 28px; letter-spacing: .04em; color: var(--or-bright);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbt-title { margin: 0; font-family: var(--f-display); font-size: 26px; line-height: 1.15; letter-spacing: .04em; color: var(--or-bright); text-wrap: balance; }
 .round-box { display: flex; flex-direction: column; align-items: center; padding: 0 14px; border-left: 1px solid var(--line); }
 .round-n { font-family: var(--f-ui); font-weight: 800; font-size: 30px; line-height: 1; color: var(--or-bright); font-variant-numeric: tabular-nums; }
 .cbt-desc summary { cursor: pointer; font-family: var(--f-display); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--or); }
@@ -137,3 +136,9 @@ span.chip-height { cursor: default; }
 
 /* ---------- random fight (S4) ---------- */
 .tag-pick { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+
+/* ---------- battle frame (S8) ---------- */
+.banner.cc { border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 13px; display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0;
+  background: rgba(208,87,75,.12); border: 1px solid var(--gules-deep); color: var(--gules); }
+.cbt-lane-head .meta { color: var(--ink-2); font-size: 13px; }
+.cbt-lane-head .withdraw { color: var(--or-bright); font-weight: 700; }

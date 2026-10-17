@@ -148,18 +148,24 @@ async def start(request: Request, body: dict):
     defn = to_editable(defn)
     name = name or defn.get("name") or "Encounter"
     party = _active_party(state) if body.get("include_party", True) else []
+    link = body.get("_battle")                 # a battle's linked fight (POST /api/battle/fight)
+    if link:
+        party = [state.party.get(pid) for pid in body.get("_knights", []) if state.party.get(pid)]
     players = to_int(body.get("players") or len(party) or 4, "players")
     if players < 1:
         bad("At least one player")
 
     enc = Encounter(state.rules)
-    foes = enc.generate_from_definition(defn, players)
+    foes = enc.generate_from_definition(defn, players, int(body.get("_multiplier") or 1))
     if lone is not None:
         foes = [lone]
     knights = []
     mounted = body.get("knights_mounted", True) is not False
+    overrides = body.get("_knight_overrides") or {}
     for m in party:
-        k = Combatant.from_party(m, mounted=mounted)
+        k = Combatant.from_party(m, mounted=overrides.get(m["id"], {}).get("mounted", mounted))
+        for key, v in overrides.get(m["id"], {}).items():
+            setattr(k, key, v)
         k.id = f"p-{m['id']}"
         knights.append(k)
     if not foes and not knights:
@@ -180,7 +186,7 @@ async def start(request: Request, body: dict):
     ev = state.record(
         "combat.started", " — ".join(lines), title=name,
         data={"name": name, "players": players, "descriptions": descriptions,
-              "combatants": [c.to_dict() for c in knights + foes],
+              "combatants": [c.to_dict() for c in knights + foes], **({"battle": link} if link else {}),
               "table_text": (f"{len(foes)} foe{'s' if len(foes) != 1 else ''} take the field: {names}"
                              + (f". {defn['description'].strip()}" if defn.get("description", "").strip() else ""))})
     return {"event": ev}

@@ -26,10 +26,13 @@ async def award(request: Request, body: dict):
         bad("Say what the Glory is for")
     cs = state.combat_state()
     fight = cs["started_event"] if cs and cs.get("active") else None
+    from web import battle_state as BS
+    b = state.battle_state()
+    battle = {"id": b["id"], "day": b["day"], "turn": b["turn"], "step": None} if BS.is_live(b) else None
     name = member["name"]
     line = f"{amount:+d} Glory · {name} — {reason}"
     ev = state.record("glory.awarded", line, title="Glory",
                       data={"knight": pid, "knight_name": name, "amount": amount, "reason": reason,
-                            "fight": fight, "battle": None, "source": "manual",
+                            "fight": fight, "battle": battle, "source": "manual",
                             "table_text": line, "touches": [pid], "glory_amount": amount})
     return {"event": ev}

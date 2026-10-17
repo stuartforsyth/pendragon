@@ -220,6 +220,7 @@ export default {
         case "postures": return Object.entries(t.postures).map(([pid, p]) => `${knightName(pid)} ${p.posture}`).join(" · ");
         case "rest": return t.rest != null ? `+${t.rest} Morale` : "";
         case "field": return t.retired ? "Retired to the Rear" : "";
+        case "fight": return t.fight ? `${t.fight.encounter}: ${t.fight.defeated} of ${t.fight.foes} defeated` : "";
         default: return "";
       }
     }
@@ -311,7 +312,7 @@ export default {
         case "select": return selectBody();
         case "morale": return moraleBody();
         case "postures": return posturesBody();
-        case "fight": return [h("div", { class: "hint" }, "Fights arrive in the next build — run this turn's fight in the Combat tool, then end the turn."), endButtons()];
+        case "fight": return fightBody();
         case "rest": return restBody();
         case "end": return endButtons();
         default: return null;
@@ -493,6 +494,38 @@ export default {
       } }), "Passion used");
     }
 
+    function fightBody() {
+      const t = b.t, c = b.chosen?.card || {};
+      const out = [];
+      if (!c.has_roster) {
+        return [h("div", { class: "hint" }, h("b", {}, b.chosen.encounter), " has no foes to fight — play it at the table."),
+          c.rules ? h("div", { class: "bl-script" }, c.rules) : null,
+          h("div", { class: "row" }, h("button", { class: "btn", onclick: () => ctx.navigate("combat") }, icon("star"), "Award Glory in Combat…"), endButtons())];
+      }
+      if (t.fight && t.fight.active) {
+        return [h("div", { class: "hint" }, `Fighting ${t.fight.encounter}: ${t.fight.defeated} of ${t.fight.foes} defeated.`),
+          h("button", { class: "btn primary", onclick: () => ctx.navigate("combat") }, icon("swords"), "Back to the fight")];
+      }
+      if (c.missile) {
+        out.push(h("div", { class: "half" }, h("div", { class: "label" }, "Barrage — the commander's Battle roll"),
+          t.barrage ? h("span", {}, t.barrage.rounds ? `${t.barrage.rounds} round${t.barrage.rounds === 1 ? "" : "s"} of arrows before contact` : "Straight into contact")
+            : outcomeChips({ keys: true, onPick: (o) => step("barrage", { outcome: o }) })));
+      }
+      if (c.countercharge) {
+        out.push(h("div", { class: "half" }, h("div", { class: "label" }, "Countercharge"),
+          b.turn === 1 ? h("span", {}, "They countercharge! ", h("span", { class: "tag or rule-sr", title: "The book: on the first Battle Turn. Each day of a multi-day battle counts as a new first turn." }, "Scenario rule"))
+            : t.countercharge ? h("span", {}, t.countercharge.yes ? "They countercharge!" : "No countercharge — lances spent")
+            : amountEntry({ dice: "1D6", min: 1, max: 6, placeholder: "1D6: 1–2 yes", onEnter: (v) => step("countercharge", { roll: v }), rollForMe: () => step("countercharge", { roll_for_me: true }) })));
+      }
+      const ready = (!c.missile || t.barrage) && (!c.countercharge || b.turn === 1 || t.countercharge);
+      if (t.fight && !t.fight.active) out.push(h("div", { class: "hint" }, `Fought ${t.fight.encounter}: ${t.fight.defeated} of ${t.fight.foes} defeated.`));
+      out.push(h("div", { class: "row" },
+        !t.fight ? h("button", { class: "btn primary", disabled: !ready || null, onclick: async () => { await post("/api/battle/fight"); ctx.navigate("combat"); } },
+          icon("swords"), `Begin the fight${b.t.intensity?.outcome === "critical" ? " (foes doubled)" : ""} → combat tracker`) : null,
+        endButtons()));
+      return out;
+    }
+
     function restBody() {
       return [h("div", { class: "hint" }, "The commander rolls 1D6 at the table. Morale can't rise above its start."),
         amountEntry({ dice: "1D6", min: 1, max: 6, onEnter: (v) => step("rest", { amount: v }), rollForMe: () => step("rest", { roll_for_me: true }) }),
@@ -501,7 +534,10 @@ export default {
 
     function endButtons() {
       const last = b.turn >= b.turns_today;
-      return h("div", { class: "row" }, h("span", { class: "hint" }, last ? `Last turn of Day ${b.day}.` : `Then Turn ${b.turn + 1}.`),
+      const gain = b.kv_gain || 0;
+      return h("div", { class: "row" },
+        gain ? h("span", { class: "hint" }, `Foes defeated → Morale +${gain} `, h("span", { class: "tag purpure rule-gr", title: "Fractions of Knight Value round half up per Encounter" }, "GM ruling")) : null,
+        h("span", { class: "hint" }, last ? `Last turn of Day ${b.day}.` : `Then Turn ${b.turn + 1}.`),
         h("button", { class: "btn primary", onclick: () => step(last ? "end_day" : "end_turn") }, last ? (b.day >= b.days ? "End the last day" : "End day") : "End turn"));
     }
 

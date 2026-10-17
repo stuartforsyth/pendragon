@@ -95,9 +95,26 @@ CUTOFF_TYPES = ("table.cleared", "session.started")
 _NUM_WORD = {2: "two", 3: "three", 4: "four", 5: "five"}
 
 
-def _effects(k):
+_POSTURE = {"reckless": "Reckless", "valorous": "Valorous", "prudent": "Prudent", "cowardly": "Cowardly"}
+
+
+def _effects(k, battle=None):
     """A knight's reminder chips — what the player applies on paper."""
     out = []
+    if k.get("posture"):
+        p = _POSTURE.get(k["posture"], k["posture"])
+        lim = k["rounds"] + k.get("extra_rounds", 0)
+        label = f"{p} · last round" if k.get("last_round") else f"{p} · withdraws" if k.get("withdraws") \
+            else f"{p} · {lim} round{'s' if lim != 1 else ''}"
+        out.append({"key": "posture", "label": label, "tone": "state"})
+    if battle and k.get("mounted", True):
+        cr = battle.get("charge_result")
+        if cr == "may_charge_plus5":
+            out.append({"key": "charge", "label": "Charge +5", "tone": "boon"})
+        elif cr == "may_charge":
+            out.append({"key": "charge", "label": "May charge", "tone": "boon"})
+        elif cr == "first_charge":
+            out.append({"key": "charge", "label": "First charge!", "tone": "boon"})
     if not k.get("mounted", True):
         out.append({"key": "on_foot", "label": "On foot", "tone": "state"})
     seen = set()
@@ -112,7 +129,7 @@ def _effects(k):
     return out
 
 
-def knight_cards(events, fl, combat):
+def knight_cards(events, fl, combat, battle=None):
     """The players' knight cards for the fight view (reusable by battles,
     feasts and hunts): Glory, reminder chips, the last things that happened
     to each knight, and their lane of foes. Built here so ``touches`` — the
@@ -121,6 +138,7 @@ def knight_cards(events, fl, combat):
         return []
     rows = combat["combatants"]
     start = combat.get("started_event") or 0
+    linked = bool(battle and (combat.get("battle") or {}).get("id") == battle.get("id"))
     cards = []
     for k in (r for r in rows if r["side"] == "party"):
         pid = k.get("party_id")
@@ -142,8 +160,9 @@ def knight_cards(events, fl, combat):
                 for f in rows if f["side"] != "party" and f.get("engaged_with") == k["name"] and f["status"] == "active"]
         cards.append({"pid": pid, "name": k["name"], "player": k.get("player", ""), "mounted": k.get("mounted", True),
                       "status": k["status"],
-                      "glory": {"value": (combat.get("glory") or {}).get(pid, 0), "scope": "fight", "last": last},
-                      "effects": _effects(k), "happened": happened, "lane": {"foes": foes}})
+                      "glory": {"value": ((battle or {}).get("glory") or {}).get(pid, 0) if linked
+                                else (combat.get("glory") or {}).get(pid, 0), "scope": "battle" if linked else "fight", "last": last},
+                      "effects": _effects(k, battle if linked else None), "happened": happened, "lane": {"foes": foes}})
     return cards
 
 
@@ -167,4 +186,4 @@ def build(session, combat, pinned_mode="auto", battle=None):
     mode = auto if pinned_mode == "auto" else pinned_mode
     return {"session": {"title": session.title, "scratch": session.scratch},
             "mode": mode, "pinned": pinned_mode, "feed": feed, "combat": combat, "battle": battle,
-            "knights": knight_cards(session.events, fl, combat)}
+            "knights": knight_cards(session.events, fl, combat, battle)}

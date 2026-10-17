@@ -17,7 +17,7 @@ COMBAT_STATE_TYPES = {
     "combat.promote", "combat.modifier", "combat.engage", "combat.removed",
     "combat.round", "combat.ended", "combat.blow",
     "combat.mounted", "combat.horse", "combat.height", "combat.captured",
-    "glory.reassigned", "glory.awarded", "battle.resumed",
+    "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round",
 }
 
 
@@ -30,7 +30,7 @@ def apply(state, ev, promotion_cfg=None):
         return {"active": True, "name": d.get("name", "Encounter"),
                 "round": 1, "players": d.get("players", 0),
                 "descriptions": d.get("descriptions", []),
-                "started_event": ev["id"], "credits": {}, "manual": {},
+                "started_event": ev["id"], "credits": {}, "manual": {}, "battle": d.get("battle"),
                 "combatants": [Combatant.from_dict(c) for c in d.get("combatants", [])]}
     if t == "battle.resumed":            # a fight carried over from a paused battle
         snap = (d.get("snapshot") or {}).get("combat")
@@ -39,7 +39,7 @@ def apply(state, ev, promotion_cfg=None):
         return {"active": True, "name": snap.get("name", "Encounter"), "round": snap.get("round", 1),
                 "players": snap.get("players", 0), "descriptions": snap.get("descriptions", []),
                 "started_event": ev["id"], "credits": dict(snap.get("credits", {})),
-                "manual": dict(snap.get("manual", {})),
+                "manual": dict(snap.get("manual", {})), "battle": snap.get("battle"),
                 "combatants": [Combatant.from_dict(c) for c in snap.get("combatants", [])]}
     if state is None or not state["active"]:
         return state
@@ -95,6 +95,8 @@ def apply(state, ev, promotion_cfg=None):
         c.height_override = d.get("override")
     elif t == "combat.captured":
         c.captured_by = d.get("by")
+    elif t == "battle.extra_round":
+        c.extra_rounds = (c.extra_rounds or 0) + 1
     # Glory credit (Q10, derived): remember who the foe was fighting when it
     # fell; striking the defeating event replays without it.
     if getattr(c, "side", "foe") != "party" and state["combatants"].count(c):
@@ -221,6 +223,10 @@ def _derive(state, rows, view):
                 if k:
                     chips.append({"foe": f.display_name, "mod": k})
             r["mounted"] = c.mounted
+            if c.rounds is not None:
+                limit = c.rounds + (c.extra_rounds or 0)
+                r.update(posture=c.posture, rounds=c.rounds, extra_rounds=c.extra_rounds or 0, position=c.position,
+                         last_round=state["round"] == limit, withdraws=state["round"] > limit)
             if view == "gm":
                 r.update(mo={"n": n, "mod": B.multiple_opponents(n), "limit": limit, "over": n > limit},
                          height_chips=chips)
@@ -257,7 +263,7 @@ def serialise(state, view):
                            o["engaged_with"] == (r["display_name"] if view == "gm" else r["name"])
                            and o["status"] == "active"]
     out = {"active": state["active"], "name": state["name"], "round": state["round"],
-           "started_event": state.get("started_event"),
+           "started_event": state.get("started_event"), "battle": state.get("battle"),
            "players": state.get("players", 0),
            "descriptions": state.get("descriptions", []) if view == "gm" else [],
            "combatants": rows}

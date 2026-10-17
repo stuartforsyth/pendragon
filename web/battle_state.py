@@ -138,17 +138,18 @@ def apply(b, ev):
 STEP_ORDER = ("field", "set", "charge", "intensity", "picks", "select", "morale", "postures", "fight", "rest", "end")
 STEP_EVENTS = {"battle.field", "battle.rest", "battle.set", "battle.charge", "battle.intensity", "battle.pick",
                "battle.select", "battle.morale", "battle.posture", "battle.passion", "battle.turn_ended",
-               "battle.day_ended", "battle.fight"}
+               "battle.day_ended", "battle.fight", "battle.barrage", "battle.countercharge"}
 EVENT_STEP = {"battle.field": "field", "battle.rest": "rest", "battle.set": "set", "battle.charge": "charge",
               "battle.intensity": "intensity", "battle.pick": "picks", "battle.select": "select",
               "battle.morale": "morale", "battle.posture": "postures", "battle.turn_ended": "end",
-              "battle.day_ended": "end", "battle.fight": "fight"}
+              "battle.day_ended": "end", "battle.fight": "fight", "battle.barrage": "fight",
+              "battle.countercharge": "fight"}
 
 
 def new_turn():
     return {"retired": False, "set": None, "charge": None, "intensity": None, "picks": {}, "select": None,
             "morale": None, "postures": {}, "rest": None, "rear_choice": None, "fight": None, "ended": False,
-            "events": {}}
+            "barrage": None, "countercharge": None, "events": {}}
 
 
 def chosen(b):
@@ -222,7 +223,8 @@ def steps(b):
     else:
         done_p = bool(conroi_ids(b)) and all(pid in t["postures"] for pid in conroi_ids(b))
         items.append(("postures", "done" if done_p else None, "", ""))
-        items.append(("fight", "done" if t["fight"] else "optional", "", ""))
+        f = t["fight"]
+        items.append(("fight", "done" if f and not f.get("active") else "optional", "", ""))
     items.append(("end", "done" if t["ended"] else None, "", ""))
     return _states(items)
 
@@ -282,8 +284,14 @@ def _apply_step(b, ev):
                 return _misfit(b, ev, "Retire is chosen at the start of a turn")
             t["retired"] = True
         return
+    if t_type == "battle.barrage":
+        t["barrage"] = {"outcome": d["outcome"], "rounds": B.barrage_rounds(d["outcome"])}
+        return
+    if t_type == "battle.countercharge":
+        first = b["turn"] == 1
+        t["countercharge"] = {"roll": d.get("roll"), "yes": B.countercharge(first, d.get("roll"))}
+        return
     if step == "fight":
-        t["fight"] = dict(d)
         return
     if t_type == "battle.day_ended":
         days = len(b["definition"].get("days", []))
@@ -303,7 +311,12 @@ def _apply_step(b, ev):
         if cur != "end":
             return _misfit(b, ev, "The turn isn't finished")
         if t_type == "battle.turn_ended":
-            gain = int(d.get("kv_gain") or 0)
+            gain = kv_gain(b)
+            for f in turn_fights(b):
+                for pid in f["knights"]:
+                    days_ = b.setdefault("fought_days", {}).setdefault(pid, [])
+                    if b["day"] not in days_:
+                        days_.append(b["day"])
             if gain and m:
                 before = m["current"]
                 m["current"] = B.apply_morale(m["current"], m["start"], gain)
@@ -371,11 +384,77 @@ def _apply_step(b, ev):
 
 
 def reduce(events):
-    """The most recent battle in these (live) events, or None."""
-    b = None
+    """The most recent battle in these (live) events, or None. Fights linked
+    to the battle are folded alongside it (``web.combat_state``) so the battle
+    knows each fight's defeats, KV and Glory — kept as plain summaries, so
+    a snapshot stays JSON."""
+    from web import combat_state as CS
+    b, fight = None, None
     for ev in events:
+        t = ev["type"]
         b = apply(b, ev)
+        if t == "glory.awarded" and b and not (ev.get("data") or {}).get("fight"):
+            link = (ev.get("data") or {}).get("battle") or {}
+            if link.get("id") == b["id"]:
+                mg = b.setdefault("manual_glory", {})
+                pid = ev["data"].get("knight")
+                mg[pid] = mg.get(pid, 0) + int(ev["data"].get("amount", 0))
+            continue
+        if t == "combat.started":
+            link = (ev.get("data") or {}).get("battle")
+            fight = CS.apply(None, ev) if b and link and link.get("id") == b["id"] else None
+        elif t == "battle.resumed":
+            fight = CS.apply(None, ev) if ((ev.get("data") or {}).get("snapshot") or {}).get("combat") else None
+        elif fight is not None and (t.startswith("combat.") or t.startswith("glory.") or t == "battle.extra_round"):
+            fight = CS.apply(fight, ev)
+        else:
+            continue
+        if b and fight and (fight.get("battle") or {}).get("id") == b["id"]:
+            _summarise(b, fight)
     return b
+
+
+def _summarise(b, fight):
+    """One linked fight as the battle sees it: defeats, KV, Glory, who fought."""
+    from web import combat_state as CS
+    link = fight["battle"]
+    link.setdefault("fid", fight["started_event"])
+    foes = [c for c in fight["combatants"] if getattr(c, "side", "foe") != "party"]
+    knights = [c for c in fight["combatants"] if getattr(c, "side", "foe") == "party"]
+    down = [c for c in foes if c.status in B.DEFEATED]
+    summary = {"day": link.get("day"), "turn": link.get("turn"), "encounter": link.get("encounter") or fight["name"],
+               "active": fight["active"], "foes": len(foes), "defeated": len(down),
+               "kvs": [str(B.parse_kv(getattr(c, "knight_value", ""))) for c in down],
+               "glory": CS.glory_tally(fight),
+               "knights": [k.party_id for k in knights if getattr(k, "position", None) in (None, "conroi")
+                           and getattr(k, "posture", None) != "cowardly"]}
+    b.setdefault("fights", {})[str(link["fid"])] = summary
+    if summary["day"] == b["day"] and summary["turn"] == b["turn"] and b["status"] in ("turn", "rear"):
+        b["t"]["fight"] = {"fid": link["fid"], **summary}
+
+
+def turn_fights(b, day=None, turn=None):
+    day, turn = day or b["day"], turn or b["turn"]
+    return [f for f in b.get("fights", {}).values() if f["day"] == day and f["turn"] == turn]
+
+
+def kv_gain(b):
+    """Morale regained at End turn: the KV of foes defeated in this turn's
+    fights, each rounded half up (GM ruling), capped by the reducer."""
+    from fractions import Fraction
+    return B.kv_morale_gain([[Fraction(k) for k in f["kvs"]] for f in turn_fights(b)])
+
+
+def battle_glory(b):
+    """Glory per knight across the battle: every linked fight, plus awards
+    made during the battle outside a fight."""
+    tally = {}
+    for f in b.get("fights", {}).values():
+        for pid, n in f["glory"].items():
+            tally[pid] = tally.get(pid, 0) + n
+    for pid, n in b.get("manual_glory", {}).items():
+        tally[pid] = tally.get(pid, 0) + n
+    return tally
 
 
 def is_live(b):
@@ -424,6 +503,8 @@ def gm_view(b, party):
         b["chosen"] = {"encounter": enc, "card": card} if enc else None
         b["first_charge_turn"] = first_charge_turn(b)
         b["conroi_now"] = conroi_ids(b)
+        b["kv_gain"] = kv_gain(b)
+    b = {**b, "glory_battle": battle_glory(b)}
     names = _names(party)
     size = b["definition"].get("size", "clash")
     dd = _day_def(b)
@@ -460,7 +541,12 @@ def table_view(b, party):
                        "last": m.get("last")} if m else None,
             "commander_name": "GM" if b["commander"] == "gm" else names.get(b["commander"], {}).get("name"),
             "title_card": {"id": b.get("last_title_event")} if b.get("last_title_event") else None,
-            "revealed_scripts": [s["text"] for s in b["revealed_scripts"] if s.get("day") == b["day"]]}
+            "revealed_scripts": [s["text"] for s in b["revealed_scripts"] if s.get("day") == b["day"]],
+            "charge_result": ((b.get("t") or {}).get("charge") or {}).get("result")
+                             or ("first_charge" if b["status"] == "turn" and first_charge_turn(b) else None),
+            "glory": battle_glory(b),
+            "barrage": ((b.get("t") or {}).get("barrage") or {}).get("rounds"),
+            "countercharge": ((b.get("t") or {}).get("countercharge") or {}).get("yes")}
 
 
 def snapshot(b, combat):
@@ -470,6 +556,7 @@ def snapshot(b, combat):
         snap["combat"] = {"name": combat["name"], "round": combat["round"], "players": combat.get("players", 0),
                           "descriptions": combat.get("descriptions", []),
                           "credits": combat.get("credits", {}), "manual": combat.get("manual", {}),
+                          "battle": combat.get("battle"),
                           "combatants": [c.to_dict() for c in combat["combatants"]]}
     return snap
 

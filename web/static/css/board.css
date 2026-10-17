@@ -3,7 +3,7 @@
 
 .kcard {
   background: rgba(251, 244, 226, .85); border: 1px solid var(--parch-dark); border-radius: 8px;
-  padding: 9px 12px; display: grid; gap: 6px; align-content: start;
+  padding: 8px 12px; display: grid; gap: 5px; align-content: start; min-width: 0;
 }
 .kcard.down { opacity: .6; }
 .kc-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -28,7 +28,7 @@
 .fx.boon { color: var(--vert); border-color: var(--vert); background: rgba(47, 107, 62, .08); }
 .fx.state { color: var(--ink-2); border-color: var(--parch-dark); background: #f6ecd2; }
 
-.happened { font-size: 16px; line-height: 1.3; color: var(--ink-2); }
+.happened { font-size: 16px; line-height: 1.3; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .happened i { font-style: normal; font-family: var(--f-caps); font-size: 11px; letter-spacing: .2em; color: var(--ink-soft); margin-right: 6px; text-transform: uppercase; }
 
 @media (prefers-reduced-motion: reduce) {

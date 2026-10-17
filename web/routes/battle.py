@@ -708,17 +708,60 @@ def record_outcome(state, step, payload, source="gm"):
         who = _pid_name(state, pid)
         line = f"{who} draws on {name or 'a Passion'}" if used else f"{who}'s Passion is unmarked"
         rec("battle.passion", line, None, {"knight": pid, "used": used, "name": name, "touches": [pid]})
+    elif step == "barrage":
+        enc, card = BS.chosen(b)
+        if cur not in ("fight", "end") or not card.get("missile"):
+            _not_now("a barrage is for a missile Encounter, before the fight")
+        outcome = payload.get("outcome")
+        if outcome not in B.OUTCOMES:
+            bad("Choose Critical, Success, Failure or Fumble")
+        rounds = B.barrage_rounds(outcome)
+        lines = []
+        for pid in BS.conroi_ids(b):
+            p_ = t["postures"].get(pid, {}).get("posture")
+            r = B.POSTURES.get(p_, {}).get("rounds", 0)
+            lines.append(f"{_pid_name(state, pid)} " + ("reaches the archers" if B.reaches(r, 0, rounds)
+                                                        else f"endures {min(r, rounds)} round{'s' if min(r, rounds) != 1 else ''}, turns back"))
+        head = "The archers loose — no barrage, straight into contact" if not rounds else \
+            f"The archers loose — {rounds} round{'s' if rounds != 1 else ''} of arrows before contact"
+        rec("battle.barrage", f"{head}: " + "; ".join(lines), "fight", {"outcome": outcome, "rounds": rounds, "lines": lines})
+    elif step == "countercharge":
+        enc, card = BS.chosen(b)
+        if cur not in ("fight", "end") or not card.get("countercharge"):
+            _not_now("only lance-armed foes countercharge")
+        if b["turn"] == 1:
+            _not_now("on the day's first turn they always countercharge")
+        rolled = bool(payload.get("roll_for_me"))
+        roll = roll_expr("1D6") if rolled else to_int(payload.get("roll"), "1D6")
+        if not 1 <= roll <= 6:
+            bad("1D6: 1 to 6")
+        yes = B.countercharge(False, roll)
+        line = "They countercharge!" if yes else "No countercharge — their lances are spent"
+        rec("battle.countercharge", f"{line} (1D6: {roll})", "fight", {"roll": roll, "rolled": rolled}, table=line)
+    elif step == "extra_round":
+        cs = state.combat_state()
+        if not cs or not cs.get("active") or (cs.get("battle") or {}).get("id") != b["id"]:
+            _not_now("no battle fight is running")
+        pid = payload.get("knight")
+        if not any(getattr(c, "party_id", None) == pid for c in cs["combatants"]):
+            bad("That knight isn't in the fight")
+        who = _pid_name(state, pid)
+        rec("battle.extra_round", f"{who} fights on — one more round", "fight", {"knight": pid, "cid": f"p-{pid}", "touches": [pid]})
     elif step in ("end_turn", "end_day"):
         if cur != "end" and cur != "fight":
             _not_now("finish the turn's steps first")
         last = b["turn"] >= (BS._day_def(b).get("turns") or 1)
         if step == "end_turn" and last and b["status"] == "turn":
             bad("This is the day's last turn — End day")
-        gain = 0
+        cs = state.combat_state()
+        if cs and cs.get("active") and (cs.get("battle") or {}).get("id") == b["id"]:
+            _not_now("end the fight first")
+        gain = BS.kv_gain(b)
+        after = B.apply_morale(m["current"], m["start"], gain)
         line = f"End of Turn {b['turn']}"
         if gain:
-            line += f" — Morale +{gain} for foes defeated"
-        rec("battle.turn_ended", line, "end", {"kv_gain": gain})
+            line += f" — Morale +{after - m['current']} for foes defeated ({after} of {m['start']})"
+        rec("battle.turn_ended", line, "end", {"kv_preview": gain})
         if step == "end_day":
             b2 = state.battle_state()
             days = len(b2["definition"]["days"])
@@ -728,6 +771,43 @@ def record_outcome(state, step, payload, source="gm"):
     else:
         bad("Unknown step")
     return {"events": evs, "battle": BS.gm_view(state.battle_state(), state.party.items)}
+
+
+@router.post("/api/battle/fight")
+async def fight(request: Request):
+    """⑨ Begin the fight: an ordinary tracked fight, linked to this turn,
+    scaled to the knights with the conroi (Cowardly ones don't count) and
+    doubled on an Intensity critical. Knights Alone on the Field get a lane."""
+    state, b = _live(request)
+    if BS.current_step(b) not in ("fight", "end") or not BS.conroi_ids(b) \
+            or not all(pid in b["t"]["postures"] for pid in BS.conroi_ids(b)):
+        _not_now("choose postures first")
+    enc, card = BS.chosen(b)
+    if not card.get("has_roster"):
+        bad("Play this Opportunity at the table, then End turn")
+    t = b["t"]
+    if card.get("missile") and not t.get("barrage"):
+        _not_now("record the commander's barrage roll first")
+    if card.get("countercharge") and b["turn"] != 1 and not t.get("countercharge"):
+        _not_now("check whether they countercharge first")
+    if card.get("countercharge") and b["turn"] == 1 and not t.get("countercharge"):
+        state.record("battle.countercharge", "They countercharge! (first turn of the day)", title=_name(b),
+                     data={"roll": None, "rolled": False, "table_text": "They countercharge!", "battle": _link(b, "fight")})
+    fighting = [pid for pid in BS.conroi_ids(b) if t["postures"].get(pid, {}).get("posture") != "cowardly"]
+    alone = [pid for pid in b["conroi"] if b["knights"].get(pid, {}).get("position") == "alone"]
+    overrides = {}
+    for pid in fighting + alone:
+        k = b["knights"][pid]
+        p_ = t["postures"].get(pid, {}).get("posture")
+        overrides[pid] = {"mounted": k["mounted"], "posture": p_, "rounds": B.POSTURES.get(p_, {}).get("rounds"),
+                          "extra_rounds": 0, "position": k.get("position", "conroi")}
+    doubled = (t.get("intensity") or {}).get("outcome") == "critical"
+    from web.routes.combat import start as combat_start
+    link = {"id": b["id"], "day": b["day"], "turn": b["turn"], "step": "fight", "encounter": enc, "doubled": doubled}
+    return await combat_start(request, {"encounter": enc, "players": max(1, len(fighting)), "_battle": link,
+                                        "_knights": fighting + alone, "_knight_overrides": overrides,
+                                        "_multiplier": 2 if doubled else 1,
+                                        "_prefix": f"Day {b['day']}, Turn {b['turn']}: "})
 
 
 @router.post("/api/battle/step")
@@ -742,10 +822,21 @@ def _undo_targets(state, b, step_key):
     idx = BS.STEP_ORDER.index(step_key)
     events = live_events(state.session.events)
     resumed = max((e["id"] for e in events if e["type"] == "battle.resumed"), default=0)
-    out = []
+    out, in_fight = [], False
+    fight_idx = BS.STEP_ORDER.index("fight")
     for ev in events:
-        link = (ev.get("data") or {}).get("battle") or {}
-        if link.get("id") != b["id"] or link.get("day") != b["day"] or link.get("turn") != b["turn"]:
+        d = ev.get("data") or {}
+        link = d.get("battle") or {}
+        this_turn = link.get("id") == b["id"] and link.get("day") == b["day"] and link.get("turn") == b["turn"]
+        if ev["type"] == "combat.started":
+            in_fight = this_turn and idx <= fight_idx
+        if in_fight and (ev["type"].startswith("combat.") or ev["type"].startswith("glory.") or
+                         (ev["type"].startswith("roll.") and d.get("cid"))):
+            out.append(ev)                         # the turn's linked fight goes with it
+            if ev["type"] == "combat.ended":
+                in_fight = False
+            continue
+        if not this_turn:
             continue
         st_ = link.get("step")
         if st_ is None or st_ not in BS.STEP_ORDER:

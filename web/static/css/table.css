@@ -298,3 +298,17 @@ body {
 .bv-script { max-width: 36em; font-size: 22px; font-style: italic; color: var(--ink); background: rgba(251, 244, 226, .8);
   border-left: 4px solid var(--purpure); padding: 10px 16px; border-radius: 0 6px 6px 0; }
 @media (max-width: 1000px) { .battleview { grid-template-columns: 1fr; } }
+
+/* ---------- fight view inside a battle (S8) ---------- */
+.fv-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; }
+.fv-battle { font-family: var(--f-caps); font-size: 15px; letter-spacing: .14em; color: var(--ink-2); text-transform: uppercase; }
+.fv-morale { display: flex; align-items: center; gap: 10px; }
+.fv-morale .lbl { font-family: var(--f-caps); font-size: 12px; letter-spacing: .25em; color: var(--ink-soft); text-transform: uppercase; }
+.fv-morale .mb { width: 200px; height: 14px; border-radius: 7px; background: rgba(42,29,20,.12); border: 1px solid var(--or); overflow: hidden; position: relative; }
+.fv-morale .mb i { position: absolute; inset: 0 auto 0 0; background: #4f7a34; }
+.fv-morale.band-shaken .mb i { background: #9a6e22; }
+.fv-morale.band-bloodied .mb i { background: linear-gradient(90deg, #8e2219, #b0632b); }
+.fv-morale.band-breaking .mb i { background: #8e2219; }
+.fv-morale b { font-family: var(--f-prose); font-size: 26px; font-weight: 600; font-variant-numeric: lining-nums; }
+.fv-morale .mw { font-family: var(--f-caps); font-weight: 700; font-size: 13px; letter-spacing: .22em; color: var(--gules); text-transform: uppercase; }
+.fv-morale.band-steady .mw { color: var(--vert); } .fv-morale.band-shaken .mw { color: #8a5a12; }

@@ -1097,7 +1097,7 @@ The full battle view is S9. In S7 the Fray and gauge already update.
 
 ---
 
-## S8 — Step ⑨: linked fight, scaling + doubling, postures/rounds in lanes, barrage, countercharge, positions, KV Morale, Alone (size **L**)
+## S8 — Step ⑨: linked fight, scaling + doubling, postures/rounds in lanes, barrage, countercharge, positions, KV Morale, Alone (size **L**) — ✅ DONE 2026-10-17
 
 **Goal.** Battles play end to end. ⑨ launches an ordinary tracked fight that is linked to the battle
 turn and scaled to the knights with the conroi. Posture rounds, barrage and countercharge show in the

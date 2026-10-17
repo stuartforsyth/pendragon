@@ -5,6 +5,7 @@
 
 import { h, clear, api, post, icon, menu, modal, toast, useCss, confirmBox, skillDisplay,
   CHAR_FULL, CHAR_ORDER, debounce } from "../lib.js";
+import { moraleStrip } from "../components.js";
 
 export default {
   async mount(el, ctx) {
@@ -27,8 +28,10 @@ export default {
       ]);
     }
 
+    let bt = null;              // the battle a linked fight belongs to (GM view)
     async function refresh() {
       cs = (await api("/api/combat")).combat;
+      bt = cs?.battle ? (await api("/api/battle")).battle : null;
       render();
     }
 
@@ -191,17 +194,20 @@ export default {
         h("div", { class: "cbt-head sticky-bar" },
           h("div", { class: "row", style: { alignItems: "flex-end" } },
             h("div", { style: { minWidth: 0, flex: 1 } },
-              h("div", { class: "label" }, "In combat"),
+              h("div", { class: "label" }, bt ? `${bt.definition.name || "Battle"} · Day ${cs.battle.day} · Turn ${cs.battle.turn}${cs.battle.doubled ? " · foes doubled" : ""}` : "In combat"),
               h("h1", { class: "cbt-title" }, cs.name)),
             h("div", { class: "round-box" }, h("span", { class: "label" }, "Round"), h("span", { class: "round-n" }, cs.round)),
             h("button", { class: "btn primary", onclick: () => post("/api/combat/round") }, icon("hourglass"), "Next round"),
             h("button", { class: "btn", onclick: (e) => addMenu(e.currentTarget, availableKnights) }, icon("plus"), "Add"),
             h("button", { class: "btn", onclick: awardGlory, title: "Award Glory by hand (an Opportunity's reward, a deed)" }, icon("star"), "Award Glory"),
-            h("button", { class: "btn danger", onclick: endCombat }, icon("flag"), "End fight")),
+            h("button", { class: "btn danger", onclick: endCombat }, icon("flag"), "End fight"),
+            bt ? h("button", { class: "btn ghost", onclick: () => ctx.navigate("battle") }, "◂ Back to battle") : null),
           h("div", { class: "row", style: { marginTop: "10px" } },
             h("span", { class: "tag gules" }, `${up} of ${foes.length} foes standing`),
             knights.length ? h("span", { class: "tag azure" }, `${knights.filter((k) => !k.down).length} of ${knights.length} knights in the fight`) : null,
             note)),
+        bt ? moraleStrip(bt, { onAdjust: () => ctx.navigate("battle"), onCommander: () => ctx.navigate("battle") }) : null,
+        bt ? battleBanners() : null,
         cs.gm_notes ? h("details", { class: "cbt-notes" }, h("summary", {}, "GM notes"), h("p", { class: "muted" }, cs.gm_notes)) : null,
         cs.types?.length ? h("div", { class: "cbt-types" }, cs.types.map(typeHeader)) : null,
         !foes.length ? h("div", { class: "empty" }, "No foes — add some.") : null,
@@ -287,7 +293,13 @@ export default {
               title: k.mo.over ? `More than ${k.mo.limit} ${k.mo.limit === 2 ? "mounted foes" : "foes on foot"} can't all attack one knight` : "Multiple Opponents: the knight applies this to each opponent" },
               `⚠ ${k.mo.n} foes · −${-k.mo.mod} vs each`) : null,
             heightReminders(k.height_chips || [])),
-          h("span", { class: "cbt-glory", title: "Glory won this fight" }, `✦ ${cs.glory?.[k.party_id] ?? 0} this fight`),
+          k.posture ? h("span", { class: "meta" }, `${k.posture[0].toUpperCase() + k.posture.slice(1)} · round ${Math.min(cs.round, k.rounds + k.extra_rounds)} of ${k.rounds + k.extra_rounds}`,
+            k.last_round ? h("b", { class: "withdraw" }, " · withdraws after this round") : k.withdraws ? h("b", { class: "withdraw" }, " · withdraws") : null) : null,
+          k.position === "alone" ? h("span", { class: "tag gules", title: "Alone: rolls Battle at −10, still drains conroi Morale (use ± with a reason)" }, "Alone") : null,
+          bt && (k.last_round || k.withdraws) ? h("button", { class: "btn ghost sm", title: "Energetic + Valorous succeeded: one more round",
+            onclick: () => post("/api/battle/step", { step: "extra_round", knight: k.party_id }) }, "+1 round") : null,
+          h("span", { class: "cbt-glory", title: bt ? "Glory won this battle" : "Glory won this fight" },
+            bt ? `✦ ${bt.glory_battle?.[k.party_id] ?? 0} this battle` : `✦ ${cs.glory?.[k.party_id] ?? 0} this fight`),
           k.down ? h("button", { class: "btn ghost sm", onclick: () => mark(null) }, "Back in the fight")
             : [h("button", { class: "btn ghost sm", onclick: () => mark("unconscious") }, "Down"),
                h("button", { class: "btn ghost sm", onclick: () => mark("fled") }, "Out")]),
@@ -412,9 +424,25 @@ export default {
       post("/api/combat/add", a.isNpc ? { cast: a.cast_id } : { adversary: a.key }));
 
     async function endCombat() {
+      if (bt) {
+        if (await confirmBox("End the fight?", "End the fight and return to the battle — End turn applies the Morale gain for foes defeated.", "End fight")) {
+          await post("/api/combat/end");
+          ctx.navigate("battle");
+        }
+        return;
+      }
       if (await confirmBox("End combat?", "The Table returns to the Chronicle. Knights' Hit Points are saved back to the Party.", "End combat")) {
         await post("/api/combat/end");
       }
+    }
+
+    // Banners for a battle fight: barrage, countercharge.
+    function battleBanners() {
+      const t = bt.t || {};
+      const bits = [];
+      if (t.countercharge) bits.push(t.countercharge.yes ? "↯ They countercharge!" : "No countercharge — lances spent");
+      if (t.barrage) bits.push(t.barrage.rounds ? `Barrage: ${t.barrage.rounds} round${t.barrage.rounds === 1 ? "" : "s"} before contact` : "No barrage — straight into contact");
+      return bits.length ? h("div", { class: "banner cc" }, bits.map((x) => h("span", {}, x))) : null;
     }
 
     const byName = (n) => cs.combatants.find((o) => o.display_name === n);
@@ -546,7 +574,7 @@ export default {
     // ------------------------------------------------------------ wiring
     const refreshSoon = debounce(refresh, 50);
     ctx.onEvent((evs, { reset }) => {
-      if (reset || evs.some((e) => e.type.startsWith("combat.") || e.type.startsWith("glory.") || e.type.startsWith("meta."))) refreshSoon();
+      if (reset || evs.some((e) => e.type.startsWith("combat.") || e.type.startsWith("glory.") || e.type.startsWith("battle.") || e.type.startsWith("meta."))) refreshSoon();
     });
 
     await loadLibrary();
