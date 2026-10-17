@@ -9,7 +9,9 @@ import json
 from fastapi import APIRouter, Request
 
 from core import adversary as A
+from core import battle as B
 from core import examples as X
+from core.dice import NotationError, roll_notation
 from core.rules import example_combat_path
 from core.combat import alpha
 from core.encounter_def import blank_encounter, preview_lines, roster_threat, to_editable
@@ -201,7 +203,7 @@ def balance_traits(request: Request, body: dict):
 def _enc_summary(key, d):
     lines = d.get("roster", d.get("core", []))
     return {"key": key, "description": d.get("description", ""), "tags": d.get("tags", []),
-            "lines": len(lines), "source": d.get("source", ""),
+            "lines": len(lines), "source": d.get("source", ""), "battle_role": d.get("battle_role"),
             "adversaries": [ln.get("adversary", "") if isinstance(ln, dict) else ln for ln in lines]}
 
 
@@ -249,6 +251,27 @@ def _clean_encounter(d, advs):
     lead = d.get("leader") or {}
     if isinstance(lead, dict) and lead.get("adversary"):
         out["leader"] = {"adversary": lead["adversary"], "promote": bool(lead.get("promote", True))}
+    # Battle fields (Foe / Opportunity decks).
+    role = d.get("battle_role") or None
+    if role not in (None, "foe", "opportunity"):
+        bad("Battle role is Foe, Opportunity or none")
+    out["battle_role"] = role
+    mm = d.get("morale_minimum")
+    if mm in (None, ""):
+        out["morale_minimum"] = None
+    else:
+        out["morale_minimum"] = to_int(mm, "Minimum Morale")
+        if out["morale_minimum"] < 0:
+            bad("Minimum Morale can't be negative")
+    loss = str(d.get("morale_loss") or "").strip().upper()
+    if loss:
+        try:
+            roll_notation(loss)
+        except NotationError:
+            bad("Morale Loss isn't dice — e.g. 1D6+3")
+    out["morale_loss"] = loss
+    out["missile"] = bool(d.get("missile")) and role == "foe"
+    out["rules"] = str(d.get("rules") or "").strip()
     return out
 
 
@@ -259,7 +282,62 @@ def preview(request: Request, body: dict):
     n = max(1, to_int(body.get("players") or 4, "players"))
     lines, total = preview_lines(d, n)
     glory, hp = roster_threat(d, n, state.combat_data)
-    return {"lines": lines, "total": total, "glory": glory, "hp": hp}
+    mm, loss = B.default_morale(d, _advs(state))
+    return {"lines": lines, "total": total, "glory": glory, "hp": hp,
+            "battle_defaults": {"morale_minimum": mm, "morale_loss": loss, "kv_per_knight": _kv_per_knight(d, _advs(state))}}
+
+
+_KV_TEXT = {(1, 8): "⅛", (1, 4): "¼", (3, 8): "⅜", (1, 2): "½", (5, 8): "⅝", (3, 4): "¾", (7, 8): "⅞"}
+
+
+def _kv_text(f):
+    """A Knight Value as the cards print it (¼, 1½…)."""
+    whole, frac = int(f), f - int(f)
+    glyph = _KV_TEXT.get((frac.numerator, frac.denominator), f"{frac.numerator}/{frac.denominator}") if frac else ""
+    return (str(whole) if whole or not glyph else "") + glyph
+
+
+def _kv_lines(d, advs):
+    out = []
+    for ln in to_editable(d)["roster"]:
+        a = advs.get(ln.get("adversary"))
+        if not a:
+            continue
+        kv = B.parse_kv(a.get("other", {}).get("knight_value", ""))
+        per = float(ln.get("count", 1)) if ln.get("per_player") else 0.0
+        out.append({"adversary": ln["adversary"], "kv": _kv_text(kv), "per_knight": per, "_kv": kv})
+    return out
+
+
+def _kv_per_knight(d, advs):
+    from fractions import Fraction
+    total = sum((x["_kv"] * Fraction(x["per_knight"]).limit_denominator(16) for x in _kv_lines(d, advs)), Fraction(0))
+    return _kv_text(total)
+
+
+@router.get("/api/battle-decks")
+def battle_decks(request: Request, role: str | None = None):
+    """Battle-approved encounters with their GM-only mechanics (Minimum, Loss,
+    KV) for deck pickers. Never projected to the Table."""
+    if role not in (None, "foe", "opportunity"):
+        bad("role is foe or opportunity")
+    advs = _advs(st(request))
+    cards = []
+    for key in alpha(_encs(st(request))):
+        d = _encs(st(request))[key]
+        r = d.get("battle_role")
+        if not r or (role and r != role):
+            continue
+        ed = to_editable(d)
+        mm, loss = B.default_morale(ed, advs)
+        kvs = [{k: v for k, v in x.items() if k != "_kv"} for x in _kv_lines(d, advs)]
+        cards.append({"key": key, "role": r, "description": d.get("description", ""),
+                      "morale_minimum": d.get("morale_minimum") if d.get("morale_minimum") is not None else mm,
+                      "morale_loss": d.get("morale_loss") or loss, "kv": kvs,
+                      "kv_per_knight": _kv_per_knight(d, advs), "missile": bool(d.get("missile")),
+                      "countercharge": B.has_countercharge(ed, advs), "mounted_charge": B.mounted_charge_card(ed, advs),
+                      "has_roster": bool(ed["roster"] or ed.get("leader")), "rules": d.get("rules", "")})
+    return {"cards": cards}
 
 
 @router.put("/api/encounters")

@@ -97,6 +97,11 @@ view shows one lane per knight built from reusable board components
 (`static/js/board.js`): knight card with Glory counter, reminder chips and the
 last thing that happened to them (from events' server-only `touches`).
 
+**Random fight** (Combat launcher) draws an encounter carrying every picked tag,
+never an Opportunity. Encounters can be marked **Foe** or **Opportunity** for
+battle decks, with Minimum Morale, Morale Loss, a missile flag and rules text;
+`GET /api/battle-decks` lists them with their GM-only mechanics.
+
 Player knights are run on paper: the app never tracks their Hit Points,
 armour, wounds or death. It only tracks the enemies.
 

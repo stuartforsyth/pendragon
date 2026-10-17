@@ -31,3 +31,16 @@
 .section-label::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
 .toolbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .sticky-bar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0; margin-top: -10px; }
+
+/* ---------- shared battle components (components.js) ---------- */
+.deck-picker { display: grid; gap: 8px; }
+.dp-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.dp-tabs { display: flex; gap: 6px; }
+.dp-search { max-width: 220px; }
+.dp-list { display: grid; gap: 2px; max-height: 320px; overflow: auto; }
+.dp-row { display: grid; grid-template-columns: auto minmax(0, 1fr) 70px 90px 70px auto; gap: 10px; align-items: center; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.dp-row:hover { background: var(--panel-2); }
+.dp-row.on { background: rgba(212, 168, 75, .08); }
+.dp-row.missing { grid-template-columns: minmax(0, 1fr) auto auto; cursor: default; }
+.dp-name { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dp-meta { color: var(--ink-dim); font-size: 12px; font-variant-numeric: tabular-nums; }

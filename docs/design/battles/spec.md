@@ -550,7 +550,7 @@ have no event id under Q10. See Open point 1.
 
 ---
 
-## S4 — Random fight with tag filter (size **S**)
+## S4 — Random fight with tag filter (size **S**) — ✅ DONE 2026-10-17
 
 **Goal.** The Combat launcher can draw a random encounter from the library, optionally filtered by tags
 (P1 d5). This draw is separate from battle decks.
@@ -586,7 +586,7 @@ mockup, so check it against the existing launcher layout.
 
 ---
 
-## S5 — Encounter battle fields + deck lists (size **M**)
+## S5 — Encounter battle fields + deck lists (size **M**) — ✅ DONE 2026-10-17
 
 **Goal.** Encounters can be marked as battle Foes or Opportunities, with Morale Minimum, Morale Loss,
 missile and rules text. Battle-approved decks become listable.

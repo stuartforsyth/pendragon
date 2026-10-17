@@ -134,3 +134,6 @@ span.chip-height { cursor: default; }
 .cbt-glory { color: var(--or); font-weight: 800; font-size: 13px; white-space: nowrap; }
 .dcredit { color: var(--or); font-size: 12px; font-weight: 700; }
 .dwho { color: var(--gules); font-size: 12px; font-weight: 700; }
+
+/* ---------- random fight (S4) ---------- */
+.tag-pick { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }

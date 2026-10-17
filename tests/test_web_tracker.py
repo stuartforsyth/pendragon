@@ -142,3 +142,34 @@ def test_adversary_editor_keeps_flags(client):
     ok(client.put("/api/adversaries", json={"adversary": adv, "original": "Bandit"}))
     back = ok(client.get("/api/adversaries/Bandit"))["adversary"]
     assert back["mounted"] and back["countercharge"] and back["attacks_horse"]
+
+
+def _save_enc(client, name, tags, roster=True, role=None):
+    enc = ok(client.get("/api/encounters/blank"))["encounter"]
+    enc.update(name=name, tags=tags)
+    if roster:
+        enc["roster"] = [{"adversary": "Bandit", "count": 2, "per_player": False, "promote": False}]
+    if role:
+        enc["battle_role"] = role
+    ok(client.put("/api/encounters", json={"encounter": enc}))
+
+
+def test_random_fight_filters_by_all_tags(client):
+    _save_enc(client, "Both", ["xtag", "ytag"])
+    _save_enc(client, "One", ["xtag"])
+    for _ in range(6):
+        ok(client.post("/api/combat/random", json={"tags": ["xtag", "ytag"]}))
+        assert ok(client.get("/api/combat"))["combat"]["name"] == "Both"
+
+
+def test_random_fight_excludes_opportunities_and_empty(client):
+    _save_enc(client, "Opp", ["ztag"], role="opportunity")
+    _save_enc(client, "Empty", ["ztag"], roster=False)
+    _save_enc(client, "Real", ["ztag"])
+    for _ in range(6):
+        ok(client.post("/api/combat/random", json={"tags": ["ztag"]}))
+        assert ok(client.get("/api/combat"))["combat"]["name"] == "Real"
+
+
+def test_random_fight_no_match_400(client):
+    assert client.post("/api/combat/random", json={"tags": ["no-such-tag"]}).status_code == 400

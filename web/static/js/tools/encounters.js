@@ -14,6 +14,7 @@ export default {
     let adversaries = [];       // [{key, category, kind, hp, glory}]
     let q = "";
     let key = null, draft = null, baseline = "";
+    let battleHint = null;
     let players = 4;
 
     const search = h("input", { class: "input", type: "search", placeholder: "Search name, tags, adversaries…" });
@@ -110,7 +111,9 @@ export default {
       countEl.textContent = `${rows.length} of ${library.length}`;
       clear(listEl, rows.length ? rows.map((e) => h("div", { class: `list-item enc-item ${e.key === key ? "on" : ""}`, onclick: () => load(e.key), title: e.description || e.key },
         h("div", { class: "enc-item-main" },
-          h("div", { class: "enc-item-name" }, e.key),
+          h("div", { class: "enc-item-name" }, e.key,
+            e.battle_role === "foe" ? h("span", { class: "tag gules role-tag" }, "Foe")
+              : e.battle_role === "opportunity" ? h("span", { class: "tag or role-tag" }, "★ Opportunity") : null),
           h("div", { class: "faint small enc-item-sub" }, e.tags.length ? e.tags.join(" · ") : `${e.lines} line${e.lines === 1 ? "" : "s"}`)),
         h("button", { class: "btn ghost sm icon enc-launch", title: `Launch “${e.key}” for ${players} players`,
           onclick: (ev) => { ev.stopPropagation(); launch({ encounter: e.key, name: e.key }); } }, icon("play"))))
@@ -126,6 +129,7 @@ export default {
 
     function normalise(d) {
       d.roster ||= []; d.tags ||= []; d.notes ??= ""; d.description ??= ""; d.name ??= "";
+      d.battle_role ??= null; d.morale_minimum ??= null; d.morale_loss ??= ""; d.missile ??= false; d.rules ??= "";
       if (!d.leader || typeof d.leader !== "object") d.leader = null;
       return d;
     }
@@ -274,7 +278,7 @@ export default {
         })] : h("div", { class: "faint small" }, "No roster lines yet — add one below."));
       drawRoster();
 
-      const roster = h("div", { class: "panel" }, h("h3", {}, "Roster — each line scales itself"),
+      const roster = h("div", { class: "panel" }, h("h3", {}, d.battle_role === "opportunity" ? "Foes to fight (optional) — each line scales itself" : "Roster — each line scales itself"),
         h("p", { class: "faint small", style: { margin: "-4px 0 10px" } },
           "Tick “× players” to scale with the party (fractions allowed — 1.5 × players of Bodyguards); untick for a fixed number (1 King Lot)."),
         rosterEl,
@@ -282,6 +286,26 @@ export default {
           d.roster.push({ adversary: "", count: 1, per_player: true, promote: false });
           touched(); drawRoster(); rosterEl.querySelector(".roster-row:last-child select:nth-child(2)")?.focus();
         } }, icon("plus"), "Add roster line"));
+
+      // battle: Foe or Opportunity, with the deck's Morale Minimum and Loss
+      battleHint = h("div", { class: "faint small" });
+      const role = (r, label) => h("button", { class: `chip ${d.battle_role === r ? "on" : ""}`,
+        onclick: () => { d.battle_role = r; if (r !== "foe") d.missile = false; touched(); renderEditor(); updatePreview(); } }, label);
+      const mmIn = h("input", { class: "input num", type: "number", min: 0, value: d.morale_minimum ?? "", placeholder: "—" });
+      mmIn.addEventListener("input", () => { d.morale_minimum = mmIn.value === "" ? null : Number(mmIn.value); touched(); });
+      const lossIn = h("input", { class: "input", value: d.morale_loss || "", placeholder: "e.g. 1D6+3", style: { width: "120px" } });
+      lossIn.addEventListener("input", () => { d.morale_loss = lossIn.value.trim(); touched(); });
+      const battle = h("div", { class: "panel" }, h("h3", {}, "Battle"),
+        h("div", { class: "row", style: { flexWrap: "wrap" } }, role(null, "Not in battles"), role("foe", "Foe"), role("opportunity", "Opportunity ★")),
+        d.battle_role ? h("div", { class: "row battle-fields", style: { flexWrap: "wrap", marginTop: "10px" } },
+          h("label", { class: "field" }, h("span", {}, "Minimum Morale"), mmIn),
+          h("label", { class: "field" }, h("span", {}, "Morale Loss"), lossIn),
+          d.battle_role === "foe" ? h("label", { class: "check" }, h("input", { type: "checkbox", checked: !!d.missile,
+            onchange: (e) => { d.missile = e.target.checked; touched(); } }), "Missile barrage before contact") : null) : null,
+        d.battle_role === "opportunity" ? h("label", { class: "field", style: { marginTop: "10px" } }, h("span", {}, "Rules / rewards — played at the table"),
+          (() => { const t = h("textarea", { class: "input", rows: 4, placeholder: "e.g. Win within four rounds: each knight +100 Glory" }, d.rules || "");
+            t.addEventListener("input", () => { d.rules = t.value; touched(); }); return t; })()) : null,
+        d.battle_role ? battleHint : null);
 
       // leader
       const lead = d.leader || { adversary: "", promote: true };
@@ -305,13 +329,21 @@ export default {
           h("button", { class: "btn primary", onclick: launchDraft, title: "Start this fight in the combat tracker" }, icon("swords"), "Launch combat")),
         previewEl);
 
-      clear(editor, headEl, preview, roster, leader, details);
+      clear(editor, headEl, preview, roster, leader, battle, details);
       touched();
     }
 
     const updatePreview = debounce(async () => {
       if (!draft || !previewEl) return;
       const r = await post("/api/encounters/preview", { encounter: draft, players });
+      if (battleHint && draft.battle_role) {
+        const bd = r.battle_defaults;
+        const mm = battleHint.closest(".panel")?.querySelector('input[type="number"]');
+        const loss = battleHint.closest(".panel")?.querySelector('.battle-fields input:not([type])');
+        if (mm) mm.placeholder = bd.morale_minimum != null ? `from the cards: ${bd.morale_minimum}` : "—";
+        if (loss && bd.morale_loss) loss.placeholder = bd.morale_loss;
+        clear(battleHint, `GM only · KV per knight ${bd.kv_per_knight || "0"} · ≈ Glory ${r.glory.toLocaleString()} for this party`);
+      }
       clear(previewEl,
         r.lines.length ? h("ul", { class: "preview-lines" }, r.lines.map((l) => {
           const m = l.match(/^(\d+)× (.*)$/);

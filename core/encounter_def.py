@@ -6,10 +6,15 @@ import copy
 from core.combat import resolve_roster
 
 
+BATTLE_FIELDS = ("battle_role", "morale_minimum", "morale_loss", "missile", "rules")
+
+
 def blank_encounter():
     return {
         "source": "user", "name": "", "description": "", "tags": [],
         "roster": [], "leader": None, "notes": "",
+        # Battle fields: role None (not in battles) / "foe" / "opportunity".
+        "battle_role": None, "morale_minimum": None, "morale_loss": "", "missile": False, "rules": "",
     }
 
 
@@ -45,7 +50,9 @@ def to_editable(defn):
                 line["per_player"] = False
         return d
     d = blank_encounter()
-    d["name"] = defn.get("name", "")
+    for k in ("name", "description", "tags", "notes", "source") + BATTLE_FIELDS:
+        if defn.get(k) is not None:
+            d[k] = copy.deepcopy(defn[k])
     core = defn.get("core", [])
     # Legacy pool (per_player × players): split the factor across the pool's
     # members so the converted roster totals the same, not ×len(core).

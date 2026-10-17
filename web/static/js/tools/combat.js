@@ -13,6 +13,7 @@ export default {
     let encounters = [], advs = [], party = [], npcs = [];
     let pending = false;       // a re-render waiting for an input to lose focus
     let launchQuery = "", selected = "", players = null, includeParty = true, knightsMounted = true;
+    const randomTags = new Set();    // tags a Random fight must carry (all of them)
 
     const body = h("div");
     clear(el, body);
@@ -74,7 +75,10 @@ export default {
                 "Knights join the fight"),
               h("label", { class: "check" }, h("input", { type: "checkbox", checked: knightsMounted, onchange: (e) => { knightsMounted = e.target.checked; } }),
                 "Knights mounted"),
-              h("button", { class: "btn primary", onclick: () => launch() }, icon("swords"), "Launch encounter"),
+              h("div", { class: "row" },
+                h("button", { class: "btn primary", onclick: () => launch() }, icon("swords"), "Launch encounter"),
+                h("button", { class: "btn", onclick: randomFight, title: "Draw a random encounter — only those with every tag picked below" }, icon("d6"), "Random fight")),
+              tagChips(),
               h("button", { class: "btn", onclick: pickSingle }, icon("dragon"), "Fight a single adversary or NPC…"),
               h("div", { class: "faint small" }, "Build new encounters in the Encounter Creator."))),
           h("div", { class: "panel" }, h("h3", {}, "Encounters"), search, h("div", { style: { height: "8px" } }), list)),
@@ -83,6 +87,25 @@ export default {
             `${cs.name} ended after ${cs.round} round${cs.round === 1 ? "" : "s"} — `,
             `${cs.combatants.filter((c) => c.side !== "party" && c.down).length} of ${cs.combatants.filter((c) => c.side !== "party").length} foes down.`)) : null,
       ];
+    }
+
+    // Tags across the library; picked ones narrow a Random fight.
+    function tagChips() {
+      const tags = [...new Set(encounters.flatMap((e) => e.tags || []))].sort((a, b) => a.localeCompare(b));
+      if (!tags.length) return null;
+      const box = h("div", { class: "tag-pick" }, h("span", { class: "faint small" }, "Random fight from:"),
+        tags.map((t) => h("button", { class: `chip ${randomTags.has(t) ? "on" : ""}`, onclick: (e) => {
+          randomTags.has(t) ? randomTags.delete(t) : randomTags.add(t);
+          e.currentTarget.classList.toggle("on");
+        } }, t)));
+      return box;
+    }
+
+    async function randomFight() {
+      const activeParty = party.filter((m) => m.active !== false);
+      const r = await post("/api/combat/random", { tags: [...randomTags], players: players ?? (activeParty.length || 4),
+        include_party: includeParty, knights_mounted: knightsMounted });
+      if (r?.event) toast(`Drew ${r.event.title}`, "ok");
     }
 
     // Pick an adversary — or a Cast NPC with saved stats (helm icon, murrey).

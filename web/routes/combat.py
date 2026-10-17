@@ -2,6 +2,8 @@
 module validates a request, works out the log line (and a player-safe line for
 the Table that never shows a foe's numbers), and records it."""
 
+import random
+
 from fastapi import APIRouter, Request
 
 from core import battle as B
@@ -169,6 +171,7 @@ async def start(request: Request, body: dict):
     names = ", ".join(c.display_name for c in foes)
     lines = [f"Combat begins: {names}" if (body.get("adversary") or body.get("cast")) and not body.get("definition")
              else f"Launched '{name}' for {players} players: {names}"]
+    lines[0] = body.get("_prefix", "") + lines[0]
     if defn.get("description", "").strip():
         lines.append(defn["description"].strip())
     descriptions = _descriptions(foes)
@@ -181,6 +184,27 @@ async def start(request: Request, body: dict):
               "table_text": (f"{len(foes)} foe{'s' if len(foes) != 1 else ''} take the field: {names}"
                              + (f". {defn['description'].strip()}" if defn.get("description", "").strip() else ""))})
     return {"event": ev}
+
+
+@router.post("/api/combat/random")
+async def random_fight(request: Request, body: dict):
+    """Draw a random encounter from the library — only those carrying every
+    chosen tag, never an Opportunity or an empty recipe — and launch it."""
+    state = st(request)
+    tags = {t.strip().lower() for t in body.get("tags") or [] if t.strip()}
+    pool = []
+    for key, defn in state.combat_data.get("encounters", {}).items():
+        if defn.get("battle_role") == "opportunity":
+            continue
+        d = to_editable(defn)
+        if not d["roster"] and not d.get("leader"):
+            continue
+        if tags <= {t.lower() for t in defn.get("tags", [])}:
+            pool.append(key)
+    if not pool:
+        bad("No encounter has all those tags")
+    key = random.choice(pool)
+    return await start(request, {**body, "encounter": key, "_prefix": f"Random fight: drew '{key}' — "})
 
 
 @router.post("/api/combat/add")

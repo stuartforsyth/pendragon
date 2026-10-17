@@ -59,3 +59,68 @@ def test_encounter_leader_preview_and_launch_definition(client):
     assert combat["name"] == "Ambush at the ford" and len(combat["combatants"]) == 3
     ok(client.delete("/api/encounters/Ambush at the ford"))
     assert client.get("/api/encounters/Ambush at the ford").status_code == 404
+
+
+def _blank(client, name, **kw):
+    enc = ok(client.get("/api/encounters/blank"))["encounter"]
+    enc.update(name=name, roster=[{"adversary": "Bandit", "count": 2, "per_player": False, "promote": False}], **kw)
+    return enc
+
+
+def test_encounter_battle_fields_round_trip(client):
+    enc = _blank(client, "Ambush at the ford", battle_role="foe", morale_minimum=9, morale_loss="1d6+2", missile=True)
+    ok(client.put("/api/encounters", json={"encounter": enc}))
+    back = ok(client.get("/api/encounters/Ambush at the ford"))["encounter"]
+    assert (back["battle_role"], back["morale_minimum"], back["morale_loss"], back["missile"]) == ("foe", 9, "1D6+2", True)
+
+
+def test_saving_legacy_encounter_keeps_morale_minimum(client):
+    legacy = ok(client.get("/api/encounters/Conroi of knights"))["encounter"]
+    legacy.update(morale_minimum=11)
+    ok(client.put("/api/encounters", json={"encounter": legacy, "original": "Conroi of knights"}))
+    back = ok(client.get("/api/encounters/Conroi of knights"))["encounter"]
+    assert back["morale_minimum"] == 11 and back["roster"]
+    gorre = ok(client.get("/api/encounters/Knights of Gorre"))["encounter"]
+    ok(client.put("/api/encounters", json={"encounter": gorre, "original": "Knights of Gorre"}))
+    back = ok(client.get("/api/encounters/Knights of Gorre"))["encounter"]
+    assert back["morale_minimum"] == 13 and back["battle_role"] == "foe" and back["morale_loss"]
+
+
+def test_bad_morale_loss_rejected(client):
+    enc = _blank(client, "Bad", battle_role="foe", morale_loss="lots")
+    r = client.put("/api/encounters", json={"encounter": enc})
+    assert r.status_code == 400 and "dice" in r.text
+
+
+def test_opportunity_with_empty_roster_saves(client):
+    enc = _blank(client, "Hold the bridge", battle_role="opportunity", morale_minimum=12, rules="Win the bridge: +50 Glory")
+    enc["roster"] = []
+    ok(client.put("/api/encounters", json={"encounter": enc}))
+    assert ok(client.get("/api/encounters/Hold the bridge"))["encounter"]["rules"].startswith("Win")
+
+
+def test_battle_decks_lists_roles_with_min_loss_kv(client):
+    cards = ok(client.get("/api/battle-decks"))["cards"]
+    assert len([c for c in cards if c["role"] == "foe"]) == 12
+    assert len([c for c in cards if c["role"] == "opportunity"]) == 5
+    by = {c["key"]: c for c in cards}
+    assert by["Cambrian Archers"]["missile"]
+    assert by["Knights of Gorre"]["countercharge"] and by["Knights of Gorre"]["mounted_charge"]
+    assert by["Knights of Gorre"]["morale_minimum"] == 13 and by["Knights of Gorre"]["kv_per_knight"] == "1"
+    assert by["Pictish Knifemen"]["kv_per_knight"] == "⅜"
+    assert not by["Rally the Division!"]["has_roster"]
+    assert [c["key"] for c in ok(client.get("/api/battle-decks?role=opportunity"))["cards"]] == sorted(
+        k for k, c in by.items() if c["role"] == "opportunity")
+
+
+def test_preview_battle_defaults_mixed_roster(client):
+    enc = _blank(client, "Mixed")
+    enc["roster"] = [{"adversary": "Pictish Knifemen", "count": 1, "per_player": True},
+                     {"adversary": "Knights of Gorre", "count": 1, "per_player": True}]
+    d = ok(client.post("/api/encounters/preview", json={"encounter": enc, "players": 3}))["battle_defaults"]
+    assert d["morale_minimum"] == 13 and d["morale_loss"] == "3D6"
+
+
+def test_battle_decks_never_on_table(client):
+    ok(client.get("/api/battle-decks"))
+    assert "morale_minimum" not in client.get("/api/table").text
