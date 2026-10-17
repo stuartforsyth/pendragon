@@ -4,9 +4,13 @@ Edits are written to the git-ignored working ``data/combat.json`` (never the
 tracked baseline). Library edits are prep, not play, so they aren't logged.
 """
 
+import json
+
 from fastapi import APIRouter, Request
 
 from core import adversary as A
+from core import examples as X
+from core.rules import example_combat_path
 from core.combat import alpha
 from core.encounter_def import blank_encounter, preview_lines, roster_threat, to_editable
 from web.routes.common import bad, st, to_int
@@ -285,3 +289,40 @@ async def delete_encounter(request: Request, key: str):
     state.save_combat_data()
     state.notify("library")
     return {"ok": True}
+
+
+# -- examples: new shipped content into the user's library (Q19) -------------
+
+def _baseline(state):
+    with open(example_combat_path(state.data_dir), encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+@router.get("/api/library/examples")
+def examples(request: Request):
+    state = st(request)
+    return X.examples_report(state.combat_data, _baseline(state))
+
+
+@router.post("/api/library/examples/merge")
+async def examples_merge(request: Request):
+    state = st(request)
+    added = X.merge_missing(state.combat_data, _baseline(state))
+    state.save_combat_data()
+    state.notify("library")
+    return {"added": added}
+
+
+@router.post("/api/library/examples/restore")
+async def examples_restore(request: Request, body: dict):
+    state = st(request)
+    kind, key = body.get("kind"), body.get("key")
+    if kind not in ("adversaries", "encounters"):
+        bad("Choose adversaries or encounters")
+    try:
+        entry = X.restore_entry(state.combat_data, _baseline(state), kind, key)
+    except KeyError:
+        bad(f"'{key}' isn't one of the shipped {kind}", 404)
+    state.save_combat_data()
+    state.notify("library")
+    return {"key": key, "entry": entry}

@@ -826,7 +826,9 @@
       },
       "promotion_title": "Captain",
       "kind": "generic",
-      "category": "human"
+      "category": "human",
+      "mounted": true,
+      "countercharge": true
     },
     "Average Knight": {
       "description": "A typical household or mercenary knight",
@@ -1274,7 +1276,7 @@
       "category": "human"
     },
     "Knights of Gorre": {
-      "description": "Stern archaic-looking knights of Gorre; may counter-charge",
+      "description": "Stern knights from the far northern kingdom of Gorre. Their gear looks old-fashioned, but they fight as well as any knight.",
       "tier": "elite",
       "battle_card": true,
       "characteristics": {
@@ -1340,7 +1342,7 @@
           "amount": "£10"
         }
       ],
-      "notes": "Stern archaic-looking knights of Gorre; may counter-charge.",
+      "notes": "One per Player-knight. May counter-charge.",
       "per_player": 1.0,
       "promotion_title": "Gorre Banneret",
       "traits": {
@@ -1350,10 +1352,12 @@
         "Horsemanship": 17
       },
       "kind": "generic",
-      "category": "human"
+      "category": "human",
+      "mounted": true,
+      "countercharge": true
     },
     "Knights of Lothian": {
-      "description": "An extra-large conroi from King Lot's Lothian; they strike harder; may counter-charge",
+      "description": "An unusually large conroi from King Lot's Lothian. There are more of them than usual, and they hit harder than most knights.",
       "tier": "elite",
       "battle_card": true,
       "characteristics": {
@@ -1413,7 +1417,7 @@
           "amount": "£4"
         }
       ],
-      "notes": "An extra-large conroi from King Lot's Lothian; they strike harder; may counter-charge.",
+      "notes": "1½ per Player-knight, rounded normally. May counter-charge.",
       "per_player": 1.5,
       "promotion_title": "Lothian Banneret",
       "traits": {
@@ -1423,10 +1427,12 @@
         "Horsemanship": 17
       },
       "kind": "generic",
-      "category": "human"
+      "category": "human",
+      "mounted": true,
+      "countercharge": true
     },
     "Knights of Malahaut": {
-      "description": "Knights dressed like Roman cavalry, with large oval shields; may counter-charge",
+      "description": "Knights turned out like the Roman cavalry of a century ago, with big oval shields and crested helms.",
       "tier": "elite",
       "battle_card": true,
       "characteristics": {
@@ -1486,7 +1492,7 @@
           "amount": "£4"
         }
       ],
-      "notes": "Knights dressed like Roman cavalry, with large oval shields; may counter-charge.",
+      "notes": "One per Player-knight. The penalty for using a large shield (scutum) on horseback is already included in their skill values; don't apply it again. May counter-charge.",
       "per_player": 1.0,
       "promotion_title": "Malahaut Banneret",
       "traits": {
@@ -1496,10 +1502,12 @@
         "Horsemanship": 15
       },
       "kind": "generic",
-      "category": "human"
+      "category": "human",
+      "mounted": true,
+      "countercharge": true
     },
     "Knights of Cornwall": {
-      "description": "A conroi of poor but motivated knights from Cornwall; may counter-charge",
+      "description": "A conroi of Cornish knights: poor, but eager to prove themselves.",
       "tier": "elite",
       "battle_card": true,
       "characteristics": {
@@ -1565,7 +1573,7 @@
           "amount": "£10"
         }
       ],
-      "notes": "A conroi of poor but motivated knights from Cornwall; may counter-charge.",
+      "notes": "One per Player-knight. May counter-charge.",
       "per_player": 1.0,
       "promotion_title": "Cornish Banneret",
       "traits": {
@@ -1575,10 +1583,12 @@
         "Horsemanship": 15
       },
       "kind": "generic",
-      "category": "human"
+      "category": "human",
+      "mounted": true,
+      "countercharge": true
     },
     "Northern Prickers": {
-      "description": "Rough men on hill ponies from the Roman Wall; armed with lances; may counter-charge",
+      "description": "Rough riders from the dales around the Roman Wall, mounted on tough hill ponies. The best-armed men of their remote valleys, but no match for a southern knight.",
       "tier": "trained",
       "battle_card": true,
       "characteristics": {
@@ -1619,17 +1629,19 @@
       "armour_desc": "Haubergeon, aketon, nasal helm + targe",
       "morale_minimum": 10,
       "ransom": null,
-      "notes": "Rough men on hill ponies from the Roman Wall; armed with lances; may counter-charge. Mace +1D6 vs mail.",
+      "notes": "One per Player-knight. They ride hill ponies and carry lances; may counter-charge. Mace: +1D6 damage against mail.",
       "per_player": 1.0,
       "promotion_title": "Pricker Headman",
       "skills": {
         "Horsemanship": 16
       },
       "kind": "generic",
-      "category": "human"
+      "category": "human",
+      "mounted": true,
+      "countercharge": true
     },
     "Pictish Pikemen": {
-      "description": "Painted, unarmoured mountain men with long spears; flee if a third are slain",
+      "description": "Painted men from the mountains far beyond Lothian. No armor, and nothing in their hands but a long spear.",
       "tier": "rabble",
       "battle_card": true,
       "characteristics": {
@@ -1664,14 +1676,14 @@
       "armour_desc": "None",
       "morale_minimum": 8,
       "ransom": null,
-      "notes": "Painted, unarmoured mountain men with long spears; flee if a third are slain.",
+      "notes": "Two per Player-knight. They carry only the two-handed spear, not even a knife. They flee once a third of their number are slain.",
       "per_player": 2.0,
       "promotion_title": "Pict War-leader",
       "kind": "generic",
       "category": "human"
     },
     "Pictish Javeliniers": {
-      "description": "Skirmishers who hurl javelins then melt away; always attempt to Evade in melee",
+      "description": "Painted skirmishers who dart across the ground like snipe, hurl their javelins, and melt back among their fellows.",
       "tier": "rabble",
       "battle_card": true,
       "characteristics": {
@@ -1712,14 +1724,14 @@
       "armour_desc": "None",
       "morale_minimum": 5,
       "ransom": null,
-      "notes": "Skirmishers who hurl javelins then melt away; always attempt to Evade in melee.",
+      "notes": "Three per Player-knight. Use the Battle rules' Encountering Missile Weapons to set how many Combat Rounds they throw javelins (Thrown Weapon) before the knights reach them. In contact they always try to Evade.",
       "per_player": 3.0,
       "promotion_title": "Pict War-leader",
       "kind": "generic",
       "category": "human"
     },
     "Pictish Knifemen": {
-      "description": "Grubby little men with wicked daggers; target horses first; flee at one-third down",
+      "description": "Grubby little men rushing in at a half-crouch, wicked daggers in hand and malice in their eyes.",
       "tier": "rabble",
       "battle_card": true,
       "characteristics": {
@@ -1754,14 +1766,15 @@
       "armour_desc": "None",
       "morale_minimum": 5,
       "ransom": null,
-      "notes": "Grubby little men with wicked daggers; target horses first; flee at one-third down.",
+      "notes": "Three per Player-knight. They go for a mounted knight's horse first and ignore all attacks until the horse is dead, then fall on the knight. They flee as soon as a third of their number are down and out of the fight.",
       "per_player": 3.0,
       "promotion_title": "Pict War-leader",
       "kind": "generic",
-      "category": "human"
+      "category": "human",
+      "attacks_horse": true
     },
     "Saxon Warriors": {
-      "description": "Seasoned armoured Saxons; form a shield wall vs a charge; fight until three-quarters are down",
+      "description": "A fierce band of seasoned, armored Saxon warriors.",
       "tier": "veteran",
       "battle_card": true,
       "characteristics": {
@@ -1814,7 +1827,7 @@
       "armour_desc": "Haubergeon, open helm + round shield; no shield with Great Axe",
       "morale_minimum": 8,
       "ransom": null,
-      "notes": "Seasoned armoured Saxons; form a shield wall vs a charge; fight until three-quarters are down. Axes -1D6 shield protection.",
+      "notes": "Two per Player-knight, so each knight faces a pair. One of each pair carries spear, axe or sword plus a round shield (roll 1D6 for each: 1-2 Sword, 3-4 Battle Axe, 5-6 Spear); the other carries a two-handed Great Axe and no shield (armor 5 instead of 5+6). In the first Combat Round the shield-men form a shield wall to Defend against a Mounted Charge; after that each pair teams up on its knight. Battle Axe and Great Axe: -1D6 to the target's shield protection. Spear: negates the height penalty for fighting mounted opponents. They fight on until three-quarters of their number are out of the fight.",
       "per_player": 2.0,
       "promotion_title": "Saxon Thegn",
       "traits": {
@@ -1824,7 +1837,7 @@
       "category": "human"
     },
     "Irish Kerns": {
-      "description": "Poorly-armed mercenaries from Ireland; make up in numbers what they lack in skill; target horses; flee once more than half are down",
+      "description": "Poorly armed, unarmored men from across the Irish Sea, brought over to fight for pay. Little discipline, but a great many of them.",
       "tier": "rabble",
       "battle_card": true,
       "characteristics": {
@@ -1867,24 +1880,24 @@
         "unconscious": 7
       },
       "other": {
-        "armor_points": 4,
-        "shield": 0,
+        "armor_points": 0,
+        "shield": 4,
         "glory": 10,
         "morale_loss": "1D6-1",
         "knight_value": "⅛",
         "healing_rate": 0
       },
-      "armour_desc": "Targe",
+      "armour_desc": "Targe only; otherwise unarmored",
       "morale_minimum": 6,
       "ransom": null,
-      "notes": "Poorly-armed mercenaries from Ireland; make up in numbers what they lack in skill; target horses; flee once more than half are down.",
+      "notes": "Four per Player-knight. Weapons vary: roll 1D6 for each (1 Inferior Sword, 2 Battle Axe, 3 Mace, 4-6 Spear). Battle Axe: -1D6 to the target's shield protection. Mace: +1D6 vs mail. Spear: negates the height penalty vs mounted opponents. Inferior Sword: breaks on ties like a normal weapon. They prefer to attack the horse, then swarm the knight once he is thrown or brought down; no more than three kerns may attack one opponent at once. They flee once more than half their number are down.",
       "per_player": 4.0,
       "promotion_title": "Kern Captain",
       "kind": "generic",
       "category": "human"
     },
     "Cambrian Archers": {
-      "description": "Hill archers wielding the dreaded longbow; loose arrows before contact; may flee if a third are injured",
+      "description": "Archers from the hills, carrying the dreaded longbow.",
       "tier": "trained",
       "battle_card": true,
       "characteristics": {
@@ -1925,14 +1938,14 @@
       "armour_desc": "None",
       "morale_minimum": 6,
       "ransom": null,
-      "notes": "Hill archers wielding the dreaded longbow; loose arrows before contact; may flee if a third are injured.",
+      "notes": "Three per Player-knight. Use the Battle rules' Encountering Missile Weapons to set how many Combat Rounds they loose arrows before the knights reach them. When the conroi reaches them, if it has more mounted knights than dismounted ones, each archer must make a Valorous roll or flee. They flee at any point once a third of them are seriously injured.",
       "per_player": 3.0,
       "promotion_title": "Master Archer",
       "kind": "generic",
       "category": "human"
     },
     "Breton Mercenary Knights": {
-      "description": "A conroi of mercenary knights from Little Britain; may counter-charge",
+      "description": "A conroi of mercenary knights from Little Britain, the peninsula settled long ago by British families.",
       "tier": "elite",
       "battle_card": true,
       "characteristics": {
@@ -1998,7 +2011,7 @@
           "amount": "£10"
         }
       ],
-      "notes": "A conroi of mercenary knights from Little Britain; may counter-charge.",
+      "notes": "One per Player-knight. May counter-charge.",
       "per_player": 1.0,
       "promotion_title": "Breton Banneret",
       "traits": {
@@ -2008,7 +2021,316 @@
         "Horsemanship": 16
       },
       "kind": "generic",
+      "category": "human",
+      "mounted": true,
+      "countercharge": true
+    },
+    "Banner Guard": {
+      "description": "Hand-picked knights of an enemy lord, sworn to guard his banner to the death.",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 16,
+        "DEX": 15,
+        "STR": 14,
+        "CON": 17,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 16,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 20,
+          "damage": "5D6"
+        }
+      ],
+      "health": {
+        "hit_points": 33,
+        "knockdown": 16,
+        "major_wound": 17,
+        "unconscious": 9
+      },
+      "other": {
+        "armor_points": 12,
+        "shield": 6,
+        "glory": 50,
+        "morale_loss": "3D6",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Advanced hauberk, advanced nasal helm, aketon + kite shield",
+      "morale_minimum": 13,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 6,
+          "type": "Banner Guard",
+          "amount": "£5"
+        }
+      ],
+      "notes": "Capture the Banner opportunity: one per Player-knight. They may roll Homage (Lord) to inspire themselves to defend the banner to the death. Ransom £5.",
+      "per_player": 1.0,
+      "promotion_title": "Standard Bearer",
+      "traits": {
+        "Valorous": 18
+      },
+      "skills": {
+        "Horsemanship": 20
+      },
+      "passions": {
+        "Homage (Lord)": 20
+      },
+      "kind": "generic",
+      "category": "human",
+      "mounted": true
+    },
+    "Enemy Bodyguard": {
+      "description": "Picked bodyguards closed tight around an enemy commander.",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 16,
+        "DEX": 15,
+        "STR": 12,
+        "CON": 17,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 18,
+          "damage": "6D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 20,
+          "damage": "6D6"
+        }
+      ],
+      "health": {
+        "hit_points": 33,
+        "knockdown": 16,
+        "major_wound": 17,
+        "unconscious": 9
+      },
+      "other": {
+        "armor_points": 12,
+        "shield": 6,
+        "glory": 50,
+        "morale_loss": "3D6",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Advanced hauberk, advanced nasal helm, aketon + kite shield",
+      "morale_minimum": 14,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 6,
+          "type": "Bodyguard",
+          "amount": "£5"
+        }
+      ],
+      "notes": "Fight Enemy Commander opportunity: 1½ per Player-knight, rounded normally. They double-team as many Player-knights as they can, highest Glory first. The card also prints a lower value in brackets for both weapons, Spear 18 (16) and Sword 20 (16), and Homage (Lord) 20 (+2), without saying when those apply. Ransom £5.",
+      "per_player": 1.5,
+      "promotion_title": "Captain of the Guard",
+      "traits": {
+        "Valorous": 18
+      },
+      "skills": {
+        "Horsemanship": 16
+      },
+      "passions": {
+        "Homage (Lord)": 20
+      },
+      "kind": "generic",
+      "category": "human",
+      "mounted": true
+    },
+    "Enemy Commander": {
+      "description": "A high-ranking enemy noble commanding a flank of the enemy host.",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 15,
+        "DEX": 14,
+        "STR": 15,
+        "CON": 18,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 20,
+          "damage": "5D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 20,
+          "damage": "5D6"
+        }
+      ],
+      "health": {
+        "hit_points": 33,
+        "knockdown": 16,
+        "major_wound": 18,
+        "unconscious": 9
+      },
+      "other": {
+        "armor_points": 13,
+        "shield": 6,
+        "glory": 150,
+        "morale_loss": "3D6",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Reinforced mail, advanced nasal helm, aketon + kite shield",
+      "morale_minimum": 14,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 6,
+          "type": "Noble commander",
+          "amount": "£100+ (by rank)"
+        }
+      ],
+      "notes": "Fight Enemy Commander opportunity: exactly one, a vanguard or rearguard division commander. Each Player-knight must defeat their own bodyguard opponent(s) before they can fight him. The card prints Spear and Sword as 20 (16) and Valorous as 20+1. Ransom £100 or more, depending on rank.",
+      "promotion_title": "Great Lord",
+      "traits": {
+        "Valorous": 20
+      },
+      "skills": {
+        "Horsemanship": 16
+      },
+      "kind": "generic",
+      "category": "human",
+      "mounted": true
+    },
+    "Dismounted Squire": {
+      "description": "Squires on foot, left to guard knights taken prisoner behind the enemy lines.",
+      "tier": "trained",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 12,
+        "DEX": 12,
+        "STR": 12,
+        "CON": 14,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Spear",
+          "skill": "Spear",
+          "value": 9,
+          "damage": "4D6"
+        }
+      ],
+      "health": {
+        "hit_points": 26,
+        "knockdown": 12,
+        "major_wound": 14,
+        "unconscious": 7
+      },
+      "other": {
+        "armor_points": 5,
+        "shield": 6,
+        "glory": 10,
+        "morale_loss": "3D6",
+        "knight_value": "¼",
+        "healing_rate": 0
+      },
+      "armour_desc": "Gambeson, open helm + round shield",
+      "morale_minimum": 13,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 6,
+          "type": "Squire",
+          "amount": "£1"
+        }
+      ],
+      "notes": "Rescue Captive Knights opportunity: one per Player-knight, on foot. Ransom £1.",
+      "per_player": 1.0,
+      "promotion_title": "Senior Squire",
+      "traits": {
+        "Valorous": 14
+      },
+      "kind": "generic",
       "category": "human"
+    },
+    "Enemy Champion": {
+      "description": "A champion who rides out from the enemy ranks to challenge one of your side to single combat.",
+      "tier": "elite",
+      "battle_card": true,
+      "characteristics": {
+        "SIZ": 16,
+        "DEX": 15,
+        "STR": 18,
+        "CON": 17,
+        "APP": "2D6+3"
+      },
+      "attacks": [
+        {
+          "weapon": "Lance",
+          "skill": "Charge",
+          "value": 18,
+          "damage": "7D6"
+        },
+        {
+          "weapon": "Sword",
+          "skill": "Sword",
+          "value": 19,
+          "damage": "6D6"
+        }
+      ],
+      "health": {
+        "hit_points": 33,
+        "knockdown": 16,
+        "major_wound": 17,
+        "unconscious": 9
+      },
+      "other": {
+        "armor_points": 12,
+        "shield": 6,
+        "glory": 50,
+        "morale_loss": "0",
+        "knight_value": "1",
+        "healing_rate": 0
+      },
+      "armour_desc": "Advanced hauberk, advanced nasal helm, aketon + kite shield",
+      "morale_minimum": 14,
+      "ransom": [
+        {
+          "min": 1,
+          "max": 6,
+          "type": "Champion",
+          "amount": "£15"
+        }
+      ],
+      "notes": "Clash of Champions opportunity: exactly one. Charge damage 7D6, or as the best warhorse of the Period (the card lists the Charge weapon as Sword; it is a Mounted Charge with lance). The GM may swap the Sword skill for another weapon skill, such as Hafted for a mace (or a hammer in later Periods). Ransom £15.",
+      "promotion_title": "Paragon",
+      "traits": {
+        "Valorous": 20
+      },
+      "skills": {
+        "Horsemanship": 19
+      },
+      "passions": {
+        "Homage (Lord)": 18
+      },
+      "kind": "generic",
+      "category": "human",
+      "mounted": true
     },
     "Carthorse": {
       "kind": "generic",
@@ -3728,88 +4050,367 @@
       "per_player": 1.0
     },
     "Knights of Gorre": {
-      "core": [
-        "Knights of Gorre"
+      "name": "Knights of Gorre",
+      "description": "Stern knights from the far northern kingdom of Gorre. Their gear looks old-fashioned, but they fight as well as any knight.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 1.0,
-      "morale_minimum": 13
+      "roster": [
+        {
+          "adversary": "Knights of Gorre",
+          "count": 1.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 13,
+      "morale_loss": "1D6+3",
+      "rules": ""
     },
     "Knights of Lothian": {
-      "core": [
-        "Knights of Lothian"
+      "name": "Knights of Lothian",
+      "description": "An unusually large conroi from King Lot's Lothian. There are more of them than usual, and they hit harder than most knights.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 1.5,
-      "morale_minimum": 13
+      "roster": [
+        {
+          "adversary": "Knights of Lothian",
+          "count": 1.5,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 13,
+      "morale_loss": "2D6",
+      "rules": ""
     },
     "Knights of Malahaut": {
-      "core": [
-        "Knights of Malahaut"
+      "name": "Knights of Malahaut",
+      "description": "Knights turned out like the Roman cavalry of a century ago, with big oval shields and crested helms.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 1.0,
-      "morale_minimum": 13
+      "roster": [
+        {
+          "adversary": "Knights of Malahaut",
+          "count": 1.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 13,
+      "morale_loss": "2D6",
+      "rules": ""
     },
     "Knights of Cornwall": {
-      "core": [
-        "Knights of Cornwall"
+      "name": "Knights of Cornwall",
+      "description": "A conroi of Cornish knights: poor, but eager to prove themselves.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 1.0,
-      "morale_minimum": 12
+      "roster": [
+        {
+          "adversary": "Knights of Cornwall",
+          "count": 1.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 12,
+      "morale_loss": "1D6+1",
+      "rules": ""
     },
     "Northern Prickers": {
-      "core": [
-        "Northern Prickers"
+      "name": "Northern Prickers",
+      "description": "Rough riders from the dales around the Roman Wall, mounted on tough hill ponies. The best-armed men of their remote valleys, but no match for a southern knight.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 1.0,
-      "morale_minimum": 10
+      "roster": [
+        {
+          "adversary": "Northern Prickers",
+          "count": 1.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 10,
+      "morale_loss": "1D6",
+      "rules": ""
     },
     "Pictish Pikemen": {
-      "core": [
-        "Pictish Pikemen"
+      "name": "Pictish Pikemen",
+      "description": "Painted men from the mountains far beyond Lothian. No armor, and nothing in their hands but a long spear.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 2.0,
-      "morale_minimum": 8
+      "roster": [
+        {
+          "adversary": "Pictish Pikemen",
+          "count": 2.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 8,
+      "morale_loss": "1D6+1",
+      "rules": ""
     },
     "Pictish Javeliniers": {
-      "core": [
-        "Pictish Javeliniers"
+      "name": "Pictish Javeliniers",
+      "description": "Painted skirmishers who dart across the ground like snipe, hurl their javelins, and melt back among their fellows.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 3.0,
-      "morale_minimum": 5
+      "roster": [
+        {
+          "adversary": "Pictish Javeliniers",
+          "count": 3.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 5,
+      "morale_loss": "1D6",
+      "missile": true,
+      "rules": ""
     },
     "Pictish Knifemen": {
-      "core": [
-        "Pictish Knifemen"
+      "name": "Pictish Knifemen",
+      "description": "Grubby little men rushing in at a half-crouch, wicked daggers in hand and malice in their eyes.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 3.0,
-      "morale_minimum": 5
+      "roster": [
+        {
+          "adversary": "Pictish Knifemen",
+          "count": 3.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 5,
+      "morale_loss": "3D6",
+      "rules": ""
     },
     "Saxon Warriors": {
-      "core": [
-        "Saxon Warriors"
+      "name": "Saxon Warriors",
+      "description": "A fierce band of seasoned, armored Saxon warriors.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 2.0,
-      "morale_minimum": 8
+      "roster": [
+        {
+          "adversary": "Saxon Warriors",
+          "count": 2.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 8,
+      "morale_loss": "1D6+2",
+      "rules": ""
     },
     "Irish Kerns": {
-      "core": [
-        "Irish Kerns"
+      "name": "Irish Kerns",
+      "description": "Poorly armed, unarmored men from across the Irish Sea, brought over to fight for pay. Little discipline, but a great many of them.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 4.0,
-      "morale_minimum": 6
+      "roster": [
+        {
+          "adversary": "Irish Kerns",
+          "count": 4.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 6,
+      "morale_loss": "1D6-1",
+      "rules": ""
     },
     "Cambrian Archers": {
-      "core": [
-        "Cambrian Archers"
+      "name": "Cambrian Archers",
+      "description": "Archers from the hills, carrying the dreaded longbow.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 3.0,
-      "morale_minimum": 6
+      "roster": [
+        {
+          "adversary": "Cambrian Archers",
+          "count": 3.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 6,
+      "morale_loss": "1D6+1",
+      "missile": true,
+      "rules": ""
     },
     "Breton Mercenary Knights": {
-      "core": [
-        "Breton Mercenary Knights"
+      "name": "Breton Mercenary Knights",
+      "description": "A conroi of mercenary knights from Little Britain, the peninsula settled long ago by British families.",
+      "tags": [
+        "battle-card"
       ],
-      "per_player": 1.0,
-      "morale_minimum": 12
+      "roster": [
+        {
+          "adversary": "Breton Mercenary Knights",
+          "count": 1.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": "",
+      "battle_role": "foe",
+      "morale_minimum": 12,
+      "morale_loss": "1D6+2",
+      "rules": ""
+    },
+    "Capture the Banner": {
+      "name": "Capture the Banner",
+      "description": "In the press of the melee you glimpse an enemy commander's own banner. Taking it would be a crushing blow to the foe.",
+      "tags": [
+        "battle-card",
+        "opportunity"
+      ],
+      "battle_role": "opportunity",
+      "morale_minimum": 13,
+      "morale_loss": "3D6",
+      "rules": "Guards: one Banner Guard (hand-picked knights) per Player-knight. The Player-knights may not charge; there's too much in the way. The guards may roll Homage (Lord) to defend the banner to the death. For the guards' Morale, check Valorous, Reckless and any Passion used.\nSeizing the banner: a Player-knight must first defeat their own opponent, then defeat the standard bearer or win a Grapple (Seize Weapon) Action to tear the banner away.\nEscape: with the banner, the conroi may break off and escort it back to their lines. Every Player-knight except the carrier makes an opposed Horsemanship roll against a pursuing guard. If the Player-knights outnumber the guards, each guard takes -5 per extra opponent, as for multiple opponents (max -15). Win: block one guard from the carrier. Partial success: block one, but a guard attacks you. Lose: a guard slips past to attack the carrier. Fumble: a guard attacks you for one Combat Round, then goes for the carrier.\nEach guard who slips past gets one Combat Action against the carrier. If they kill him, knock him unconscious or tear the banner away, they take it back to their lines; otherwise the banner is captured. Either way the Encounter ends, and if the Player-knights keep the banner they immediately Retire to the Rear.\nRewards: banner brought home: carrier +100 Glory, each escort +50 Glory, all +£2 base loot. The enemy Division Commander rolls Battle at -5 (2D6+5 if unknown): on a failure he leaves the field with his whole Division; on a success all Minimum Morale values drop by 3 for the rest of the battle.",
+      "roster": [
+        {
+          "adversary": "Banner Guard",
+          "count": 1.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": ""
+    },
+    "Fight Enemy Commander": {
+      "name": "Fight Enemy Commander",
+      "description": "An enemy flank commander stands apart from his division, ringed by his picked bodyguards. Here is a chance to take a great noble!",
+      "tags": [
+        "battle-card",
+        "opportunity"
+      ],
+      "battle_role": "opportunity",
+      "morale_minimum": 14,
+      "morale_loss": "3D6",
+      "rules": "Foes: 1½ bodyguards per Player-knight (rounded normally) plus the Commander, a vanguard or rearguard division commander. The bodyguards double-team as many Player-knights as possible, highest Glory first; this is no time for chivalric niceties. To fight the commander, a Player-knight must first defeat their own opponent(s).\nIf the Player-knights capture or kill the commander, his whole division leaves the battle. Another noble may try to rally it with a Battle roll at -10 (2D6+5 if unknown). If that fails, Minimum Morale drops by 5 and Morale Loss by 2 for every Encounter for the rest of the battle.\nRewards: knights in the conroi who didn't kill or capture the commander themselves still gain +50 Glory and +£5 loot. Commander's ransom £100 or more, by rank.",
+      "roster": [
+        {
+          "adversary": "Enemy Bodyguard",
+          "count": 1.5,
+          "per_player": true,
+          "promote": false
+        },
+        {
+          "adversary": "Enemy Commander",
+          "count": 1,
+          "per_player": false,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": ""
+    },
+    "Rescue Captive Knights": {
+      "name": "Rescue Captive Knights",
+      "description": "The conroi has broken through to the enemy's rear, where many friendly knights are held captive. Free them and they will turn the battle!",
+      "tags": [
+        "battle-card",
+        "opportunity"
+      ],
+      "battle_role": "opportunity",
+      "morale_minimum": 13,
+      "morale_loss": "3D6",
+      "rules": "Guards: one dismounted squire per Player-knight.\nIf the Player-knights defeat all their opponents within four Combat Rounds, they free the captives before reinforcements arrive. There are spare horses, arms and armor for all, and the freed knights rejoin the battle. The conroi must Retire to the Rear as it escorts them back to its lines.\nAfter four Combat Rounds a large force of mounted knights arrives. Each Player-knight may then break off and flee to their lines, with no shame in it (an Evade Action if engaged). Anyone who chooses or is forced to stay locked in combat must face two Knight Encounters of the GM's choice at once before fleeing. The captives stay captive, and the Player-knights may join them if it goes badly.\nRewards: if the captives are freed, each Player-knight gains 100 Glory and makes an unopposed Battle roll. Critical: a rescued knight is a great noble (or a noble's son), +350 Glory. Success: +150 Glory. Failure: +50 Glory. Fumble: nothing. Optionally, with the Favor system, the nobles owe Favors equal to these Glory awards instead.",
+      "roster": [
+        {
+          "adversary": "Dismounted Squire",
+          "count": 1.0,
+          "per_player": true,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": ""
+    },
+    "Rally the Division!": {
+      "name": "Rally the Division!",
+      "description": "A whole wing of your army is starting to crack: knights and foot soldiers are turning to flee. Only bold action can save the day, and only your conroi is in position.",
+      "tags": [
+        "battle-card",
+        "opportunity"
+      ],
+      "battle_role": "opportunity",
+      "morale_minimum": 12,
+      "morale_loss": "3D6",
+      "rules": "Three stages. Each Player-knight may roll only one Passion during this Encounter, at the start of any stage.\n1. Recognize the Danger: each knight rolls Battle; on a failure they do nothing useful for the rest of the Encounter. On a success they roll Valorous, Honor and Homage, scoring critical 2, success 1, failure 0, fumble -2. A positive total goes on to stage 2.\n2. Stop the Panic: only one knight who got this far rolls Play Instrument at -10 (horns and battle calls). Critical: everyone +10 to Orate in stage 3. Success: the retreat slows; everyone +5 to Orate. Fumble: the attempt fails and the knights are swept away, as for All Fumble below.\n3. Rally the Troops: the routing troops have Cowardly 20. Each knight still trying rolls Valorous, Honor and Homage (Lord); each win lowers that Cowardly by 5 and each loss raises it by 5. Then each knight rolls Orate against the modified Cowardly.\nResults. All Fumble: the division quits the field. The knights may join the rout (-1 Honor, -1 Homage, check Prudent, Retire to the Rear) or stand (+1 Honor, +1 Reckless; fight triple the foes in the next Encounter; if they defeat them all, five times normal battle Glory and plunder as a Division Commander each).\nMore losses than wins: half the division retreats. The knights may withdraw (-1 Honor, check Cowardly, Retire to the Rear) or stand (+1 Honor, check Reckless; twice the foes in the next Encounter; if they defeat them all, triple battle Glory and plunder as a conroi commander, or as a Division Commander for the actual conroi commander).\nMore wins than losses: the division stops, reforms and holds on the defensive for the next Battle Turn. The knights gain +1 Honor, checks to Honor and Orate, double battle Glory, and plunder as a conroi commander (the conroi commander as a Division Commander).\nAll win: the division reforms and attacks! Draw a random Foe Encounter; each knight gets +5 to every Skill during it. All gain +1 Honor, +1 Homage, +1 to a Passion used here, an Orate check, triple battle Glory, and plunder as a Division Commander.",
+      "roster": [],
+      "leader": null,
+      "notes": ""
+    },
+    "Clash of Champions": {
+      "name": "Clash of Champions",
+      "description": "The enemy ranks part, and a champion rides out to challenge someone from your side to single combat.",
+      "tags": [
+        "battle-card",
+        "opportunity"
+      ],
+      "battle_role": "opportunity",
+      "morale_minimum": 14,
+      "morale_loss": "0",
+      "rules": "The conroi commander picks the champion from anyone in the conroi, themselves included. A Player-knight who wants the honor pleads on Skill, Glory or favors owed, at the GM's discretion. If several qualified candidates plead, they make opposed Honor, Hate or other Passion rolls (they may pick different Passions). Orate and other Skills can't modify this, though a critical Valorous or Reckless may give +5 at the GM's option. A loss rules the knight out, a critical nominates them outright, and otherwise the winner is considered as above.\nThe two sides clear space for the champions to make a Mounted Charge at each other; a chivalrous foe may lend a spare lance. Only the two champions fight in the first Combat Round. Most cultures honor the challenge (Saxons perhaps more than knights). Picts never offer it, and wicked knights may attack the conroi while it is distracted watching.",
+      "roster": [
+        {
+          "adversary": "Enemy Champion",
+          "count": 1,
+          "per_player": false,
+          "promote": false
+        }
+      ],
+      "leader": null,
+      "notes": ""
     }
   }
 }

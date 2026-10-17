@@ -33,6 +33,8 @@ core/                      pure game logic (no UI) — shared by both apps
   npc.py names.py          NPC generation + statblock/description formatting
   combat.py                Combatant (serialisable, shared HP/wound logic), Encounter
   adversary.py encounter_def.py  creator helpers
+  battle.py                every Battle rule (GM ch. 6) as pure tables/functions
+  examples.py              bring new shipped examples into the user's combat.json (adds only)
   rules.py pdf_export.py   rules data loading, combat.json persistence, PDF sheet
 web/
   app.py                   create_app(): routes, static, templates

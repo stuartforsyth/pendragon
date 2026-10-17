@@ -45,3 +45,9 @@
 .threat .stat .label { font-size: 10.5px; }
 .threat .stat-v { font-family: var(--f-display); font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .threat .stat-v.or { color: var(--or-bright); }
+
+/* Examples dialog */
+.ex-sec { display: grid; gap: 6px; margin-bottom: 12px; }
+.ex-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.ex-list:has(.ex-row) { padding-left: 0; list-style: none; }
+.ex-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding: 6px 0; }

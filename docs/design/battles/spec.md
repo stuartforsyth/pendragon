@@ -135,7 +135,7 @@ The server builds every knight-card dict (`web/table.py: knight_cards()`). The f
 
 ---
 
-## S0 — Data fixes, flags, `core/battle.py` rules (size **M**)
+## S0 — Data fixes, flags, `core/battle.py` rules (size **M**) — ✅ DONE 2026-10-17
 
 **Goal.** The battle cards are correct and carry the new flags. Every battle rule is a tested pure
 function. The user can pull new example content into their own `combat.json` without anything being

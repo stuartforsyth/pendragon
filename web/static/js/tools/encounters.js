@@ -1,7 +1,7 @@
 // Encounter Creator: reusable encounter recipes (who, how many, how they scale
 // with the party) with a live preview and one-click launch into combat.
 
-import { h, clear, api, post, put, del, enc, icon, confirmBox, toast, useCss, debounce } from "../lib.js";
+import { h, clear, api, post, put, del, enc, icon, confirmBox, modal, toast, useCss, debounce } from "../lib.js";
 
 const CATS = ["all", "human", "beast", "monster", "fae"];
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -25,7 +25,8 @@ export default {
 
     clear(el,
       h("div", { class: "tool-head" }, h("div", {}, h("h1", {}, "Encounter Creator"),
-        h("p", { class: "lede" }, "Recipes for a fight — which foes, how many, and how they scale with the party. Launch one straight into combat."))),
+        h("p", { class: "lede" }, "Recipes for a fight — which foes, how many, and how they scale with the party. Launch one straight into combat.")),
+        h("div", { class: "actions" }, h("button", { class: "btn", onclick: examplesDialog, title: "New cards and fixes shipped with the app" }, icon("download"), "Examples…"))),
       h("div", { class: "split enc-split" },
         h("aside", { class: "panel enc-lib" }, search, h("div", { class: "row", style: { justifyContent: "flex-end" } }, countEl), listEl,
           h("div", { class: "enc-lib-btns" },
@@ -33,6 +34,57 @@ export default {
             h("button", { class: "btn sm", onclick: duplicate }, icon("copy"), "Duplicate"),
             h("button", { class: "btn sm danger", onclick: remove }, icon("x"), "Delete"))),
         editor));
+
+    // ---------------------------------------------------------------- examples
+    // New shipped content (battle cards, Opportunities, fixes) into the user's
+    // library: missing entries and fields are added; nothing is overwritten
+    // except a card the GM explicitly restores.
+    // One line per name, adversary and encounter fields side by side.
+    function fieldRows(fields) {
+      const by = new Map();
+      for (const f of fields) {
+        const row = by.get(f.key) || {};
+        row[f.kind] = f.fields.map((x) => x.replace(/^other\./, "").replace(/_/g, " "));
+        by.set(f.key, row);
+      }
+      return [...by].map(([k, row]) => h("li", {}, h("b", {}, k), ": ",
+        [row.adversaries && `card — ${row.adversaries.join(", ")}`, row.encounters && `encounter — ${row.encounters.join(", ")}`,
+         row.battles && `battle — ${row.battles.join(", ")}`].filter(Boolean).join(" · ")));
+    }
+
+    async function examplesDialog() {
+      const r = await api("/api/library/examples");
+      const names = Object.entries(r.missing).flatMap(([kind, keys]) => keys.map((k) => ({ kind, k })));
+      const nothing = !names.length && !r.fields.length && !r.differs.length;
+      await modal("Examples", (close) => {
+        if (nothing) return [h("p", { class: "muted" }, "Your library has everything."),
+          h("div", { class: "foot" }, h("button", { class: "btn primary", onclick: () => close() }, "Close"))];
+        const addable = names.length || r.fields.length;
+        return [
+          names.length ? h("div", { class: "ex-sec" }, h("div", { class: "section-label" }, `New in the app's examples (${names.length})`),
+            h("p", { class: "small" }, names.map((n) => n.k).join(" · "))) : null,
+          r.fields.length ? h("div", { class: "ex-sec" }, h("div", { class: "section-label" }, "New fields for your cards"),
+            h("ul", { class: "ex-list small" }, fieldRows(r.fields))) : null,
+          addable ? h("div", { class: "row" }, h("button", { class: "btn primary", onclick: async () => {
+            const a = (await post("/api/library/examples/merge")).added;
+            toast(`Added ${a.adversaries} adversaries, ${a.encounters} encounters, ${a.fields} fields`);
+            close(); await refreshLibrary();
+          } }, icon("plus"), "Add missing")) : null,
+          r.differs.length ? h("div", { class: "ex-sec" }, h("div", { class: "section-label" }, "Cards that differ from the shipped card"),
+            h("p", { class: "faint small" }, "Your edits are kept unless you restore a card."),
+            h("ul", { class: "ex-list" }, r.differs.map((d) => h("li", { class: "ex-row" },
+              h("span", {}, h("b", {}, d.key), h("span", { class: "faint small" }, ` — ${d.fields.join(", ")}`)),
+              h("button", { class: "btn sm", onclick: async (e) => {
+                if (!(await confirmBox("Restore shipped card?", `Replace your ${d.key} with the shipped card? Your edits to it are lost.`, "Restore", true))) return;
+                await post("/api/library/examples/restore", { kind: d.kind, key: d.key });
+                toast(`${d.key} restored`);
+                e.target.closest("li").remove();
+                await refreshLibrary();
+              } }, "Restore shipped card"))))) : null,
+          h("div", { class: "foot" }, h("button", { class: "btn ghost", onclick: () => close() }, "Close")),
+        ];
+      }, { wide: true });
+    }
 
     // ---------------------------------------------------------------- data
     async function refreshLibrary() {

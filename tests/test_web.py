@@ -1,27 +1,4 @@
-import shutil
-
-import pytest
-from fastapi.testclient import TestClient
-
-from tests.conftest import ROOT
-from web.app import create_app
-
-
-@pytest.fixture
-def client(tmp_path):
-    data = tmp_path / "data"
-    data.mkdir()
-    for f in ("rules.json", "examplecombat.json"):
-        shutil.copy(f"{ROOT}/data/{f}", data / f)
-    app = create_app(ROOT, sessions_dir=str(tmp_path / "sessions"), data_dir=str(data))
-    with TestClient(app) as c:
-        c.tmp = tmp_path
-        yield c
-
-
-def ok(r):
-    assert r.status_code == 200, r.text
-    return r.json()
+from tests.conftest import ok
 
 
 def test_pages_and_health(client):
