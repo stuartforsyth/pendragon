@@ -1,6 +1,6 @@
 # Piece 1 — Engagement model
 
-**Status:** rules and workflow settled on 2026-10-17 (Q1–Q9). The UI conversation is still to come.
+**Status:** settled on 2026-10-17, pending the user's yes to the summary.
 
 ## Decisions
 
@@ -23,6 +23,7 @@
 
 ## UI decisions
 
+- U10 **While dragging,** the tokens you can drop on glow. Nothing else is added.
 - U13 **Rebated:** a toggle in the fight header plus a checkbox at launch. While it's on, a "for love" ribbon shows on the players' board.
 
 ## Open questions
