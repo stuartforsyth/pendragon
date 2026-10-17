@@ -1,6 +1,6 @@
 # Battles — breakdown (stage 1)
 
-Status: **draft, awaiting user agreement on the piece list.**
+Status: **all 9 pieces closed 2026-10-17** — compiling design.md (stage 3).
 Sources: GM Handbook ch. 6 pp. 121–148 (corpus `gm.battle.*`), Battle Cards PDF (12 foe
 conrois — already imported as adversaries/encounters, see `docs/encounter-generator-spec.md`
 §5.2). Gaps in the corpus: **Opportunities (pp. 143–148)** and the Battle Cards deck as prose
