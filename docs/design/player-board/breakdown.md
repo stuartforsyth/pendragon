@@ -3,6 +3,9 @@
 Status: **draft, awaiting user agreement on the piece list.**
 Goal (user): make the Table easier for players to follow what has happened, and whether it affected their knight. Battle/fight board is designed in docs/design/battles (piece 8) — this covers the rest of play and shared parts.
 
+## User direction (2026-10-17)
+- The board is the **centrepiece**: players watch it to see what is happening to their knights and to pick up valuable information. The current implementation is poor — UI quality is the priority; get the UI right before anything else. Resume after the battles design questions are handled.
+
 ## Current Chronicle board (screenshot 2026-10-17)
 - Latest event spotlit large (illuminated initial); "Earlier" feed of ~4 cards to the right; older events drop off.
 - Knights are absent outside combat; events are linked to knights only by free-text labels ("Sir Erik — Awareness").
