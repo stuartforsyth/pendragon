@@ -1,6 +1,6 @@
 # Player board improvements — breakdown (stage 1)
 
-Status: **RESCOPED 2026-10-17 after mockup v1 review.**
+Status: **CLOSED 2026-10-17** — no separate track. "The board" is designed inside each mechanic (battles piece 8 now; feasts and hunts later). Rescoped after mockup v1 review:
 
 User direction: not a VTT and never intended to become one. The app's job is the UX for tracking
 complicated multi-turn mechanics — combat, battles, (planned) feasts and hunts. Everything else is

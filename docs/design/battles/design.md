@@ -1,6 +1,6 @@
 # Battles: compiled design (stage 3)
 
-Status: **§13 resolved (all recommendations accepted); user reviewing before approval**, compiled 2026-10-17 from `breakdown.md` and
+Status: **APPROVED by the user 2026-10-17** (§13 resolved, all recommendations accepted), compiled 2026-10-17 from `breakdown.md` and
 `pieces/01–09`. Those piece files hold the user's decisions and win any conflict
 with this document. Anything here that no piece decided is either marked
 *implementation choice* (no effect on what the user sees) or asked in
