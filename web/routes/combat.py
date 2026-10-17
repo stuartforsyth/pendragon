@@ -514,6 +514,52 @@ async def credit(request: Request, cid: str, body: dict):
     return {"event": ev}
 
 
+def even_split(foes, knights):
+    """Spread active foes evenly over the knights (names), keeping any foe on
+    its current knight while that knight is under its share. Returns
+    {cid: knight_name} for the foes that move."""
+    n, k = len(foes), len(knights)
+    share = {name: n // k + (1 if i < n % k else 0) for i, name in enumerate(knights)}
+    load = {name: 0 for name in knights}
+    keep, moving = [], []
+    for c in foes:
+        if c.engaged_with in load and load[c.engaged_with] < share[c.engaged_with]:
+            load[c.engaged_with] += 1
+            keep.append(c)
+        else:
+            moving.append(c)
+    out = {}
+    for c in moving:
+        name = min(knights, key=lambda x: (load[x] - share[x], knights.index(x)))
+        load[name] += 1
+        if c.engaged_with != name:
+            out[c.id] = name
+    return out
+
+
+@router.post("/api/combat/distribute")
+async def distribute(request: Request):
+    """Distribute foes equally: active foes only — defeated foes stay with the
+    knight they fell to, so their Glory still counts for him."""
+    state, cs = _active(request)
+    knights = [c for c in cs["combatants"] if not _is_foe(c) and c.status == "active"]
+    foes = [c for c in cs["combatants"] if _is_foe(c) and c.status == "active"]
+    if not knights:
+        bad("No knights in the fight to share the foes")
+    if not foes:
+        bad("No foes still fighting")
+    moves = even_split(foes, [k.display_name for k in knights])
+    if not moves:
+        return {"event": None}
+    per = len(foes) // len(knights)
+    line = (f"The foes spread out — {per} on each knight" if len(foes) % len(knights) == 0
+            else f"The foes spread out — {per}–{per + 1} on each knight")
+    pids = sorted({k.party_id for k in knights if k.display_name in moves.values()})
+    ev = state.record("combat.distribute", f"{line} ({len(moves)} moved)", title="Foes distributed",
+                      data={"assignments": moves, "table_text": line, "touches": pids})
+    return {"event": ev}
+
+
 @router.post("/api/combat/{cid}/remove")
 async def remove(request: Request, cid: str):
     state, cs = _active(request)

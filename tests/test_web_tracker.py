@@ -173,3 +173,57 @@ def test_random_fight_excludes_opportunities_and_empty(client):
 
 def test_random_fight_no_match_400(client):
     assert client.post("/api/combat/random", json={"tags": ["no-such-tag"]}).status_code == 400
+
+
+# -- Distribute foes equally -------------------------------------------------------
+
+def test_even_split_keeps_engaged_foes_and_balances():
+    from types import SimpleNamespace as N
+    from web.routes.combat import even_split
+    foes = [N(id=f"f{i}", engaged_with=w) for i, w in enumerate(["A", "A", "A", "A", "", "", "B", "", "", ""])]
+    moves = even_split(foes, ["A", "B", "C"])
+    load = {"A": 0, "B": 0, "C": 0}
+    for f in foes:
+        load[moves.get(f.id, f.engaged_with)] += 1
+    assert sorted(load.values()) == [3, 3, 4]
+    assert all(f.id not in moves for f in foes[:3])          # A keeps three of its four
+    assert "f6" not in moves                                  # B keeps its foe
+
+
+def _lanes(client):
+    cs = ok(client.get("/api/combat"))["combat"]
+    by = {}
+    for c in _foes(cs):
+        if c["status"] == "active":
+            by.setdefault(c["engaged_with"], []).append(c["id"])
+    return cs, by
+
+
+def test_distribute_foes_active_only_and_undoable(client):
+    cs = _fight(client, "Pictish Knifemen", knights=("Sir Bors", "Sir Cai", "Dame Lynet"))
+    foes = _foes(cs)
+    assert len(foes) >= 5
+    # one foe falls to Sir Bors: he must keep it (and its Glory) after the share-out
+    fallen = foes[0]
+    ok(client.post(f"/api/combat/{fallen['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{fallen['id']}/status", json={"out": "unconscious"}))
+    ev = ok(client.post("/api/combat/distribute"))["event"]
+    assert ev["type"] == "combat.distribute" and fallen["id"] not in ev["data"]["assignments"]
+    cs, by = _lanes(client)
+    assert "" not in by                                       # nobody left in the pool
+    counts = sorted(len(by.get(k, [])) for k in ("Sir Bors", "Sir Cai", "Dame Lynet"))
+    assert counts[-1] - counts[0] <= 1
+    assert next(c for c in cs["combatants"] if c["id"] == fallen["id"])["engaged_with"] == "Sir Bors"
+    # already even: nothing to do
+    assert ok(client.post("/api/combat/distribute"))["event"] is None
+    # one strike undoes the whole share-out
+    ok(client.post(f"/api/events/{ev['id']}/strike"))
+    assert set(_lanes(client)[1]) == {""}
+
+
+def test_distribute_skips_downed_knights(client):
+    cs = _fight(client, knights=("Sir Bors", "Sir Cai"))
+    bors = _knight(cs, "Sir Bors")
+    ok(client.post(f"/api/combat/{bors['id']}/status", json={"out": "unconscious"}))
+    ok(client.post("/api/combat/distribute"))
+    assert set(_lanes(client)[1]) == {"Sir Cai"}

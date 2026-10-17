@@ -17,7 +17,7 @@ COMBAT_STATE_TYPES = {
     "combat.promote", "combat.modifier", "combat.engage", "combat.removed",
     "combat.round", "combat.ended", "combat.blow",
     "combat.mounted", "combat.horse", "combat.height", "combat.captured",
-    "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round",
+    "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round", "combat.distribute",
 }
 
 
@@ -51,6 +51,11 @@ def apply(state, ev, promotion_cfg=None):
         return state
     if t == "combat.added":
         state["combatants"].append(Combatant.from_dict(d["combatant"]))
+        return state
+    if t == "combat.distribute":              # one action, many engagements
+        for c in state["combatants"]:
+            if c.id in (d.get("assignments") or {}):
+                c.engaged_with = d["assignments"][c.id]
         return state
     if t.startswith("glory."):
         if d.get("fight") != state["started_event"]:

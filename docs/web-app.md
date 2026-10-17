@@ -89,6 +89,10 @@ engaged pair's pills and added to foe attack rolls automatically; a foe going fo
 the horse (`combat.horse`) loses its −5, and the GM can negate Height for a
 two-handed spear (`combat.height`). Knight lanes show their own Height and
 Multiple Opponents reminders; captives are flagged with `combat.captured`.
+**Distribute foes equally** (`combat.distribute`, one event, one strike to undo)
+spreads the foes still fighting evenly over the knights still in the fight; foes
+already on a knight stay while he's under his share, and defeated foes never move,
+so their Glory stays with the knight they fell to.
 
 **Glory ledger.** A defeated foe's Glory (Table A.1: unconscious, slain, fled or
 surrendered) goes to the knight it was fighting when it fell. This is derived on

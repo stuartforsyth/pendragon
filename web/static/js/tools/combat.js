@@ -199,6 +199,8 @@ export default {
             h("div", { class: "round-box" }, h("span", { class: "label" }, "Round"), h("span", { class: "round-n" }, cs.round)),
             h("button", { class: "btn primary", onclick: () => post("/api/combat/round") }, icon("hourglass"), "Next round"),
             h("button", { class: "btn", onclick: (e) => addMenu(e.currentTarget, availableKnights) }, icon("plus"), "Add"),
+            knights.length && foes.some((c) => !c.down) ? h("button", { class: "btn", onclick: () => post("/api/combat/distribute"),
+              title: "Spread the foes still fighting evenly over the knights still in the fight. Defeated foes stay with the knight they fell to." }, icon("swords"), "Distribute foes equally") : null,
             h("button", { class: "btn", onclick: awardGlory, title: "Award Glory by hand (an Opportunity's reward, a deed)" }, icon("star"), "Award Glory"),
             h("button", { class: "btn danger", onclick: endCombat }, icon("flag"), "End fight"),
             bt ? h("button", { class: "btn ghost", onclick: () => ctx.navigate("battle") }, "◂ Back to battle") : null),
