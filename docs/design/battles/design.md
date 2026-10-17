@@ -876,3 +876,11 @@ scripts). Everything about **the group** is entered when it is launched, at Must
 knights ride, **who commands the conroi** (a knight or GM (NPC)), starting Morale, Passion, Mounted
 pills, and army rolls / Intensity not fixed by the template. The template holds no commander
 (supersedes Open point 8's `commander` field; `definition.commander` is always null).
+
+## 17. Mounted or on foot is set at Mustering (user direction, 2026-10-17)
+
+Applying §16: the day switch "Conroi starts on foot" left the template — whether knights still
+have their horses depends on the group (at Bedegraine, on who lost a charger on day 1). Knights'
+Mounted pills carry over from the previous day; Mustering has **All on foot / All mounted**
+(one `battle.mounted` event with `pids`) plus the per-knight pills. Old saved `on_foot` flags are
+ignored.

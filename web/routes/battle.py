@@ -332,7 +332,7 @@ async def morale(request: Request, body: dict):
 
 # -- live edits ---------------------------------------------------------------------
 
-_PATCH_KEYS = ("intensity", "turns", "first_charge", "on_foot", "no_charge", "commanders", "notes", "scripts", "deck")
+_PATCH_KEYS = ("intensity", "turns", "first_charge", "no_charge", "commanders", "notes", "scripts", "deck")
 
 
 @router.post("/api/battle/settings")
@@ -453,6 +453,20 @@ async def script(request: Request, body: dict):
     text = scripts[i]["text"]
     ev = state.record("battle.script", text, title=_name(b),
                       data={"day": d, "index": i, "text": text, "table_text": text, "battle": _link(b)})
+    return {"event": ev}
+
+
+@router.post("/api/battle/mounted")
+async def all_mounted(request: Request, body: dict):
+    """All on foot / all mounted, at Mustering: one event for the listed knights."""
+    state, b = _live(request)
+    on = bool(body.get("mounted"))
+    pids = [p for p in (body.get("pids") or b["conroi"]) if p in b["knights"] and b["knights"][p]["mounted"] != on]
+    if not pids:
+        return {"event": None}
+    line = f"The conroi {'mounts up' if on else 'fights on foot'}"
+    ev = state.record("battle.mounted", line, title="The conroi",
+                      data={"pids": pids, "mounted": on, "table_text": line, "touches": pids, "battle": _link(b)})
     return {"event": ev}
 
 

@@ -15,7 +15,7 @@ _SIDES = ("friendly", "enemy")
 
 def blank_day(size="clash"):
     return {"intensity": {"mode": "roll"}, "turns": SIZES[size]["turns"],
-            "first_charge": True, "on_foot": False, "no_charge": False,
+            "first_charge": True, "no_charge": False,
             "commanders": {"friendly": None, "enemy": None},
             "deck": {"foes": [], "opportunities": []}, "notes": "", "scripts": []}
 
@@ -75,7 +75,8 @@ def clean_day(day, size, known=None, warnings=None, label="Day"):
     else:
         out["intensity"] = {"mode": "roll"}
     out["turns"] = _int(day.get("turns", base["turns"]), f"{label} turns", 1)
-    for k in ("first_charge", "on_foot", "no_charge"):
+    # Mounted or on foot is the group's state, set at Mustering — not the template's.
+    for k in ("first_charge", "no_charge"):
         out[k] = bool(day.get(k, base[k]))
     cmd = day.get("commanders") or {}
     for side in _SIDES:

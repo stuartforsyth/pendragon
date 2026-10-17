@@ -130,6 +130,13 @@ export default {
               render(); } }), icon("shield"), m.name),
             b.knights[m.id] ? h("button", { class: `pill-mounted ${k.mounted ? "on" : ""}`, onclick: () => post(`/api/battle/knight/${m.id}`, { mounted: !k.mounted }) }, k.mounted ? "Mounted" : "On foot") : null);
         }),
+        (() => {
+          const ids = muster.knights.filter((p) => b.knights[p]);
+          const allFoot = ids.length && ids.every((p) => !b.knights[p].mounted);
+          return ids.length ? h("div", { class: "row", style: { marginTop: "6px" } },
+            h("button", { class: "btn sm", onclick: () => post("/api/battle/mounted", { mounted: allFoot, pids: ids }) }, allFoot ? "All mounted" : "All on foot"),
+            h("span", { class: "faint small" }, b.day > 1 ? "Horses carry over from yesterday — click a pill for a knight who lost or found one." : "Click a pill for any knight who starts on foot.")) : null;
+        })(),
         h("div", { class: "label", style: { marginTop: "8px" } }, "Commander"),
         h("div", { class: "chips" },
           [...active.filter((m) => muster.knights.includes(m.id)).map((m) => [m.id, m.name]), ["gm", "GM (NPC)"]].map(([id, name]) =>
@@ -744,7 +751,7 @@ export default {
               for (const [n, d] of Object.entries(edits)) {
                 const old = b.definition.days[n - 1];
                 const patch = {};
-                for (const k of ["intensity", "turns", "first_charge", "on_foot", "no_charge", "commanders", "notes", "scripts"])
+                for (const k of ["intensity", "turns", "first_charge", "no_charge", "commanders", "notes", "scripts"])
                   if (JSON.stringify(old[k]) !== JSON.stringify(d[k])) patch[k] = d[k];
                 if (Object.keys(patch).length) await post("/api/battle/settings", { day: Number(n), patch });
                 const before = new Set([...old.deck.foes, ...old.deck.opportunities]), after = new Set([...d.deck.foes, ...d.deck.opportunities]);

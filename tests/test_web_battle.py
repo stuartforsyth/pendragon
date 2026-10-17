@@ -870,8 +870,14 @@ def test_launch_bedegraine_day2_on_foot(client):
     _step(client, "end_day")
     b = _battle(client)
     assert b["status"] == "mustering" and b["day"] == 2
-    assert all(not b["knights"][p]["mounted"] for p in pids)
+    assert all(b["knights"][p]["mounted"] for p in pids)          # horses carry over; the template doesn't decide
+    ev = ok(client.post("/api/battle/mounted", json={"mounted": False, "pids": pids}))["event"]
+    assert all(not _battle(client)["knights"][p]["mounted"] for p in pids)
+    ok(client.post(f"/api/events/{ev['id']}/strike"))
+    assert all(_battle(client)["knights"][p]["mounted"] for p in pids)
+    ok(client.post("/api/battle/mounted", json={"mounted": False, "pids": pids}))
     _muster(client, pids, commander="gm", intensity=None)
+    assert all(not _battle(client)["knights"][p]["mounted"] for p in pids)
     b = _battle(client)
     assert b["intensity_today"] == 18 and b["step"]["items"][1]["state"] == "skipped"   # no charge this day
 

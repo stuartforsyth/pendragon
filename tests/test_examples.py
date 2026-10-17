@@ -125,7 +125,7 @@ def test_example_battles_valid():
         clean, warnings = clean_battle(b, d["encounters"])
         assert not warnings, (key, warnings)
     bed = d["battles"]["The Battle of Bedegraine"]
-    assert bed["size"] == "huge" and bed["days"][1]["on_foot"] and bed["days"][1]["no_charge"]
+    assert bed["size"] == "huge" and "on_foot" not in bed["days"][1] and bed["days"][1]["no_charge"]
     assert [x["intensity"]["value"] for x in bed["days"]] == [14, 18]
     assert all(b["commander"] is None for b in d["battles"].values())   # chosen at launch, never in the template
 

@@ -192,7 +192,7 @@ def test_build_bedegraine_in_the_editor_and_play_it(page, app_url):
     day2 = page.locator(".day-card").nth(1)
     day2.get_by_role("button", name="Fixed").click()
     day2.locator("input[type=number]").first.fill("18")
-    day2.get_by_text("Conroi starts on foot").click()
+    expect(day2.get_by_text("Conroi starts on foot")).to_have_count(0)   # set at Mustering, not in the template
     day2.get_by_text("No charge this day").click()
     page.get_by_role("button", name="Save").click()
     expect(page.locator(".bt-item", has_text="Bedegraine by hand")).to_contain_text("Huge Battle · 2 days")
@@ -267,3 +267,15 @@ def test_battle_settings_edit_everything_mid_turn(page, app_url):
     expect(page.locator(".bhead")).to_contain_text("Intensity 16")
     expect(page.locator(".kchip")).to_have_count(2)
     expect_step(page, "Charge · Intensity")                   # still mid-turn
+
+
+def test_all_on_foot_at_mustering(page, app_url):
+    quick_launch(page, app_url)
+    pills = page.locator(".bl .kchk .pill-mounted")
+    expect(pills.first).to_have_text("Mounted")
+    page.get_by_role("button", name="All on foot").click()
+    for p in pills.all():
+        expect(p).to_have_text("On foot")
+    pills.first.click()                                         # one knight kept his horse
+    expect(pills.first).to_have_text("Mounted")
+    expect(page.get_by_role("button", name="All on foot")).to_be_visible()

@@ -79,9 +79,6 @@ def apply(b, ev):
             i = int(d.get("day", b["day"])) - 1
             if 0 <= i < len(days):
                 days[i].update(copy.deepcopy(d.get("patch") or {}))
-                if (d.get("patch") or {}).get("on_foot") and i + 1 == b["day"]:
-                    for k in b["knights"].values():
-                        k["mounted"] = False
     elif t == "battle.deck":
         deck = _day_def(b, int(d.get("day", b["day"])))["deck"]
         cards = d.get("cards") or {}
@@ -111,9 +108,6 @@ def apply(b, ev):
             k = _knight(b, pid)
             k["passion_used"] = False          # scenario rule: each day is its own engagement
             k["position"] = "conroi"
-        if _day_def(b).get("on_foot"):
-            for pid in b["conroi"]:
-                b["knights"][pid]["mounted"] = False
         b["status"] = "turn"
         b["turn"] = 1
         b["t"] = new_turn()
@@ -146,9 +140,10 @@ def apply(b, ev):
     elif t in STEP_EVENTS:
         _apply_step(b, ev)
     elif t == "battle.mounted":
-        k = _knight(b, d.get("pid") or d.get("knight"))
-        k["mounted"] = bool(d.get("mounted"))
-        k["on_foot_since"] = None if k["mounted"] else (b["day"], b["turn"])
+        for pid in d.get("pids") or [d.get("pid") or d.get("knight")]:
+            k = _knight(b, pid)
+            k["mounted"] = bool(d.get("mounted"))
+            k["on_foot_since"] = None if k["mounted"] else (b["day"], b["turn"])
     elif t == "battle.position":
         _knight(b, d.get("pid") or d.get("knight"))["position"] = d.get("position") or "conroi"
     return b
@@ -339,10 +334,7 @@ def _apply_step(b, ev):
             b["day"] += 1
             b["turn"] = 0
             b["status"] = "mustering"
-            b["fought_last"] = False
-            if _day_def(b).get("on_foot"):
-                for pid in b["conroi"]:
-                    _knight(b, pid)["mounted"] = False
+            b["fought_last"] = False           # knights keep yesterday's horses: set at Mustering
         return
     if step == "end":
         if cur not in ("end", "fight"):           # End turn is offered on the fight step too

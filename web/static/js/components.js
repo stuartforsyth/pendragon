@@ -200,7 +200,6 @@ export function dayCard(day, size, { readOnly = false, onChange, decks = [], lab
       h("div", { class: "dc-top" }, inten, turns),
       h("div", { class: "dc-switches" },
         sw("first_charge", "First charge", "Turn 1 opens with a mounted charge (an army commander's roll can change this)"),
-        sw("on_foot", "Conroi starts on foot", "Every knight's Mounted pill starts On foot today"),
         sw("no_charge", "No charge this day", "Skip the charge step on every turn today")),
       commanders,
       deckSec,

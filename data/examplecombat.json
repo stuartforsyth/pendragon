@@ -4441,7 +4441,6 @@
           },
           "turns": 5,
           "first_charge": true,
-          "on_foot": false,
           "no_charge": false,
           "commanders": {
             "friendly": null,
@@ -4469,7 +4468,6 @@
           },
           "turns": 5,
           "first_charge": false,
-          "on_foot": true,
           "no_charge": true,
           "commanders": {
             "friendly": null,
@@ -4494,7 +4492,7 @@
               "Rescue Captive Knights"
             ]
           },
-          "notes": "Most knights lost their chargers: they fight on foot (switch individual knights who kept theirs). No charge — Arthur holds the ridge and receives Lot's charge.",
+          "notes": "Knights who lost their chargers on day 1 fight on foot — set it at Mustering (All on foot, or click each knight's pill). No charge — Arthur holds the ridge and receives Lot's charge.",
           "scripts": [
             {
               "turn": 1,
@@ -4577,7 +4575,6 @@
           },
           "turns": 8,
           "first_charge": true,
-          "on_foot": false,
           "no_charge": false,
           "commanders": {
             "friendly": null,
