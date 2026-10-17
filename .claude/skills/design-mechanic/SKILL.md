@@ -101,7 +101,9 @@ list them as questions. Output `design.md`.
 
 ## 4 — Spec
 
-Write `spec.md` from the approved design: ordered build slices each shippable on its own,
+Launch a **fresh Agent with `model: "opus"`** to write `spec.md` from the approved design (it
+must read `design.md`, the piece files, the skill's Notes, and the real code each slice touches,
+so paths, functions, events and test fixtures are accurate). The spec contains: ordered build slices each shippable on its own,
 with files to touch, event schemas, route signatures, UI elements and behaviour per slice, and **tests per slice**
 (real behaviours, run against copies of the data per CLAUDE.md). **Gate:** user approves.
 

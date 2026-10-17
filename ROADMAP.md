@@ -4,6 +4,16 @@ Future functionality for the Pendragon NPC Generator, grouped by theme. Tick
 items off as they land. This file is the running backlog — add ideas here
 rather than scattering TODOs through the code.
 
+## Game mechanics (designed with the `design-mechanic` skill)
+
+Each runs the same pipeline: breakdown → grill each piece (rules + UI, every decision reviewed for
+rules breaks and better options) → Opus compiles `design.md` → approval → Opus writes `spec.md` →
+approval → build slice by slice. State lives in `docs/design/{mechanic}/`.
+
+- [ ] **Battles** — designed and approved (`docs/design/battles/`); spec in progress, then build.
+- [ ] **Feasts** — next: same process (`/design-mechanic feasts`), after battles' spec is approved.
+- [ ] **Hunts** — planned, same process.
+
 ## Quick wins (small, high payoff)
 
 - [x] **Wire up Directed Traits** — a one-line grudge/fear/loyalty aimed at a
