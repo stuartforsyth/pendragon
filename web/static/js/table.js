@@ -2,7 +2,7 @@
 // only what players may see (see web/table.py); this file just makes it sing.
 
 import { h, clear, icon, debounce } from "./lib.js";
-import { knightCard, moraleGauge, cardFrame, deckSpread } from "./board.js";
+import { knightCard, moraleGauge, cardFrame, deckSpread, knightShield as knightShieldEl } from "./board.js";
 
 const $ = (id) => document.getElementById(id);
 let last = { heroId: null, states: {}, titleCard: null };
@@ -185,6 +185,8 @@ function mini(c) {
 // ---------------------------------------------------------------- views
 function chronicle(p) {
   const [top, ...rest] = p.feed;
+  if (top && top.type === "battle.finale" && top.data?.summary) return h("div", { class: "chronicle" },
+    h("div", { class: "spot" }, finaleScene(top.data.summary)), h("div", { class: "feed" }, h("h2", {}, "Earlier"), rest.slice(0, 10).map(mini)));
   if (!top) {
     return h("div", { class: "spot idle" }, h("div", {},
       h("div", { class: "h-title", style: { fontFamily: "var(--f-display)", color: "var(--gules)" } }, "Pendragon"),
@@ -272,9 +274,25 @@ function fight(p) {
 // centre stage (title card, revealed turn scripts; cards arrive with the turn
 // loop), and the Fray.
 const STATUS_LINE = { mustering: "The conroi musters", paused: "The battle is paused", rear: "At the rear" };
+// The finale: outcome, then one card per knight with their Glory breakdown.
+function finaleScene(f) {
+  return h("div", { class: "finale" },
+    h("div", { class: "fin-kicker" }, f.name),
+    h("div", { class: "fin-outcome" }, f.outcome_label),
+    h("div", { class: "fin-line" }, f.line),
+    h("div", { class: "fin-cards" }, f.knights.map((k) => h("div", { class: "fin-card" },
+      h("div", { class: "fin-top" }, knightShieldEl(), h("span", { class: "fin-name" }, k.name)),
+      h("div", { class: "fin-total" }, k.total, h("small", {}, " Glory")),
+      h("ul", {}, h("li", {}, h("span", {}, "Foes defeated"), h("span", {}, k.encounter_glory)),
+        h("li", {}, h("span", {}, `Participation${k.role_label ? ` (${k.role_label})` : ""}`), h("span", {}, k.participation)),
+        k.plunder ? h("li", {}, h("span", {}, "Plunder"), h("span", {}, k.plunder)) : null,
+        (k.ransoms || []).map((r) => h("li", {}, h("span", {}, `Ransom · ${r.captive}`), h("span", {}, r.amount || "—"))))))));
+}
+
 function battleView(p) {
   const b = p.battle;
   if (!b) return chronicle(p);
+  if (b.finale && b.status === "aftermath") return finaleScene(b.finale);
   const titleFresh = b.title_card && b.title_card.id !== last.titleCard;
   last.titleCard = b.title_card?.id;
   const tt = b.this_turn || {};
@@ -313,8 +331,9 @@ function render(p) {
   const battle = p.mode === "battle" && p.battle;
   clear($("mode"), combat
     ? [h("span", {}, p.combat.active ? p.combat.name : `${p.combat.name} — ended`), h("span", { class: "round" }, "Round ", h("span", { class: "rn" }, p.combat.round))]
-    : battle ? [h("span", {}, battle.turn ? `Day ${battle.day} · Turn ${battle.turn} of ${battle.turns_today}` : `Day ${battle.day}`),
-        battle.intensity ? h("span", { class: "round" }, "Intensity ", h("span", { class: "rn" }, battle.intensity)) : null]
+    : battle ? (battle.status === "aftermath" ? h("span", {}, "The battle is done")
+      : [h("span", {}, battle.turn ? `Day ${battle.day} · Turn ${battle.turn} of ${battle.turns_today}` : `Day ${battle.day}`),
+        battle.intensity ? h("span", { class: "round" }, "Intensity ", h("span", { class: "rn" }, battle.intensity)) : null])
     : h("span", {}, "The Chronicle"));
   if (battle) $("title").textContent = battle.name;
   clear($("view"), combat ? fight(p) : battle ? battleView(p) : chronicle(p));

@@ -59,6 +59,14 @@ def apply(b, ev):
             b["paused_from"] = b["status"]
         b["status"] = "paused"
         return b
+    if b["status"] == "aftermath":
+        if t == "battle.aftermath":
+            b.setdefault("aftermath_patch", {}).update(copy.deepcopy(d.get("patch") or {}))
+        elif t == "battle.finale":
+            b["finale"] = copy.deepcopy(d.get("summary"))
+        elif t == "battle.ended":
+            b["status"] = "ended"
+        return b
     if b["status"] not in LIVE:
         return b
     if t == "battle.settings":
@@ -422,7 +430,12 @@ def _summarise(b, fight):
     foes = [c for c in fight["combatants"] if getattr(c, "side", "foe") != "party"]
     knights = [c for c in fight["combatants"] if getattr(c, "side", "foe") == "party"]
     down = [c for c in foes if c.status in B.DEFEATED]
+    lost = [c for c in foes if c.status == "dead" or (c.captured_by and c.status in ("unconscious", "surrendered"))]
     summary = {"day": link.get("day"), "turn": link.get("turn"), "encounter": link.get("encounter") or fight["name"],
+               "lost_kvs": [str(B.parse_kv(getattr(c, "knight_value", ""))) for c in lost],
+               "captives": [{"fight": fight["started_event"], "cid": c.id, "name": c.display_name, "captor": c.captured_by,
+                             "ransom": bool(getattr(c, "ransom", None))}
+                            for c in foes if c.captured_by and c.status in ("unconscious", "surrendered")],
                "active": fight["active"], "foes": len(foes), "defeated": len(down),
                "kvs": [str(B.parse_kv(getattr(c, "knight_value", ""))) for c in down],
                "glory": CS.glory_tally(fight),
@@ -443,6 +456,83 @@ def kv_gain(b):
     fights, each rounded half up (GM ruling), capped by the reducer."""
     from fractions import Fraction
     return B.kv_morale_gain([[Fraction(k) for k in f["kvs"]] for f in turn_fights(b)])
+
+
+_OUTCOME_LINE = {"decisive_victory": "The enemy is destroyed", "victory": "The enemy breaks and flies the field",
+                 "indecisive": "Neither host gives way", "defeat": "The conroi is driven back",
+                 "decisive_defeat": "A rout — the day is lost"}
+_FRAC = {(1, 3): "⅓", (2, 3): "⅔", (1, 2): "½", (1, 4): "¼", (3, 4): "¾", (1, 8): "⅛", (3, 8): "⅜", (5, 8): "⅝", (7, 8): "⅞"}
+
+
+def fmt_frac(f, money=False):
+    from fractions import Fraction
+    f = Fraction(f)
+    whole, frac = int(f), f - int(f)
+    g = _FRAC.get((frac.numerator, frac.denominator), f"{frac.numerator}/{frac.denominator}") if frac else ""
+    txt = (str(whole) if whole or not g else "") + (" " if whole and g and money else "") + g
+    return ("£" if money else "") + (txt or "0")
+
+
+def _parse_amount(v):
+    """"6 3/8", "6⅜", "2" or a number → Fraction."""
+    from fractions import Fraction
+    if isinstance(v, (int, float)):
+        return Fraction(v).limit_denominator(64)
+    s_ = str(v or "0").strip()
+    total = Fraction(0)
+    for part in s_.split():
+        total += B.parse_kv(part)
+    return total
+
+
+def aftermath_view(b, party):
+    """The aftermath (Outcome / Glory / Spoils), computed from the battle and
+    the GM's edits; every figure is overridable."""
+    from fractions import Fraction
+    names = _names(party)
+    patch = b.get("aftermath_patch", {})
+    size = b["definition"].get("size", "clash")
+    fights = list(b.get("fights", {}).values())
+    enemy_default = sum((Fraction(k) for f in fights for k in f.get("lost_kvs", [])), Fraction(0))
+    enemy = _parse_amount(patch["enemy_kv"]) if patch.get("enemy_kv") not in (None, "") else enemy_default
+    pk = int(patch.get("friendly_pk_losses") or 0)
+    gm_n = int(patch.get("gm_knights") or 0)
+    gm_losses = patch.get("gm_losses_override") or (B.conroi_losses(patch["gm_losses_roll"], gm_n)
+                                                    if patch.get("gm_losses_roll") and gm_n else {"killed": 0, "captured": 0})
+    friendly = Fraction(pk + gm_losses["killed"] + gm_losses["captured"])
+    outnumber = patch.get("outnumber") or "none"
+    computed = B.outcome(enemy, friendly, outnumber)
+    ratio = None if friendly == 0 else float(enemy / friendly * {"we": 2, "they": Fraction(1, 2)}.get(outnumber, 1))
+    small_plus = size not in ("fight", "skirmish", "clash")
+    chosen_outcome = patch.get("outcome_choice") or (b["definition"].get("outcome") if small_plus else None) or computed
+    leader = B.leader_default([b["commander_by_day"].get(str(d)) for d in range(1, b["day"] + 1)])
+    roles = {pid: (patch.get("roles") or {}).get(pid, "conroi" if pid == leader else None) for pid in b["conroi"]}
+    days_fought = {pid: int((patch.get("days_fought") or {}).get(pid, len(b.get("fought_days", {}).get(pid, []))))
+                   for pid in b["conroi"]}
+    glory = battle_glory(b)
+    opponents = patch.get("opponents") or "feudal"
+    decisive = patch.get("decisive_roll")
+    knights = []
+    base = B.SIZES[size]["participation"]
+    for pid in b["conroi"]:
+        role, days = roles[pid], days_fought[pid]
+        part = B.participation_glory(size, days, chosen_outcome, role) if days else 0
+        mult = B.OUTCOME_MULT[chosen_outcome] + (B.LEADER_MULT[role] if role and size not in ("fight", "skirmish") else 0)
+        working = f"{base}{f' × {days} days' if days > 1 else ''} × {fmt_frac(mult)} = {part}" if days else "did not fight"
+        pl = B.plunder(opponents, chosen_outcome, decisive, outnumber, role, size)
+        knights.append({"pid": pid, "name": names.get(pid, {}).get("name", "A knight"), "role": role, "days": days,
+                        "encounter_glory": glory.get(pid, 0), "participation": part, "working": working,
+                        "total": glory.get(pid, 0) + part, "plunder": fmt_frac(pl, money=True) if pl else "",
+                        "plunder_value": float(pl)})
+    captives = [dict(c, captor_name=names.get(c["captor"], {}).get("name", "")) for f in fights for c in f.get("captives", [])]
+    return {"size": size, "size_label": B.SIZES[size]["label"], "days": len(b["definition"].get("days", [])),
+            "enemy_kv": fmt_frac(enemy), "enemy_kv_default": fmt_frac(enemy_default), "friendly_pk_losses": pk,
+            "gm_knights": gm_n, "gm_losses_roll": patch.get("gm_losses_roll"), "gm_losses": gm_losses,
+            "friendly_kv": fmt_frac(friendly), "outnumber": outnumber, "ratio": round(ratio, 2) if ratio is not None else None,
+            "computed": computed, "small_plus": small_plus, "outcome": chosen_outcome,
+            "outcome_label": B.OUTCOME_LABEL[chosen_outcome], "line": _OUTCOME_LINE[chosen_outcome],
+            "zero_ruling": friendly == 0, "opponents": opponents, "decisive_roll": decisive,
+            "knights": knights, "captives": captives, "finale": b.get("finale")}
 
 
 def battle_glory(b):
@@ -505,6 +595,8 @@ def gm_view(b, party):
         b["conroi_now"] = conroi_ids(b)
         b["kv_gain"] = kv_gain(b)
     b = {**b, "glory_battle": battle_glory(b)}
+    if b["status"] == "aftermath":
+        b["aftermath"] = aftermath_view(b, party)
     names = _names(party)
     size = b["definition"].get("size", "clash")
     dd = _day_def(b)
@@ -552,7 +644,8 @@ def table_view(b, party):
                             or ("first_charge" if b["status"] == "turn" and first_charge_turn(b) else None),
            "glory": battle_glory(b),
            "barrage": (t.get("barrage") or {}).get("rounds"),
-           "countercharge": (t.get("countercharge") or {}).get("yes")}
+           "countercharge": (t.get("countercharge") or {}).get("yes"),
+           "finale": b.get("finale")}
     # the turn's story
     banner = None
     if (t.get("morale") or {}).get("kind") == "forced_retire":

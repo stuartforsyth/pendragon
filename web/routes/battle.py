@@ -822,6 +822,106 @@ async def step(request: Request, body: dict):
     return record_outcome(state, body.get("step"), body, source="gm")
 
 
+# -- aftermath and finale ------------------------------------------------------------
+
+_AFTER_KEYS = {"enemy_kv", "friendly_pk_losses", "gm_knights", "gm_losses_roll", "gm_losses_override", "outnumber",
+               "outcome_choice", "roles", "days_fought", "opponents", "decisive_roll", "decisive_rolled"}
+
+
+def _aftermath(request):
+    state = st(request)
+    b = state.battle_state()
+    if not b or b["status"] != "aftermath":
+        bad("The battle isn't over yet", 409)
+    return state, b
+
+
+@router.post("/api/battle/aftermath")
+async def aftermath(request: Request, body: dict):
+    state, b = _aftermath(request)
+    patch = {k: v for k, v in (body.get("patch") or {}).items() if k in _AFTER_KEYS}
+    if "outnumber" in patch and patch["outnumber"] not in ("none", "we", "they"):
+        bad("Outnumbering is none, we, or they")
+    if patch.get("outcome_choice") and patch["outcome_choice"] not in B.OUTCOME_LABEL:
+        bad("Unknown outcome")
+    if patch.get("opponents") and patch["opponents"] not in B.PLUNDER_BASE:
+        bad("Unknown opponents")
+    if patch.get("gm_losses_roll") and patch["gm_losses_roll"] not in B.OUTCOMES:
+        bad("Unknown roll outcome")
+    for pid, role in (patch.get("roles") or {}).items():
+        if role not in (None, "conroi", "bataille", "army"):
+            bad("Role is conroi, bataille or army")
+    ev = state.record("battle.aftermath", "Aftermath: " + ", ".join(f"{k} → {v}" for k, v in patch.items()),
+                      title="Aftermath", visibility="gm", data={"patch": patch, "battle": _link(b, "aftermath")})
+    nb = state.battle_state()
+    return {"event": ev, "aftermath": BS.aftermath_view(nb, state.party.items)}
+
+
+@router.post("/api/battle/aftermath/roll")
+async def aftermath_roll(request: Request, body: dict):
+    state, b = _aftermath(request)
+    if BS.aftermath_view(b, state.party.items)["outcome"] != "decisive_victory":
+        bad("The +£2D3 is for a Decisive Victory", 409)
+    n = roll_expr("2D3")
+    ev = state.record("battle.aftermath", f"Decisive Victory plunder: +£{n} (2D3)", title="Aftermath", visibility="gm",
+                      data={"patch": {"decisive_roll": n, "decisive_rolled": True}, "battle": _link(b, "aftermath")})
+    return {"event": ev}
+
+
+@router.post("/api/battle/ransom")
+async def battle_ransom(request: Request, body: dict):
+    """Roll a captive's ransom after the battle (their fight has ended)."""
+    from core.combat import roll_ransom
+    from web import combat_state as CS
+    state = st(request)
+    fight_id, cid = body.get("fight"), body.get("cid")
+    cs = None
+    for ev in live_events(state.session.events):
+        if ev["type"] == "combat.started" and ev["id"] == fight_id:
+            cs = CS.apply(None, ev)
+        elif cs is not None:
+            cs = CS.apply(cs, ev)
+            if ev["type"] == "combat.ended":
+                break
+    c = next((x for x in (cs or {}).get("combatants", []) if x.id == cid), None)
+    if c is None or not c.ransom:
+        bad("No ransom table for that captive", 404)
+    roll_, line = roll_ransom(c)
+    ev = state.record("combat.check", line, title=f"{c.display_name} — Ransom",
+                      data={"cid": cid, "roll": roll_, "label": "Ransom", "fight": fight_id})
+    return {"event": ev}
+
+
+@router.post("/api/battle/finale")
+async def finale(request: Request):
+    state, b = _aftermath(request)
+    a = BS.aftermath_view(b, state.party.items)
+    ransoms = {}
+    for ev in live_events(state.session.events):
+        d = ev.get("data") or {}
+        if ev["type"] == "combat.check" and d.get("label") == "Ransom" and d.get("fight"):
+            ransoms[(d["fight"], d["cid"])] = ev["text"].split(": ", 1)[-1]
+    knights = []
+    for k in a["knights"]:
+        rs = [{"captive": c["name"], "amount": ransoms.get((c["fight"], c["cid"]), "")} for c in a["captives"] if c["captor"] == k["pid"]]
+        knights.append({"pid": k["pid"], "name": k["name"], "encounter_glory": k["encounter_glory"], "participation": k["participation"],
+                        "role_label": {"conroi": "commander", "bataille": "bataille leader", "army": "army leader"}.get(k["role"], ""),
+                        "total": k["total"], "plunder": k["plunder"], "ransoms": rs})
+    summary = {"outcome": a["outcome"], "outcome_label": a["outcome_label"], "line": a["line"], "name": _name(b), "knights": knights}
+    line = f"{a['outcome_label']} — " + ", ".join(f"{k['name']} {k['total']} Glory" for k in knights)
+    ev = state.record("battle.finale", line, title=_name(b),
+                      data={"summary": summary, "table_text": line, "battle": _link(b, "aftermath")})
+    return {"event": ev}
+
+
+@router.post("/api/battle/end")
+async def end_battle(request: Request):
+    state, b = _aftermath(request)
+    ev = state.record("battle.ended", f"{_name(b)} is over", title=_name(b),
+                      data={"table_text": "The battle is over", "battle": _link(b, "aftermath")})
+    return {"event": ev}
+
+
 # -- cascade undo ------------------------------------------------------------------
 
 def _undo_targets(state, b, step_key):

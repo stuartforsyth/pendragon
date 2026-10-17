@@ -55,6 +55,8 @@ _SAFE_DATA = {
     "battle.passion": ("used", "name"),
     "battle.turn_ended": (),
     "battle.day_ended": (),
+    "battle.finale": ("summary",),
+    "battle.ended": (),
 }
 
 

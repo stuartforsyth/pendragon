@@ -1286,7 +1286,7 @@ board. UX acceptance against `#t-battle`: the two-second check that every player
 
 ---
 
-## S10 — Aftermath + finale (size **M**)
+## S10 — Aftermath + finale (size **M**) — ✅ DONE 2026-10-17
 
 **Goal.** The battle closes with one aftermath (Outcome / Glory / Spoils, every number editable,
 `#gm-after`), then **Post to Table** shows the finale (`#t-finale`).

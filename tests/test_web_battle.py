@@ -739,3 +739,118 @@ def test_banner_follows_latest_step(client):
     assert _tb(client)["battle"]["banner"]["text"] == "The Encounter stands"
     _step(client, "morale", kind="forced_retire")
     assert _tb(client)["battle"]["banner"]["text"] == "Not enough Morale — Retire to the Rear"
+
+
+# -- S10: aftermath and finale ----------------------------------------------------------
+
+def _one_turn_battle(client, size="clash", encounter="Knights of Gorre"):
+    pids = _party(client, "Sir Bors", "Sir Cai")
+    _quick(client, size)
+    ok(client.post("/api/battle/settings", json={"day": 1, "patch": {"turns": 1, "first_charge": False}}))
+    ok(client.post("/api/battle/deck", json={"day": 1, "add": DECK}))
+    _muster(client, pids)
+    _to_fight(client, pids, encounter)
+    ok(client.post("/api/battle/fight"))
+    return pids
+
+
+def _aftermath(client):
+    ok(client.post("/api/combat/end"))
+    _step(client, "end_day")
+    b = _battle(client)
+    assert b["status"] == "aftermath"
+    return b["aftermath"]
+
+
+def test_aftermath_enemy_kv_dead_plus_captured_only(client):
+    pids = _one_turn_battle(client)
+    gorre = _foes(client)
+    ok(client.post(f"/api/combat/{gorre[0]['id']}/status", json={"out": "dead"}))
+    ok(client.post(f"/api/combat/{gorre[1]['id']}/status", json={"out": "fled"}))
+    ok(client.post(f"/api/combat/{gorre[0]['id']}/credit", json={"knight": pids[0]}))
+    a = _aftermath(client)
+    assert a["enemy_kv"] == "1"                              # the fled knight doesn't count
+
+
+def test_aftermath_captured_counts(client):
+    pids = _one_turn_battle(client)
+    g = _foes(client)[0]
+    ok(client.post(f"/api/combat/{g['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{g['id']}/status", json={"out": "surrendered"}))
+    ok(client.post(f"/api/combat/{g['id']}/captured", json={}))
+    a = _aftermath(client)
+    assert a["enemy_kv"] == "1" and a["captives"][0]["captor_name"] == "Sir Bors"
+
+
+def test_aftermath_outcome_computed_and_small_plus_choice(client):
+    _one_turn_battle(client)
+    for g in _foes(client)[:2]:
+        ok(client.post(f"/api/combat/{g['id']}/status", json={"out": "dead"}))
+    _aftermath(client)
+    a = ok(client.post("/api/battle/aftermath", json={"patch": {"friendly_pk_losses": 1}}))["aftermath"]
+    assert a["outcome"] == "victory" and a["ratio"] == 2.0
+    a = ok(client.post("/api/battle/aftermath", json={"patch": {"outnumber": "we"}}))["aftermath"]
+    assert a["outcome"] == "decisive_victory"
+
+
+def test_zero_friendly_losses_ruling(client):
+    _one_turn_battle(client)
+    ok(client.post(f"/api/combat/{_foes(client)[0]['id']}/status", json={"out": "dead"}))
+    a = _aftermath(client)
+    assert a["zero_ruling"] and a["outcome"] == "decisive_victory"
+
+
+def test_participation_per_days_fought_and_roles(client):
+    pids = _one_turn_battle(client)
+    a = _aftermath(client)
+    k = {x["pid"]: x for x in a["knights"]}
+    assert k[pids[0]]["role"] == "conroi" and k[pids[0]]["days"] == 1
+    # Clash base 10 × (Indecisive 1 + conroi 2) = 30; the other knight 10 × 1 = 10
+    assert a["outcome"] == "indecisive" and k[pids[0]]["participation"] == 30 and k[pids[1]]["participation"] == 10
+    a = ok(client.post("/api/battle/aftermath", json={"patch": {"days_fought": {pids[1]: 0}}}))["aftermath"]
+    assert {x["pid"]: x for x in a["knights"]}[pids[1]]["participation"] == 0
+
+
+def test_plunder_only_on_victory_and_decisive_roll(client):
+    pids = _one_turn_battle(client)
+    a = _aftermath(client)
+    assert all(not k["plunder"] for k in a["knights"])
+    assert client.post("/api/battle/aftermath/roll", json={"what": "decisive"}).status_code == 409
+    a = ok(client.post("/api/battle/aftermath", json={"patch": {"outcome_choice": None, "enemy_kv": "4", "friendly_pk_losses": 1}}))["aftermath"]
+    assert a["outcome"] == "decisive_victory"
+    ok(client.post("/api/battle/aftermath/roll", json={"what": "decisive"}))
+    a = _battle(client)["aftermath"]
+    assert 2 <= a["decisive_roll"] <= 6 and all(k["plunder"] for k in a["knights"])
+
+
+def test_aftermath_is_gm_only(client):
+    _one_turn_battle(client)
+    _aftermath(client)
+    ok(client.post("/api/battle/aftermath", json={"patch": {"friendly_pk_losses": 1}}))
+    raw = client.get("/api/table").text
+    assert "enemy_kv" not in raw and "friendly_pk_losses" not in raw
+
+
+def test_finale_summary_on_table_then_ended(client):
+    pids = _one_turn_battle(client)
+    g = _foes(client)[0]
+    ok(client.post(f"/api/combat/{g['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{g['id']}/status", json={"out": "dead"}))
+    _aftermath(client)
+    ok(client.post("/api/battle/finale"))
+    t = ok(client.get("/api/table"))
+    f = t["battle"]["finale"]
+    assert f["outcome_label"] == "Decisive Victory" and f["knights"][0]["total"] == 50 + 10 * 4
+    ok(client.post("/api/battle/end"))
+    t = ok(client.get("/api/table"))
+    assert t["mode"] == "chronicle" and t["feed"][0]["type"] == "battle.ended"
+    assert _battle(client)["status"] == "ended"
+
+
+def test_leave_the_field_goes_to_aftermath(client):
+    _running(client)
+    _step(client, "retire")
+    _step(client, "rest", amount=1)
+    _step(client, "end_turn")
+    _step(client, "rear", choice="leave")
+    assert _battle(client)["status"] == "aftermath"

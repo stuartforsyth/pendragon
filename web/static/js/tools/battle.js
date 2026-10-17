@@ -48,7 +48,8 @@ export default {
     function render() {
       if (el.querySelector(".bl input:focus, .bl textarea:focus")) return;
       const live = b && ["mustering", "turn", "rear"].includes(b.status);
-      clear(body, h("div", { class: "bl" }, !live ? launchPanel() : b.status === "mustering" ? mustering() : running()));
+      clear(body, h("div", { class: "bl" }, b?.status === "aftermath" ? aftermathPanel()
+        : !live ? launchPanel() : b.status === "mustering" ? mustering() : running()));
     }
 
     // ------------------------------------------------------------ idle: launch
@@ -192,6 +193,59 @@ export default {
           knightChip(k, { onMounted: () => post(`/api/battle/knight/${k.pid}`, { mounted: !k.mounted }) }))),
         b.minus5 && b.turn === 1 ? h("div", { class: "bl-reminder" }, "−5 Battle this turn for the whole army (Army Commander fumbled).") : null,
         b.status === "rear" ? rearPanel() : stepper(),
+      ];
+    }
+
+    // ------------------------------------------------------------ aftermath (#gm-after)
+    const OUTCOMES = [["decisive_victory", "Decisive Victory"], ["victory", "Victory"], ["indecisive", "Indecisive"], ["defeat", "Defeat"], ["decisive_defeat", "Decisive Defeat"]];
+    const OPPONENTS = [["feudal", "Feudal army · £2"], ["inferior", "Inferior feudal army · £1½"], ["saxons", "Saxons · £1"], ["cymric", "Cymric hill tribes · £½"], ["picts_irish", "Picts or Irish · £¼"]];
+    const patchSoon = debounce((patch) => post("/api/battle/aftermath", { patch }), 350);
+    function aftermathPanel() {
+      const a = b.aftermath;
+      const num = (val, onset, attrs = {}) => h("input", { class: "input num", value: val, onchange: (e) => onset(e.target.value), ...attrs });
+      const sel = (opts, val, onset) => h("select", { class: "input", onchange: (e) => onset(e.target.value || null) },
+        opts.map(([v, l]) => h("option", { value: v ?? "", selected: (v ?? "") === (val ?? "") }, l)));
+      const outcomeCol = h("div", { class: "panel" }, h("h3", {}, "Outcome"),
+        h("div", { class: "kv" },
+          h("span", {}, "Enemy losses (dead + captured)"), h("span", {}, num(a.enemy_kv, (v) => patchSoon({ enemy_kv: v }), { style: { width: "80px" } }), " KV"),
+          h("span", {}, "Player knights killed or captured"), num(a.friendly_pk_losses, (v) => patchSoon({ friendly_pk_losses: Number(v) || 0 })),
+          h("span", {}, "GM knights in the conroi"), num(a.gm_knights, (v) => patchSoon({ gm_knights: Number(v) || 0 })),
+          a.gm_knights ? [h("span", {}, "Their losses (Table 6.5 roll)"), outcomeChips({ value: a.gm_losses_roll, onPick: (o) => patchSoon({ gm_losses_roll: o }) })] : null,
+          h("span", {}, "Friendly losses"), h("b", {}, `${a.friendly_kv} KV`),
+          h("span", {}, "Outnumbering"), sel([["none", "none"], ["we", "we outnumbered them 2:1"], ["they", "they outnumbered us 2:1"]], a.outnumber, (v) => patchSoon({ outnumber: v || "none" })),
+          h("span", {}, "Ratio"), h("b", {}, a.ratio ?? "—")),
+        h("div", { class: "result" }, a.outcome_label),
+        a.zero_ruling ? h("div", { class: "hint" }, h("span", { class: "tag purpure rule-gr", title: "The book divides by friendly losses" }, "GM ruling"), " No friendly losses: any enemy loss is a Decisive Victory, none is Indecisive.") : null,
+        a.small_plus ? h("label", { class: "field" }, h("span", {}, `Outcome — the book leaves Small battles and larger to the story (suggested: ${OUTCOMES.find((o) => o[0] === a.computed)[1]})`),
+          sel([[null, "Use the suggestion"], ...OUTCOMES], b.aftermath_patch?.outcome_choice || b.definition.outcome, (v) => patchSoon({ outcome_choice: v }))) : null,
+        h("div", { class: "hint" }, "Computed from KV. Every number above is editable."));
+      const gloryCol = h("div", { class: "panel" }, h("h3", {}, "Glory"),
+        h("table", { class: "gt" }, h("thead", {}, h("tr", {}, ["Knight", "Role", "Days", "Encounters", "Participation", "Total"].map((x) => h("th", {}, x)))),
+          h("tbody", {}, a.knights.map((k) => h("tr", {},
+            h("td", {}, k.name),
+            h("td", {}, sel([[null, "—"], ["conroi", "conroi ×2"], ["bataille", "bataille ×3"], ["army", "army ×5"]], k.role, (v) => patchSoon({ roles: { ...(b.aftermath_patch?.roles || {}), [k.pid]: v } }))),
+            h("td", {}, num(k.days, (v) => patchSoon({ days_fought: { ...(b.aftermath_patch?.days_fought || {}), [k.pid]: Number(v) || 0 } }), { style: { width: "54px" } })),
+            h("td", { class: "n" }, k.encounter_glory), h("td", { class: "n" }, k.working), h("td", { class: "tot" }, k.total))))),
+        h("div", { class: "hint" }, "Participation: Table 6.6 base × (outcome + leader). ", a.days > 1 ? [h("span", { class: "tag or rule-sr", title: "The Sword Campaign treats each day as its own engagement" }, "Scenario rule"), " × days fought."] : null));
+      const spoilsCol = h("div", { class: "panel" }, h("h3", {}, "Spoils"),
+        ["victory", "decisive_victory"].includes(a.outcome) ? [
+          h("label", { class: "field" }, h("span", {}, "Opponents (Table 6.9)"), sel(OPPONENTS, a.opponents, (v) => patchSoon({ opponents: v || "feudal" }))),
+          a.outcome === "decisive_victory" ? h("div", { class: "row" }, h("span", {}, "Decisive +£2D3"),
+            num(a.decisive_roll ?? "", (v) => patchSoon({ decisive_roll: Number(v) || null })),
+            h("button", { class: "btn ghost sm", onclick: () => post("/api/battle/aftermath/roll", { what: "decisive" }) }, icon("d6"), "roll for me")) : null,
+          h("div", { class: "kv" }, a.knights.map((k) => [h("span", {}, k.name), h("b", {}, k.plunder || "—")])),
+        ] : h("p", { class: "faint" }, `No plunder (${a.outcome_label}).`),
+        h("div", { class: "label", style: { marginTop: "8px" } }, "Captives"),
+        a.captives.length ? h("div", { class: "kv" }, a.captives.map((c) => [h("span", {}, `${c.name} — ${c.captor_name}`),
+          c.ransom ? h("button", { class: "btn sm", onclick: () => post("/api/battle/ransom", { fight: c.fight, cid: c.cid }) }, "Roll ransom") : h("span", { class: "faint" }, "no ransom table")]))
+          : h("p", { class: "faint small" }, "No captives taken."));
+      return [
+        h("div", { class: "bhead" }, h("span", { class: "bl-title" }, b.definition.name || "Battle"),
+          h("span", { class: "faint" }, `Aftermath · ${a.size_label} · ${a.days} day${a.days === 1 ? "" : "s"}`),
+          h("span", { class: "sp" },
+            h("button", { class: "btn primary", onclick: () => post("/api/battle/finale") }, a.finale ? "Post again ▸" : "Post to Table ▸"),
+            a.finale ? h("button", { class: "btn", onclick: async () => { if (await confirmBox("End the battle?", "It moves to the log; the Table returns to the Chronicle.", "End battle")) post("/api/battle/end"); } }, "End battle") : null)),
+        h("div", { class: "cols3" }, outcomeCol, gloryCol, spoilsCol),
       ];
     }
 

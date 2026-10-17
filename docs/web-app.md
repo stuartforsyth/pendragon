@@ -169,3 +169,11 @@ outlined, spent struck through), revealed turn scripts, the Morale gauge, the
 Fray, and a knights row (battle Glory, chips such as Commander / May charge /
 posture / Passion / At the rear, and the LAST line). `battle_state.table_view`
 sends only these fields — never Minimum, Loss, KV, card mechanics, dice or tokens.
+
+After the last turn of the last day (or Leave the field) the battle enters its
+**aftermath**: Outcome (enemy KV from dead + captured foes, friendly losses with
+the Table 6.5 helper, outnumbering, ratio → result; Small+ battles let the GM
+choose), Glory (encounter Glory + participation by days fought and role) and
+Spoils (Table 6.9/6.10 plunder, captives with Roll ransom) — all editable
+(`battle.aftermath`, GM-only). **Post to Table** (`battle.finale`) shows the
+finale; **End battle** (`battle.ended`) closes it.

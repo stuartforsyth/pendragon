@@ -326,3 +326,18 @@ body {
 .bv-script.minus5 { border-left-color: var(--gules); font-style: normal; font-family: var(--f-caps); font-size: 18px; }
 .battleview { height: 100%; min-height: 0; }
 .battleview .fray { overflow: hidden; }
+
+/* ---------- finale (S10, #t-finale) ---------- */
+.finale { display: grid; justify-items: center; align-content: start; gap: 12px; text-align: center; min-height: 0; width: 100%; padding-top: 6px; }
+.fin-kicker { font-family: var(--f-caps); font-size: 16px; letter-spacing: .25em; color: var(--ink-2); text-transform: uppercase; }
+.fin-outcome { font-family: var(--f-display); font-weight: 700; font-size: 54px; line-height: 1.05; color: var(--gules); letter-spacing: .06em; animation: bloom .8s; }
+.fin-line { font-family: var(--f-caps); font-size: 17px; letter-spacing: .22em; color: var(--ink-2); text-transform: uppercase; }
+.fin-cards { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 8px; width: 100%; }
+.fin-card { width: 300px; }
+.fin-card { background: rgba(251,244,226,.9); border: 1px solid var(--parch-dark); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; text-align: left; animation: rise .6s ease-out backwards; }
+.fin-top { display: flex; gap: 10px; align-items: center; }
+.fin-name { font-family: var(--f-caps); font-weight: 700; font-size: 19px; color: var(--azure); }
+.fin-total { font-family: var(--f-prose); font-weight: 600; font-size: 50px; color: var(--or); line-height: 1; font-variant-numeric: lining-nums; }
+.fin-total small { font-family: var(--f-caps); font-size: 13px; letter-spacing: .25em; color: var(--ink-soft); }
+.fin-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 17px; }
+.fin-card li { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted var(--parch-dark); padding-bottom: 3px; }

@@ -69,3 +69,17 @@
 .o-critical { color: var(--or-bright); } .o-success { color: var(--vert); } .o-failure { color: var(--gules); } .o-fumble { color: var(--purpure); }
 @media (max-width: 900px) { .split2 { grid-template-columns: 1fr; } .step > .row { grid-template-columns: 30px 1fr; } .step .body { padding-left: 14px; } }
 .step .body > .btn { justify-self: start; }
+
+/* ---------- aftermath (S10, #gm-after) ---------- */
+.cols3 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.cols3 > :nth-child(2) { grid-column: 1 / -1; order: 3; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; font-size: 14px; color: var(--ink-2); }
+.kv b { color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
+.result { font-family: var(--f-display); font-size: 22px; color: var(--vert); letter-spacing: .08em; margin: 6px 0; }
+table.gt { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.gt th { text-align: left; color: var(--ink-dim); font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 4px; border-bottom: 1px solid var(--line); }
+table.gt td { padding: 5px 4px; border-bottom: 1px solid #221d19; color: var(--ink-2); }
+table.gt td.n { text-align: right; color: var(--ink); }
+table.gt td.tot { text-align: right; color: var(--or-bright); font-weight: 800; }
+table.gt select { padding: 2px 4px; height: 28px; }
+@media (max-width: 1100px) { .cols3 { grid-template-columns: 1fr; } }
