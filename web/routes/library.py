@@ -133,6 +133,16 @@ def compute(request: Request, body: dict):
                                              arm.get("shield", ""))}
 
 
+@router.post("/api/adversaries/brawling")
+def brawling(body: dict):
+    """The default Brawling skill and the Brawling Damage for an editor draft."""
+    ch = body.get("characteristics") or {}
+    ints = {k: A._int(ch.get(k), 0) for k in A.CHAR_ORDER}
+    v, src = A.default_brawling(body.get("name", ""), body.get("category", "human"), ints,
+                                body.get("attacks") or [], body.get("skills") or {})
+    return {"default": v, "source": src, "damage": A.brawling_damage(ints)}
+
+
 @router.post("/api/adversaries/weapon")
 def weapon(request: Request, body: dict):
     state = st(request)

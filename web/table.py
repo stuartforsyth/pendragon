@@ -159,7 +159,8 @@ def knight_cards(events, fl, combat, battle=None):
             if last is None and d.get("glory_amount") and ev["id"] >= start:
                 last = {"amount": d["glory_amount"], "text": d.get("table_text", "")}
         foes = [{"id": f["id"], "name": f["name"], "wound_state": f["wound_state"],
-                 "chips": [x for x in (f.get("height_chip"), "⇣ horse" if f.get("attacks_horse") and k.get("mounted") else "") if x]}
+                 "chips": [x for x in (f.get("height_chip"), "⇣ horse" if f.get("attacks_horse") and k.get("mounted") else "",
+                                       "Disarmed" if f.get("disarmed") else "") if x]}
                 for f in rows if f["side"] != "party" and f.get("engaged_with") == k["name"] and f["status"] == "active"]
         cards.append({"pid": pid, "name": k["name"], "player": k.get("player", ""), "mounted": k.get("mounted", True),
                       "status": k["status"],

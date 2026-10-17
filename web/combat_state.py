@@ -17,7 +17,7 @@ COMBAT_STATE_TYPES = {
     "combat.promote", "combat.modifier", "combat.engage", "combat.removed",
     "combat.round", "combat.ended", "combat.blow",
     "combat.mounted", "combat.horse", "combat.height", "combat.captured",
-    "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round", "combat.distribute",
+    "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round", "combat.distribute", "combat.wield",
 }
 
 
@@ -51,6 +51,11 @@ def apply(state, ev, promotion_cfg=None):
         return state
     if t == "combat.added":
         state["combatants"].append(Combatant.from_dict(d["combatant"]))
+        return state
+    if t == "combat.wield":
+        for c in state["combatants"]:
+            if c.id in (d.get("cids") or []):
+                c.wielding = d["wield"]
         return state
     if t == "combat.distribute":              # one action, many engagements
         for c in state["combatants"]:
@@ -130,6 +135,9 @@ def gm_view(c):
              log_name=c.log_name, armor_total=c.armor_total(),
              armour_text=c.describe_armour(), looks=c.describe_looks(),
              wound_state=c.wound_state(), side=getattr(c, "side", "foe"))
+    if d["side"] != "party":
+        key, _ = c.wielded()
+        d.update(wielding=key, brawl=c.brawl())
     return d
 
 
@@ -144,7 +152,7 @@ def table_view(c):
     if side == "party":
         out.update(player=getattr(c, "player", ""), party_id=getattr(c, "party_id", None))
     else:
-        out.update(attacks_horse=c.attacks_horse)
+        out.update(attacks_horse=c.attacks_horse, disarmed=c.wielding == "brawl")
     return out
 
 

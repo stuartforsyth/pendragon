@@ -32,6 +32,42 @@ def _dice_count(expr):
     return int(m.group(1)) if m else 0
 
 
+def brawling_damage(characteristics):
+    """Flat Brawling Damage = (STR + SIZ) ÷ 6, rounded half up
+    (core.game-system.table-characteristics-derived)."""
+    from core.rules import _rhu
+    try:
+        return max(1, _rhu((int(characteristics.get("STR") or 0) + int(characteristics.get("SIZ") or 0)) / 6))
+    except (TypeError, ValueError):
+        return None
+
+
+_KNIGHT = re.compile(r"\bknights?\b", re.I)
+
+
+def default_brawling(name, category, characteristics, attacks, skills=None):
+    """A foe's Brawling skill when nobody has set one: its Brawling skill, else
+    its Brawling weapon's value (the card states it), else — humans only — the
+    knight's starting value STR ÷ 2 (Table 3.5), at least 10 for knights, who
+    can't be knighted with less (core.character-creation.knighthood-ranks-and-
+    training). Returns (value or None, where it came from)."""
+    from core.rules import _rhu
+    if (skills or {}).get("Brawling"):
+        return int(skills["Brawling"]), "skill"
+    for a in attacks or []:
+        if (a.get("skill") or "").lower() == "brawling" and a.get("value"):
+            return int(a["value"]), a.get("weapon") or "Brawling weapon"
+    if category != "human":
+        return None, ""
+    try:
+        v = _rhu(int(characteristics.get("STR") or 0) / 2)
+    except (TypeError, ValueError):
+        return None, ""
+    if _KNIGHT.search(name or ""):
+        return max(v, 10), "STR ÷ 2, at least 10 for a knight"
+    return v, "STR ÷ 2"
+
+
 def resolve_weapon_damage(wdef, base_damage):
     """The damage a weapon deals for a wielder whose Weapon Damage is base_damage.
 
@@ -390,6 +426,8 @@ def finalise(draft, rules, combat):
         m = draft.get(key, {}) or {}
         adv[key] = {str(k).strip(): _int(v) for k, v in m.items() if str(k).strip()}
     adv["notes"] = str(draft.get("notes", "") or "").strip()
+    b = draft.get("brawling")
+    adv["brawling"] = None if b in (None, "") else _int(b)    # None = the default (default_brawling)
     if draft.get("created_from_npc"):
         adv["created_from_npc"] = True
     for k, v in draft.items():

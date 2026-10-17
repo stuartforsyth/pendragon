@@ -12,8 +12,8 @@
   },
   "critical_hit": {
     "melee_bonus": "on a critical hit, roll the weapon's damage normally and add a flat +4D6 (worked example: 5D6 -> 5D6+4D6)",
-    "brawling": "a critical doubles Brawling Damage",
-    "note": "transcribe exact wording from Core Rulebook Ch.7 'Winner's Outcome' at implementation"
+    "brawling": "an unarmed critical adds +2D6 to Brawling Damage; Brawling weapons add the normal +4D6 (core.combat.brawling, p.144)",
+    "note": "see rules_corpus core.combat.brawling and core.combat.resolution-matrix"
   },
   "promotion": {
     "title_default": "Champion",

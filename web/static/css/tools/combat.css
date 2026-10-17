@@ -84,7 +84,27 @@
 .cbt-none { padding: 8px 14px; }
 .cbt-foe { border-bottom: 1px solid #221d19; }
 .cbt-foe:last-child { border-bottom: 0; }
-.cbt-foe-line { display: grid; grid-template-columns: minmax(130px, 1fr) 140px 80px minmax(150px, 1fr) 160px auto 62px auto; gap: 10px; align-items: center; padding: 6px 12px; }
+.cbt-foe-line { display: grid; grid-template-columns: minmax(110px, .8fr) 110px minmax(0, auto) 120px minmax(230px, 1.6fr) auto 62px auto; gap: 10px; align-items: center; padding: 6px 12px; }
+.cbt-wield { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.cbt-weapon { all: unset; cursor: pointer; min-width: 0; flex: 1; display: flex; align-items: baseline; gap: 4px; white-space: nowrap;
+  font-size: 12.5px; border: 1px solid var(--line-2); border-radius: 5px; padding: 3px 8px; color: var(--ink); }
+.cbt-weapon .wn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cbt-weapon:hover { border-color: var(--or); }
+.cbt-weapon:focus-visible { outline: 2px solid var(--or); }
+.cbt-weapon b { color: var(--or-bright); }
+.cbt-weapon.disarmed { border-color: rgba(190,80,70,.6); }
+.cbt-weapon .tag { margin-left: 6px; font-size: 10.5px; padding: 0 5px; }
+.atk-btn { border-color: #6b5a2e; color: var(--or-bright); }
+.atk-btn:hover:not([disabled]) { background: #2e2615; }
+.cbt-wpick { all: unset; cursor: pointer; font-size: 12.5px; border: 1px solid var(--line-2); border-radius: 5px; padding: 2px 8px; }
+.cbt-wpick:hover { border-color: var(--or); }
+.cbt-wpick.on { border-color: var(--or); background: rgba(176,138,54,.14); }
+.cbt-wpick b { color: var(--or-bright); }
+@media (max-width: 1250px) {
+  .cbt-foe-line { grid-template-columns: minmax(120px, 1fr) 110px 130px minmax(190px, 1.3fr) auto 62px auto; }
+  .cbt-foe-line .cbt-chips { grid-column: 1 / -1; grid-row: 2; }
+  .cbt-foe-line .cbt-chips:empty { display: none; }
+}
 .cbt-foe-name { all: unset; cursor: pointer; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cbt-foe-name:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
 .cbt-foe-name .marker { color: var(--or); margin-right: 4px; }

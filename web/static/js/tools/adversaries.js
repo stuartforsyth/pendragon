@@ -35,6 +35,9 @@ export default {
     const listEl = h("div", { class: "list list-scroll adv-list" });
     const countEl = h("span", { class: "faint small" });
     const editor = h("div", { class: "adv-editor" });
+    let brawlRefresh = null;   // the editor's Brawling default follows STR, SIZ, name and weapons
+    editor.addEventListener("input", () => brawlRefresh?.());
+    editor.addEventListener("click", () => setTimeout(() => brawlRefresh?.(), 50));
 
     search.addEventListener("input", () => { filt.q = search.value.toLowerCase(); renderList(); });
     search.addEventListener("keydown", (e) => {
@@ -331,9 +334,23 @@ export default {
       drawAttacks();
       const weaponPick = h("select", { class: "input" }, h("option", { value: "" }, "Choose a weapon…"),
         Object.entries(meta.weapons).map(([w, info]) => h("option", { value: w }, `${w} (${info.skill})`)));
+      // Brawling: what a disarmed foe fights with. Blank = the rule's default.
+      const brawlIn = h("input", { class: "input num", type: "number", min: 0, value: d.brawling ?? "" });
+      const brawlNote = h("span", { class: "faint small" });
+      const drawBrawl = debounce(async () => {
+        const r = await post("/api/adversaries/brawling", { name: d.name, category: d.category, characteristics: d.characteristics, attacks: d.attacks, skills: d.skills });
+        brawlIn.placeholder = r.default ?? "—";
+        brawlNote.textContent = (d.brawling != null ? "" : r.default != null ? `Default ${r.default} (${r.source}). ` : "No default for a creature — enter one if it can fight unarmed. ")
+          + (r.damage ? `Brawling Damage ${r.damage} ((STR + SIZ) ÷ 6).` : "");
+      }, 200);
+      brawlIn.addEventListener("input", () => { d.brawling = brawlIn.value === "" ? null : Number(brawlIn.value); touched(); drawBrawl(); });
+      brawlRefresh = drawBrawl;
+      drawBrawl();
       const attacks = h("div", { class: "panel" }, h("h3", {}, "Attacks & weapons"),
         h("datalist", { id: "adv-weapons" }, Object.keys(meta.weapons).map((w) => h("option", { value: w }))),
         atkList,
+        h("div", { class: "row brawl-row", style: { marginTop: "10px" } },
+          h("label", { class: "field" }, h("span", {}, "Brawling (when disarmed)"), brawlIn), brawlNote),
         h("div", { class: "row", style: { marginTop: "10px" } }, weaponPick,
           h("button", { class: "btn sm", onclick: async () => {
             if (!weaponPick.value) return weaponPick.focus();

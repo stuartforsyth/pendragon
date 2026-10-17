@@ -104,6 +104,9 @@ class Combatant:
     rounds = None
     extra_rounds = 0
     position = None
+    wielding = 0            # index into attacks, or "brawl" (disarmed)
+    brawling_override = None
+    brawl_bonus = 0         # a promoted champion's skill bonus
 
     def __init__(self, type_name, template, label, hp_jitter=True):
         self.type = type_name
@@ -131,6 +134,7 @@ class Combatant:
         }
 
         self.attacks = copy.deepcopy(template["attacks"])
+        self.brawling_override = template.get("brawling")
         self.skills = dict(template.get("skills", {}))
         self.traits = dict(template.get("traits", {}))  # e.g. Valorous, for Surrender
         # Valorous drives the Surrender check; battle-card conrois list no traits,
@@ -310,6 +314,41 @@ class Combatant:
         c.player = member.get("player", "")
         return c
 
+    # -- weapons -----------------------------------------------------------
+
+    def brawl(self):
+        """The unarmed attack: Brawling skill and flat Brawling Damage."""
+        from core.adversary import brawling_damage, default_brawling
+        if self.brawling_override not in (None, ""):
+            v, src = int(self.brawling_override), "set in the Adversaries editor"
+        else:
+            v, src = default_brawling(self.type, self.category, self.characteristics,
+                                      (self._base or {}).get("attacks", self.attacks), self.skills)
+        if v is not None:
+            v += self.brawl_bonus
+        return {"weapon": "Brawling", "skill": "Brawling", "value": v,
+                "damage": str(brawling_damage(self.characteristics) or ""), "unarmed": True, "source": src}
+
+    def attack_for(self, key):
+        """An attack by key: an index into attacks, or "brawl". Raises
+        LookupError for an unknown one."""
+        if key == "brawl":
+            return self.brawl()
+        try:
+            i = int(key)
+        except (TypeError, ValueError):
+            raise LookupError(key)
+        if not 0 <= i < len(self.attacks):
+            raise LookupError(key)
+        return self.attacks[i]
+
+    def wielded(self):
+        """(key, attack) for the weapon in hand; falls back to the first."""
+        try:
+            return self.wielding, self.attack_for(self.wielding)
+        except LookupError:
+            return (0, self.attacks[0]) if self.attacks else ("brawl", self.brawl())
+
     # -- promotion ---------------------------------------------------------
 
     def promote(self, cfg):
@@ -332,6 +371,7 @@ class Combatant:
         self.unconscious = max(1, _rhu(self.max_hp / 4))
         self.armor_points += cfg.get("armour_bonus", 0)
         self.glory *= cfg.get("glory_multiplier", 1)
+        self.brawl_bonus = cfg.get("skill_bonus", 5)
         self.elite = True
 
     def demote(self):
@@ -343,6 +383,7 @@ class Combatant:
         self.unconscious = self._base["unconscious"]
         self.armor_points = self._base["armor_points"]
         self.glory = self._base["glory"]
+        self.brawl_bonus = 0
         self.elite = False
         self._base = None
 

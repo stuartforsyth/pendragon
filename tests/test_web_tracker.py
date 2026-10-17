@@ -227,3 +227,60 @@ def test_distribute_skips_downed_knights(client):
     ok(client.post(f"/api/combat/{bors['id']}/status", json={"out": "unconscious"}))
     ok(client.post("/api/combat/distribute"))
     assert set(_lanes(client)[1]) == {"Sir Cai"}
+
+
+# -- weapons in hand, Disarmed, Brawling -------------------------------------------
+
+def test_default_brawling_rules():
+    from core.adversary import brawling_damage, default_brawling
+    ch = {"STR": 15, "SIZ": 15}
+    assert brawling_damage(ch) == 5 and brawling_damage({"STR": 8, "SIZ": 8}) == 3     # 16/6 = 2.67 -> 3
+    assert default_brawling("Knights of Gorre", "human", ch, [{"skill": "Sword", "value": 17}]) == (10, "STR ÷ 2, at least 10 for a knight")
+    assert default_brawling("Bandit", "human", {"STR": 13}, [])[0] == 7                  # 6.5 rounds up
+    assert default_brawling("Bandit", "human", ch, [{"skill": "Brawling", "value": 8, "weapon": "Dagger"}]) == (8, "Dagger")
+    assert default_brawling("Bear", "beast", ch, []) == (None, "")
+    assert default_brawling("X", "human", ch, [], {"Brawling": 14})[0] == 14
+
+
+def test_wield_type_and_disarm_then_brawl_attack(client):
+    cs = _fight(client, knights=("Sir Bors", "Sir Cai", "Dame Lynet"))
+    ok(client.post("/api/combat/distribute"))
+    foes = _foes(ok(client.get("/api/combat"))["combat"])
+    assert all(f["wielding"] == 0 for f in foes)                         # the card's first weapon
+    ev = ok(client.post("/api/combat/wield", json={"type": "Knights of Gorre", "wield": 2}))["event"]
+    assert len(ev["data"]["cids"]) == 3
+    f = foes[0]
+    ok(client.post("/api/combat/wield", json={"cid": f["id"], "wield": "brawl"}))
+    row = next(c for c in _foes(ok(client.get("/api/combat"))["combat"]) if c["id"] == f["id"])
+    assert row["wielding"] == "brawl" and row["brawl"]["value"] == 10 and row["brawl"]["damage"] == "5"
+    roll = ok(client.post(f"/api/combat/{f['id']}/roll", json={"what": "attack"}))["event"]      # no key: the weapon in hand
+    assert roll["data"]["label"].startswith("Brawling") and roll["data"]["attack"] == "brawl"
+    knight = _knight(cs, row["engaged_with"])
+    blow = ok(client.post("/api/combat/blow", json={"attacker": f["id"], "attack": "brawl", "target": knight["id"], "critical": True}))["event"]
+    terms = blow["data"]["blow"]
+    crit = next(x for x in terms["terms"] if x["label"] == "critical")
+    assert blow["data"]["weapon"] == "Brawling" and crit["expr"].lower() == "2d6"   # unarmed critical: +2D6, not +4D6
+    t = ok(client.get("/api/table"))
+    assert any("Disarmed" in x["chips"] for k in t["knights"] for x in k["lane"]["foes"])
+    # strike the disarm: back to the sword
+    ok(client.post(f"/api/events/{_last_id(client, 'combat.wield')}/strike"))
+    row = next(c for c in _foes(ok(client.get("/api/combat"))["combat"]) if c["id"] == f["id"])
+    assert row["wielding"] == 2
+
+
+def _last_id(client, t):
+    evs = ok(client.get("/api/session/events"))["events"]
+    return [e for e in evs if e["type"] == t][-1]["id"]
+
+
+def test_brawling_override_saved_and_used(client):
+    adv = ok(client.get("/api/adversaries/Knights of Gorre"))["adversary"]
+    adv["brawling"] = 13
+    ok(client.put("/api/adversaries", json={"adversary": adv, "original": "Knights of Gorre"}))
+    assert ok(client.get("/api/adversaries/Knights of Gorre"))["adversary"]["brawling"] == 13
+    _fight(client)
+    f = _foes(ok(client.get("/api/combat"))["combat"])[0]
+    assert f["brawl"]["value"] == 13
+    r = ok(client.post("/api/adversaries/brawling", json={"name": "Knights of Gorre", "category": "human",
+                                                          "characteristics": {"STR": 15, "SIZ": 15}}))
+    assert r == {"default": 10, "source": "STR ÷ 2, at least 10 for a knight", "damage": 5}

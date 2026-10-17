@@ -514,6 +514,42 @@ async def credit(request: Request, cid: str, body: dict):
     return {"event": ev}
 
 
+@router.post("/api/combat/wield")
+async def wield(request: Request, body: dict):
+    """Change the weapon in hand: one foe (``cid``), or every foe of a type still
+    fighting (``type``) — e.g. all Knights of Gorre drop lances for swords.
+    ``wield`` is an attack index, or "brawl" for a disarmed foe."""
+    state, cs = _active(request)
+    w = body.get("wield")
+    if body.get("type"):
+        if w == "brawl":
+            bad("Disarm foes one at a time")
+        targets = [c for c in cs["combatants"] if _is_foe(c) and c.type == body["type"] and not c.down]
+        if not targets:
+            bad(f"No {body['type']} still fighting")
+    else:
+        targets = [_combatant(cs, body.get("cid"))]
+    try:
+        atk = targets[0].attack_for(w)
+    except LookupError:
+        bad("Unknown weapon")
+    w = w if w == "brawl" else int(w)
+    targets = [c for c in targets if c.wielding != w]
+    if not targets:
+        return {"event": None}
+    if w == "brawl":
+        text = f"{targets[0].display_name} is disarmed — fights on with Brawling"
+        title = targets[0].display_name
+    else:
+        names = targets[0].display_name if len(targets) == 1 else f"{len(targets)} {targets[0].type}"
+        was_brawl = len(targets) == 1 and targets[0].wielding == "brawl"
+        text = f"{names} {'recovers a weapon:' if was_brawl else 'switch to' if len(targets) > 1 else 'switches to'} {atk['weapon']}"
+        title = names
+    ev = state.record("combat.wield", text, title=title,
+                      data={"cids": [c.id for c in targets], "wield": w, "table_text": text})
+    return {"event": ev}
+
+
 def even_split(foes, knights):
     """Spread active foes evenly over the knights (names), keeping any foe on
     its current knight while that knight is under its share. Returns
@@ -584,13 +620,18 @@ async def roll(request: Request, cid: str, body: dict):
         ev = record_check(state, label=CHAR_FULL[key], value=c.characteristics[key],
                           kind="characteristic", modifier=c.modifier, **common)
     elif what in ("attack", "damage"):
+        if key in (None, ""):
+            key = c.wielded()[0]                 # the weapon in hand
         try:
-            atk = c.attacks[int(key)]
-        except (TypeError, ValueError, IndexError):
+            atk = c.attack_for(key)
+        except LookupError:
             bad("Unknown attack")
+        if atk.get("value") is None:
+            bad(f"{c.display_name} has no Brawling skill — set one in the Adversaries editor")
+        key = key if key == "brawl" else int(key)
         if what == "attack":
             height = _height(cs, c)
-            common["extra"].update(attack=int(key), height=height)
+            common["extra"].update(attack=key, height=height)
             label = atk["weapon"] + (f" (Height {height:+d})" if height else "")
             ev = record_check(state, label=label, value=atk["value"],
                               modifier=c.modifier + height, **common)
@@ -656,13 +697,15 @@ def record_blow(state, cs, body):
     attacker = _combatant(cs, body["attacker"]) if body.get("attacker") else None
     target = _combatant(cs, body["target"]) if body.get("target") else None
     weapon, expr = (body.get("weapon") or "").strip(), None
+    unarmed = False
     if attacker is not None and body.get("attack") not in (None, ""):
         try:
-            atk = attacker.attacks[int(body["attack"])]
-        except (TypeError, ValueError, IndexError):
+            atk = attacker.attack_for(body["attack"])
+        except LookupError:
             bad("Unknown attack")
         weapon = atk["weapon"]
         expr = atk["damage"]
+        unarmed = bool(atk.get("unarmed"))
     rolled = body.get("damage")
     if rolled not in (None, ""):
         rolled, expr = to_int(rolled, "damage"), None      # a typed total wins
@@ -684,11 +727,11 @@ def record_blow(state, cs, body):
             roll_notation(extra)
         except NotationError:
             bad(f"Can't read the extra damage '{extra}'")
-    unarmed = bool(attacker and not wdef and weapon.lower() in ("fist", "punch", "unarmed", "brawling"))
+    unarmed = unarmed or bool(attacker and not wdef and weapon.lower() in ("fist", "punch", "unarmed", "brawling"))
     through = "strikes through shields" in (wdef.get("advantage", "").lower())
 
     if target is not None and not _is_foe(target):
-        return _report_blow_on_knight(state, attacker, target, weapon, expr, rolled, extra, body)
+        return _report_blow_on_knight(state, attacker, target, weapon, expr, rolled, extra, body, unarmed)
 
     shield_value = body.get("shield_value")
     shield_value = (to_int(shield_value, "shield") if shield_value not in (None, "")
@@ -740,11 +783,11 @@ def record_blow(state, cs, body):
     return state.record("combat.blow", text + suffix, title=title, data=data)
 
 
-def _report_blow_on_knight(state, attacker, knight, weapon, expr, rolled, extra, body):
+def _report_blow_on_knight(state, attacker, knight, weapon, expr, rolled, extra, body, unarmed=False):
     """An enemy's blow on a player knight: roll and report its damage (+4D6 on
-    a critical) and which protection applies. Nothing is applied — players
-    keep their knights' Hit Points on paper."""
-    b = resolve_blow(expr=expr, rolled=rolled, critical=bool(body.get("critical")),
+    a critical, +2D6 bare-handed) and which protection applies. Nothing is
+    applied — players keep their knights' Hit Points on paper."""
+    b = resolve_blow(expr=expr, rolled=rolled, critical=bool(body.get("critical")), unarmed=unarmed,
                      reckless=bool(body.get("reckless")), extra=extra,
                      rebated=bool(body.get("rebated")))
     shield = bool(body.get("shield"))

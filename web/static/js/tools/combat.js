@@ -220,7 +220,8 @@ export default {
           : (pool.length ? h("div", { class: "cbt-lane" }, h("div", { class: "cbt-lane-body" }, pool.map(foeLine))) : null),
         defeatedStrip(foes),
         h("div", { class: "cbt-help faint small" },
-          "Click a foe's weapon skill in its type header to attack a knight: the app rolls it, you click the knight's result, and if the foe hits its damage is rolled. ",
+          "Each foe shows the weapon in its hand: click it to switch weapons or mark it Disarmed (it fights on with Brawling). Attack rolls that weapon against the knight it's fighting — you click the knight's result, and if the foe wins its damage is rolled. ",
+          "In a foe type's header, “All wield” switches every foe of that type at once (lances down, swords out). ",
           "When a knight hits a foe, press Hit and enter the damage the player rolled — armour comes off automatically. ±HP is for plain changes (healing, a fall). ",
           "Drag a foe to another knight, or use its target chip, to change who it fights. Strike any log entry to undo it."),
       ];
@@ -236,18 +237,18 @@ export default {
         menu(anchor, active.map((c) => [`${c.display_name} — ${value(c)}`, () => fn(c)]));
       };
       const rollFor = (c, body) => post(`/api/combat/${c.id}/roll`, body).then((r) => ctx.showLastRoll(r.event));
-      const knightsIn = cs.combatants.some((o) => o.side === "party");
       return h("div", { class: "cbt-type" },
         h("b", { class: "cbt-type-name" }, t.type),
         h("span", { class: "grp" }, Object.entries(t.characteristics).map(([k, v]) => h("span", { class: "pair" }, h("span", { class: "nm" }, k), " ",
           h("span", { class: "rollable", title: `Roll ${CHAR_FULL[k]}`, onclick: (e) => forFoe(e.currentTarget, k, (c) => c.characteristics[k] + (c.modifier || 0), (c) => rollFor(c, { what: "char", key: k })) }, v)))),
-        h("span", { class: "grp" }, t.attacks.map((a, i) => h("span", { class: "pair" }, h("span", { class: "nm" }, a.weapon), " ",
-          h("span", { class: `rollable ${a.value >= 16 ? "famous" : ""}`, title: `${a.weapon}: attack a knight`,
-            onclick: (e) => forFoe(e.currentTarget, a.weapon, (c) => skillDisplay((c.attacks[i]?.value ?? a.value) + (c.modifier || 0)),
-              (c) => (knightsIn ? attackDialog(c, i) : rollFor(c, { what: "attack", key: i }))) }, skillDisplay(a.value)),
-          " ", h("span", { class: "rollable dmg", title: `Roll ${a.weapon} damage`,
-            onclick: (e) => forFoe(e.currentTarget, a.weapon, (c) => c.attacks[i]?.damage ?? a.damage,
-              (c) => ctx.rollDamage({ label: a.weapon, expr: c.attacks[i]?.damage ?? a.damage, actor: c.log_name, path: `/api/combat/${c.id}/roll`, extra: { what: "damage", key: i } })) }, `(${a.damage})`)))),
+        t.attacks.length > 1 ? h("span", { class: "grp" }, h("span", { class: "faint small" }, "All wield"),
+          t.attacks.map((a, i) => {
+            const all = active.length && active.every((c) => wieldedOf(c)[0] === i);
+            return h("button", { class: `cbt-wpick ${all ? "on" : ""}`, title: `Every ${t.type} still fighting takes up ${a.weapon}`,
+              onclick: () => post("/api/combat/wield", { type: t.type, wield: i }) },
+              a.weapon, " ", h("b", {}, skillDisplay(a.value)), h("span", { class: "faint" }, ` · ${a.damage}`));
+          }))
+          : h("span", { class: "grp" }, t.attacks.map((a) => h("span", { class: "pair" }, h("span", { class: "nm" }, a.weapon), " ", h("b", {}, skillDisplay(a.value)), h("span", { class: "faint" }, ` · ${a.damage}`)))),
         h("span", { class: "faint" }, t.armour_text),
         t.description || t.notes ? h("button", { class: "btn ghost sm icon", title: "Card text and rules",
           onclick: () => modal(t.type, (close) => [
@@ -325,17 +326,51 @@ export default {
             c.npc ? icon("helm", "npc-ico") : marker ? h("span", { class: "marker" }, marker) : null, c.display_name),
           h("div", { class: "cbt-hp" },
             h("div", { class: "hp-bar big" }, h("i", { class: hpTone, style: { width: `${pct}%` } })),
-            h("span", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`))),
-          h("span", { class: "ws faint small" }, c.wound_state),
+            h("span", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`),
+              c.wound_state ? h("span", { class: "ws faint" }, ` · ${c.wound_state}`) : null)),
           h("span", { class: "cbt-chips" }, foeChips(c)),
           h("button", { class: `cbt-target ${c.engaged_with ? "set" : ""}`, title: "Who is this foe fighting?",
             onclick: (e) => targetMenu(e.currentTarget, c) }, `→ ${c.engaged_with || "nobody"} ▾`),
-          h("button", { class: "btn sm hit-btn", title: `A knight hit ${c.display_name}: enter the damage rolled`, onclick: () => hitDialog(c) }, icon("swords"), "Hit"),
+          weaponCell(c),
+          h("button", { class: "btn sm hit-btn", title: `A knight hit ${c.display_name}: enter the damage rolled`, onclick: () => hitDialog(c) }, icon("shield"), "Hit"),
           hpIn,
           h("button", { class: "btn sm icon", title: "Actions", onclick: (e) => actions(e.currentTarget, c) }, icon("dots"))),
         open ? h("div", { class: "cbt-foe-more" }, statLine(c, false),
           h("div", { class: "row" }, h("div", { class: "cbt-mod" }, h("span", { class: "faint small" }, "Mod"), modInput(c)), flavour(c))) : null);
       return draggable(line, c);
+    }
+
+    // The weapon in hand (click to switch, or mark Disarmed) and Attack, which
+    // rolls it against the knight this foe is fighting.
+    function wieldedOf(c) {
+      if (c.wielding === "brawl" || !c.attacks?.length) return ["brawl", c.brawl];
+      const i = Number(c.wielding) || 0;
+      return [i, c.attacks[i] || c.attacks[0]];
+    }
+    function weaponCell(c) {
+      const [key, a] = wieldedOf(c);
+      const disarmed = key === "brawl";
+      const noSkill = a?.value == null;
+      const knightsIn = cs.combatants.some((o) => o.side === "party");
+      return h("span", { class: "cbt-wield" },
+        h("button", { class: `cbt-weapon ${disarmed ? "disarmed" : ""}`, title: disarmed ? "Disarmed — click to pick a weapon back up" : "The weapon in hand — click to switch, or mark Disarmed",
+          onclick: (e) => weaponMenu(e.currentTarget, c, key) },
+          disarmed ? "✋ " : "⚔ ", h("span", { class: "wn" }, a?.weapon || "Brawling"), " ",
+          h("b", {}, noSkill ? "—" : skillDisplay(a.value)), h("span", { class: "faint" }, ` · ${a?.damage || "—"}`),
+          disarmed ? h("span", { class: "tag gules" }, "Disarmed") : null, " ▾"),
+        h("button", { class: "btn sm atk-btn", disabled: c.down || noSkill || null,
+          title: noSkill ? "No Brawling skill — set one in the Adversaries editor" : `${c.display_name} attacks ${c.engaged_with || "a knight"} with ${a.weapon}`,
+          onclick: () => (knightsIn ? attackDialog(c, key) : post(`/api/combat/${c.id}/roll`, { what: "attack", key }).then((r) => ctx.showLastRoll(r.event))) },
+          icon("swords"), "Attack"));
+    }
+    function weaponMenu(anchor, c, current) {
+      const wield = (w) => w !== current && post("/api/combat/wield", { cid: c.id, wield: w });
+      const b = c.brawl || {};
+      menu(anchor, [
+        ...c.attacks.map((a, i) => [`${i === current ? "• " : ""}${a.weapon} ${skillDisplay(a.value)} · ${a.damage}`, () => wield(i)]),
+        c.attacks.length ? null : undefined,
+        [`${current === "brawl" ? "• " : ""}Disarmed — Brawling ${b.value ?? "—"} · ${b.damage || "—"}`, () => wield("brawl"), { icon: "x" }],
+      ].filter((x) => x !== undefined));
     }
 
     // The knight's own Height reminders, grouped: "+5 Height vs 3 foes".
@@ -468,12 +503,13 @@ export default {
         close();
         if (r.result === "knight" || r.result === "tie") hitDialog(c, r.knight_shield);
       };
+      const chips = h("div", { class: "chips" });
+      const againstChips = () => clear(chips, knights.map((k) => h("button", { class: `chip ${k.id === target ? "on" : ""}`,
+        onclick: () => { target = k.id; againstChips(); } }, k.display_name)));
       await modal(`${c.display_name} attacks`, (close) => [
         h("div", { class: "attack-roll" }, `${d.label} ${d.shown}: rolled `, h("b", {}, d.roll), " — ",
           h("b", { class: `o-${d.outcome}` }, OUT[d.outcome])),
-        h("label", { class: "field", style: { margin: "12px 0" } }, h("span", {}, "Against"),
-          h("select", { class: "input", onchange: (e) => { target = e.target.value; } },
-            knights.map((k) => h("option", { value: k.id, selected: k.id === target }, k.display_name)))),
+        h("div", { class: "field", style: { margin: "12px 0" } }, h("span", {}, "Against"), againstChips()),
         h("div", { class: "label" }, "The knight's result"),
         h("div", { class: "knight-results" },
           h("button", { class: "btn", onclick: () => go("critical", close) }, "Critical"),

@@ -89,6 +89,15 @@ engaged pair's pills and added to foe attack rolls automatically; a foe going fo
 the horse (`combat.horse`) loses its −5, and the GM can negate Height for a
 two-handed spear (`combat.height`). Knight lanes show their own Height and
 Multiple Opponents reminders; captives are flagged with `combat.captured`.
+**Weapons in hand.** Every foe row shows the weapon it is wielding (starts as the
+card's first) with skill and damage, and an **Attack** button that rolls it against
+the knight it fights (then Table 7.1 as before). Click the weapon to switch, or mark
+it **Disarmed** — it fights on with Brawling (`combat.wield`, an attack index or
+`"brawl"`; players see a Disarmed chip). A type header's "All wield" switches every
+foe of that type. Brawling = the adversary's `brawling` if set, else its Brawling
+skill or Brawling weapon's value, else STR ÷ 2 for humans (Table 3.5), at least 10
+for knights; Brawling Damage = (STR + SIZ) ÷ 6 flat; an unarmed critical adds +2D6
+(`core.adversary.default_brawling`, `Combatant.brawl`).
 **Distribute foes equally** (`combat.distribute`, one event, one strike to undo)
 spreads the foes still fighting evenly over the knights still in the fight; foes
 already on a knight stay while he's under his share, and defeated foes never move,
