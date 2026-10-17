@@ -8,7 +8,7 @@
 2. **Other drops.** A foe dropped on another foe joins that foe's knight or knights. A knight dropped on a knight does nothing.
 3. **Unlinking.** Three ways: the ✕ on a hovered line, dragging a foe to *Waiting*, or dragging a knight onto empty ground.
 4. **Over the limit.** More than 3 attackers on foot (2 mounted) on one opponent turns the link amber and shows a warning. The drop is still allowed: warn, don't block (`core.combat.multiple-opponents`).
-5. **A foe facing several knights** takes −5 per knight after the first on each of its rolls, applied automatically (`core.combat.multiple-opponents`). *(Revised 2026-10-17: no Ignore control and no dashed lines. The rule's option to ignore an opponent (p.148) is rare; if it comes up, the GM sets the foe's modifier by hand.)*
+5. **A foe facing several knights** takes −5 per knight after the first on each of its rolls, applied automatically (`core.combat.multiple-opponents`). *(Revised 2026-10-17: Ignore isn't tracked at all. If a foe ignores someone, the GM just enters the Hit or rolls the damage as usual.)*
 6. **Attacks stay one at a time, as today, in the new format.** The foe's card has **Attack** for the weapon in hand. If the foe is linked to several knights, the GM picks which knight with a chip first; otherwise it attacks the knight it's fighting. Then the knight's result chips, then damage if it wins. *(Revised 2026-10-17: "Attack all" was my proposal, not the user's request, and is dropped.)*
 7. **Glory for a shared foe.**
    - A beast, monster or fairy: divided among the knights linked to it when it falls, each share rounded half up (Table A.1, RAW).
