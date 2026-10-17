@@ -132,7 +132,27 @@ const KIND = (t) => t.startsWith("roll.") ? ["roll", "d20"]
   : t === "table.cleared" ? ["meta", "present"]
   : t.startsWith("meta.") ? ["meta", "undo"] : ["other", "scroll"];
 
-const FILTERS = [["all", "All"], ["roll", "Rolls"], ["combat", "Combat"], ["npc", "NPCs"], ["narrate", "Story"]];
+const FILTERS = [["all", "All"], ["roll", "Rolls"], ["combat", "Combat"], ["battle", "Battle"], ["npc", "NPCs"], ["narrate", "Story"]];
+
+// Battle grouping: each event's "DAY 1 · TURN 3" (or "· FIGHT", "AFTERMATH")
+// label, worked out in order so a linked fight's combat events join its turn.
+function battleGroups(events) {
+  const out = new Map();
+  let fight = null;
+  for (const ev of events) {
+    const link = ev.data?.battle;
+    if (ev.type === "combat.started") fight = link || null;
+    let label = null;
+    if (fight && (ev.type.startsWith("combat.") || ev.type.startsWith("glory.") || (ev.type.startsWith("roll.") && ev.data?.cid))) {
+      label = `Day ${fight.day} · Turn ${fight.turn} · Fight`;
+    } else if (link) {
+      label = link.step === "aftermath" ? "Aftermath" : link.turn ? `Day ${link.day} · Turn ${link.turn}` : `Day ${link.day} · Muster`;
+    }
+    if (ev.type === "combat.ended") fight = null;
+    if (label) out.set(ev.id, label);
+  }
+  return out;
+}
 
 function buildLog() {
   const list = h("div", { class: "log-list", id: "logList" });
@@ -157,6 +177,7 @@ function exportMenu(anchor) {
 function matchesFilter(ev) {
   if (ev.type.startsWith("meta.")) return false;
   if (S.filter === "all") return true;
+  if (S.filter === "battle") return ev.type.startsWith("battle.") || !!ev.data?.battle || (S.groups?.has(ev.id) ?? false);
   const [k] = KIND(ev.type);
   if (S.filter === "narrate") return k === "narrate" || k === "note" || k === "rule" || k === "session";
   return k === S.filter;
@@ -197,8 +218,17 @@ function entryEl(ev) {
 
 function renderLog() {
   const list = $("logList");
+  S.groups = battleGroups(S.events);
   const shown = S.events.filter(matchesFilter);
-  clear(list, shown.length ? shown.map(entryEl) :
+  const rows = [];
+  let last = null;
+  for (const ev of shown) {
+    const g = S.groups.get(ev.id) || null;
+    if (g && g !== last) rows.push(h("div", { class: "log-group" }, g));
+    last = g;
+    rows.push(entryEl(ev));
+  }
+  clear(list, rows.length ? rows :
     h("div", { class: "empty", style: { margin: "12px" } }, icon("scroll"),
       S.session?.scratch ? "No session started — rolls still reach the Table but aren't saved." : "Nothing yet. Roll some dice!"));
   list.scrollTop = list.scrollHeight;
@@ -238,7 +268,7 @@ async function fetchNew() {
   const list = $("logList");
   const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
   applyIncoming(r.events);
-  if (r.events.some((e) => e.type.startsWith("meta.")) || S.events.length < 3) renderLog();
+  if (r.events.some((e) => e.type.startsWith("meta.") || e.type.startsWith("battle.") || e.data?.battle || S.groups?.size) || S.events.length < 3) renderLog();
   else {
     list.querySelector(".empty")?.remove();
     for (const ev of r.events.filter(matchesFilter)) list.append(entryEl(ev));

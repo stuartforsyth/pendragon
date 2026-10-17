@@ -403,3 +403,7 @@ textarea.input { height: auto; padding: 8px 10px; resize: vertical; line-height:
   .log { position: fixed; right: 0; top: 56px; bottom: 0; width: min(380px, 92vw); z-index: 30; box-shadow: var(--shadow); }
   .shell.log-collapsed .log { display: none; }
 }
+
+/* battle groups in the session log */
+.log-group { font-family: var(--f-display); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-dim);
+  border-bottom: 1px solid var(--line); padding: 10px 12px 3px; margin-top: 4px; }

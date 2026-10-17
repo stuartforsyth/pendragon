@@ -192,6 +192,7 @@ export default {
         h("div", { class: "kchips" }, b.knight_list.filter((k) => b.conroi.includes(k.pid)).map((k) =>
           knightChip(k, { onMounted: () => post(`/api/battle/knight/${k.pid}`, { mounted: !k.mounted }) }))),
         b.minus5 && b.turn === 1 ? h("div", { class: "bl-reminder" }, "−5 Battle this turn for the whole army (Army Commander fumbled).") : null,
+        b.day_def.notes ? h("div", { class: "hint bl-daynotes" }, h("b", {}, `Day ${b.day} (GM only): `), b.day_def.notes) : null,
         b.status === "rear" ? rearPanel() : stepper(),
       ];
     }
@@ -307,7 +308,7 @@ export default {
         const st = [it.state, inten.state];
         const cur = st.includes("current");
         const allDone = st.every((x) => x === "done" || x === "skipped");
-        const res = [it.state === "skipped" ? h("em", {}, it.reason) : ["Charge: ", summary("charge")], " · ",
+        const res = [it.state === "skipped" ? h("em", {}, it.reason) : summary("charge") ? ["Charge: ", summary("charge")] : h("em", {}, "commander's charge roll"), " · ",
           inten.state === "skipped" ? h("em", {}, inten.reason) : summary("intensity") || h("em", {}, "Intensity roll")];
         if (cur) return h("div", { class: "step cur", "data-key": "charge" },
           h("div", { class: "row" }, h("span", { class: "n" }, "③④"), h("span", { class: "nm" }, "Charge · Intensity"), h("span", { class: "res" }, ""), h("span")),

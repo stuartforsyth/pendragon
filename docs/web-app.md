@@ -177,3 +177,8 @@ choose), Glory (encounter Glory + participation by days fought and role) and
 Spoils (Table 6.9/6.10 plunder, captives with Roll ransom) — all editable
 (`battle.aftermath`, GM-only). **Post to Table** (`battle.finale`) shows the
 finale; **End battle** (`battle.ended`) closes it.
+
+The GM log groups battle events under `Day N · Turn t` (and `· Fight`,
+`Aftermath`) headers, with a **Battle** filter. Bedegraine and Carlion ship as
+example battles in `examplecombat.json`; Encounters → Examples… adds them to the
+user's library.

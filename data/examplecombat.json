@@ -4412,5 +4412,229 @@
       "leader": null,
       "notes": ""
     }
+  },
+  "battles": {
+    "The Battle of Bedegraine": {
+      "source": "example",
+      "name": "The Battle of Bedegraine",
+      "size": "huge",
+      "where": "Bedegraine, on the River Trent",
+      "against": "King Lot and the northern kings, with hordes of Picts",
+      "notes": "Scripted battle (Sword Campaign). Arthur leads the conroi in his own bataille (Battle 13). Each day is a separate engagement for Morale and Passions; 60 Glory per day for participation.",
+      "outcome": null,
+      "commander": "gm",
+      "army_commanders": {
+        "friendly": {
+          "name": "King Arthur",
+          "battle": null
+        },
+        "enemy": {
+          "name": "King Lot",
+          "battle": null
+        }
+      },
+      "days": [
+        {
+          "intensity": {
+            "mode": "fixed",
+            "value": 14
+          },
+          "turns": 5,
+          "first_charge": true,
+          "on_foot": false,
+          "no_charge": false,
+          "commanders": {
+            "friendly": null,
+            "enemy": null
+          },
+          "deck": {
+            "foes": [
+              "Pictish Knifemen",
+              "Pictish Javeliniers",
+              "Pictish Pikemen"
+            ],
+            "opportunities": [
+              "Clash of Champions",
+              "Rally the Division!",
+              "Rescue Captive Knights"
+            ]
+          },
+          "notes": "Lot sends only his Pictish infantry. Always set the Pictish Knifemen this day — they go for the horses. After five turns Arthur breaks off in good order.",
+          "scripts": []
+        },
+        {
+          "intensity": {
+            "mode": "fixed",
+            "value": 18
+          },
+          "turns": 5,
+          "first_charge": false,
+          "on_foot": true,
+          "no_charge": true,
+          "commanders": {
+            "friendly": null,
+            "enemy": null
+          },
+          "deck": {
+            "foes": [
+              "Knights of Lothian",
+              "Knights of Gorre",
+              "Breton Mercenary Knights",
+              "Northern Prickers",
+              "Saxon Warriors",
+              "Irish Kerns",
+              "Cambrian Archers",
+              "Pictish Pikemen"
+            ],
+            "opportunities": [
+              "Capture the Banner",
+              "Clash of Champions",
+              "Fight Enemy Commander",
+              "Rally the Division!",
+              "Rescue Captive Knights"
+            ]
+          },
+          "notes": "Most knights lost their chargers: they fight on foot (switch individual knights who kept theirs). No charge — Arthur holds the ridge and receives Lot's charge.",
+          "scripts": [
+            {
+              "turn": 1,
+              "text": "Archery exchange: the Cambrian Archers loose on the ridge — no chance to engage; the commander's Battle roll sets the barrage rounds.",
+              "if_intensity": true,
+              "deck": {
+                "foes": [
+                  "Cambrian Archers"
+                ],
+                "opportunities": []
+              }
+            },
+            {
+              "turn": 2,
+              "text": "Lot's cavalry charge up the hill. Arthur is wounded but will not withdraw.",
+              "if_intensity": true,
+              "deck": {
+                "foes": [
+                  "Knights of Lothian",
+                  "Knights of Gorre"
+                ],
+                "opportunities": []
+              }
+            },
+            {
+              "turn": 3,
+              "text": "Count Sanam pulls back at the first push, baring Lot's right flank: Capture the Banner or Fight Enemy Commander may be chosen.",
+              "if_intensity": true,
+              "deck": null
+            },
+            {
+              "turn": 4,
+              "text": "\"Ban and Leodegrance have come!\" Fresh knights burst from the woods; every foe the knights engage is −5 for multiple opponents.",
+              "if_intensity": true,
+              "deck": null
+            },
+            {
+              "turn": 5,
+              "text": "Lot falls back behind his shield wall in good order. No pursuit.",
+              "if_intensity": true,
+              "deck": {
+                "foes": [
+                  "Cambrian Archers",
+                  "Northern Prickers",
+                  "Pictish Pikemen"
+                ],
+                "opportunities": [
+                  "Rescue Captive Knights"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "The Battle of Carlion": {
+      "source": "example",
+      "name": "The Battle of Carlion",
+      "size": "large",
+      "where": "Before the walls of Carlion",
+      "against": "King Lot and the rebel kings",
+      "notes": "Scripted battle (Sword Campaign). King Leodegrance leads the conroi (Battle 18). The conroi will need to retire to the rear at least once.",
+      "outcome": null,
+      "commander": "gm",
+      "army_commanders": {
+        "friendly": {
+          "name": "King Arthur",
+          "battle": null
+        },
+        "enemy": {
+          "name": "King Lot",
+          "battle": null
+        }
+      },
+      "days": [
+        {
+          "intensity": {
+            "mode": "fixed",
+            "value": 12
+          },
+          "turns": 8,
+          "first_charge": true,
+          "on_foot": false,
+          "no_charge": false,
+          "commanders": {
+            "friendly": null,
+            "enemy": null
+          },
+          "deck": {
+            "foes": [
+              "Knights of Lothian",
+              "Knights of Gorre",
+              "Knights of Cornwall",
+              "Breton Mercenary Knights",
+              "Pictish Javeliniers",
+              "Saxon Warriors",
+              "Irish Kerns"
+            ],
+            "opportunities": [
+              "Capture the Banner",
+              "Clash of Champions",
+              "Fight Enemy Commander",
+              "Rally the Division!",
+              "Rescue Captive Knights"
+            ]
+          },
+          "notes": "Turn 1 is a mounted charge.",
+          "scripts": [
+            {
+              "turn": 5,
+              "text": "Lot's charge: King Lot and his men crash into Arthur's bataille — the Knights of Lothian charge the knights.",
+              "if_intensity": true,
+              "deck": {
+                "foes": [
+                  "Knights of Lothian"
+                ],
+                "opportunities": []
+              }
+            },
+            {
+              "turn": 6,
+              "text": "Arthur draws Clarent; a flash of light blinds and overawes the foes nearby.",
+              "if_intensity": true,
+              "deck": null
+            },
+            {
+              "turn": 7,
+              "text": "The townsfolk of Carlion pour out with axes and daggers: the knights' opponents are −10 for multiple foes.",
+              "if_intensity": true,
+              "deck": null
+            },
+            {
+              "turn": 8,
+              "text": "Lot sounds an orderly retreat. No pursuit — one last Encounter against the rear guard.",
+              "if_intensity": true,
+              "deck": null
+            }
+          ]
+        }
+      ]
+    }
   }
 }

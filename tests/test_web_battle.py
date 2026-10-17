@@ -35,7 +35,7 @@ def test_battles_crud_writes_working_copy(client):
     data = client.tmp / "data"
     before = (data / "examplecombat.json").read_bytes()
     _saved(client)
-    assert [b["key"] for b in ok(client.get("/api/battles"))["battles"]] == ["Bedegraine"]
+    assert "Bedegraine" in [b["key"] for b in ok(client.get("/api/battles"))["battles"]]
     b = ok(client.get("/api/battles/Bedegraine"))["battle"]
     assert client.put("/api/battles", json={"battle": b}).status_code == 409
     assert "Bedegraine" in json.loads((data / "combat.json").read_text())["battles"]
@@ -854,3 +854,23 @@ def test_leave_the_field_goes_to_aftermath(client):
     _step(client, "end_turn")
     _step(client, "rear", choice="leave")
     assert _battle(client)["status"] == "aftermath"
+
+
+# -- S11: example battles ----------------------------------------------------------
+
+def test_launch_bedegraine_day2_on_foot(client):
+    pids = _party(client, "Sir Bors", "Sir Cai")
+    ok(client.post("/api/battle/start", json={"key": "The Battle of Bedegraine"}))
+    ok(client.post("/api/battle/settings", json={"day": 1, "patch": {"turns": 1}}))
+    _muster(client, pids, commander="gm", intensity=None)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="success")
+    _step(client, "morale", kind="loss", amount=1)
+    _postures(client, pids)
+    _step(client, "end_day")
+    b = _battle(client)
+    assert b["status"] == "mustering" and b["day"] == 2
+    assert all(not b["knights"][p]["mounted"] for p in pids)
+    _muster(client, pids, commander="gm", intensity=None)
+    b = _battle(client)
+    assert b["intensity_today"] == 18 and b["step"]["items"][1]["state"] == "skipped"   # no charge this day

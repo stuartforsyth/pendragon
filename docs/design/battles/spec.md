@@ -1,6 +1,6 @@
 # Battles — build spec (stage 4)
 
-Status: **APPROVED by the user 2026-10-17 (all 24 open-point recommendations accepted)**, written 2026-10-17.
+Status: **BUILT 2026-10-17** — all slices S0–S11 done (APPROVED by the user 2026-10-17, all 24 open-point recommendations accepted), written 2026-10-17.
 
 The spec is built from these sources, in this order of authority:
 
@@ -1374,7 +1374,7 @@ Finish a 1-day Clash, edit the numbers, Post to Table, then End battle. UX accep
 
 ---
 
-## S11 — Log grouping, Battle filter, example battles (size **S**)
+## S11 — Log grouping, Battle filter, example battles (size **S**) — ✅ DONE 2026-10-17
 
 **Goal.** The session log groups battle events under `Day N · Turn t` headers and gains a **Battle**
 filter. Bedegraine and Carlion ship as ready-made examples.

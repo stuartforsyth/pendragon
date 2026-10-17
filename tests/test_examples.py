@@ -116,3 +116,21 @@ def test_examples_restore_route(client):
     assert r["entry"]["description"] != "My own Gorre"
     assert client.post("/api/library/examples/restore",
                        json={"kind": "adversaries", "key": "Nobody"}).status_code == 404
+
+
+def test_example_battles_valid():
+    from core.battle_def import clean_battle
+    d = _baseline()
+    for key, b in d["battles"].items():
+        clean, warnings = clean_battle(b, d["encounters"])
+        assert not warnings, (key, warnings)
+    bed = d["battles"]["The Battle of Bedegraine"]
+    assert bed["size"] == "huge" and bed["days"][1]["on_foot"] and bed["days"][1]["no_charge"]
+    assert [x["intensity"]["value"] for x in bed["days"]] == [14, 18]
+    assert d["battles"]["The Battle of Carlion"]["commander"] == "gm"
+
+
+def test_examples_merge_adds_battles():
+    base = {"battles": {"B": {"size": "clash"}}}
+    working = {"adversaries": {}}
+    assert X.merge_missing(working, base)["battles"] == 1 and "B" in working["battles"]

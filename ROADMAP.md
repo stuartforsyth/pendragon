@@ -10,8 +10,8 @@ Each runs the same pipeline: breakdown → grill each piece (rules + UI, every d
 rules breaks and better options) → Opus compiles `design.md` → approval → Opus writes `spec.md` →
 approval → build slice by slice. State lives in `docs/design/{mechanic}/`.
 
-- [ ] **Battles** — designed and approved (`docs/design/battles/`); spec in progress, then build.
-- [ ] **Feasts** — next: same process (`/design-mechanic feasts`), after battles' spec is approved.
+- [x] **Battles** — designed, specced and built (`docs/design/battles/`, slices S0–S11, 2026-10-17).
+- [ ] **Feasts** — next: same process (`/design-mechanic feasts`).
 - [ ] **Hunts** — planned, same process.
 
 ## Quick wins (small, high payoff)
