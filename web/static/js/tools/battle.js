@@ -4,7 +4,7 @@
 // Players roll and resolve at the table; the GM records outcomes here.
 
 import { h, clear, api, post, icon, modal, confirmBox, toast, useCss, debounce, menu } from "../lib.js";
-import { dayCard, deckPicker, outcomeChips, moraleStrip, knightChip } from "../components.js";
+import { dayCard, deckPicker, outcomeChips, amountEntry, moraleStrip, knightChip } from "../components.js";
 
 const SIZES = {
   fight: { label: "Fight", turns: 1, dice: "1D6+2", army: false },
@@ -191,9 +191,330 @@ export default {
         h("div", { class: "kchips" }, b.knight_list.filter((k) => b.conroi.includes(k.pid)).map((k) =>
           knightChip(k, { onMounted: () => post(`/api/battle/knight/${k.pid}`, { mounted: !k.mounted }) }))),
         b.minus5 && b.turn === 1 ? h("div", { class: "bl-reminder" }, "−5 Battle this turn for the whole army (Army Commander fumbled).") : null,
-        scriptsPanel(),
-        h("div", { class: "panel bl-stepper-soon" }, h("p", { class: "faint" }, "The turn stepper arrives in the next build. Use the Combat tool for this turn's fight.")),
+        b.status === "rear" ? rearPanel() : stepper(),
       ];
+    }
+
+    // ------------------------------------------------------------ the turn stepper
+    // Answering a step completes it; done steps collapse to their result and
+    // can be reopened (cascade undo). Matches the approved #gm-turn mockup.
+    const NUM = { field: "①", set: "②", charge: "③", intensity: "④", picks: "⑤", select: "⑥", morale: "⑦", postures: "⑧", fight: "⑨", rest: "☾", end: "⑩" };
+    const NAME = { field: "Field or rear", set: "Set Encounter", charge: "Charge", intensity: "Intensity", picks: "Picks", select: "Commander's choice",
+      morale: "Morale", postures: "Postures", fight: "Fight", rest: "Rest at the rear", end: "End turn" };
+    const OUT_WORD = { critical: "critical", success: "success", failure: "failed", fumble: "fumble" };
+    const ui = { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, lastUndo: null, turnKey: "" };
+    const knightName = (pid) => b.knight_list.find((k) => k.pid === pid)?.name || "A knight";
+    const cardOf = (key) => decks.find((c) => c.key === key) || b.cards?.[key] || { key };
+    const step = (stepKey, extra = {}) => post("/api/battle/step", { step: stepKey, ...extra });
+
+    function summary(key) {
+      const t = b.t;
+      switch (key) {
+        case "set": return t.set ? [h("b", {}, t.set.encounter), t.set.flavour ? h("em", {}, ` · “${t.set.flavour}”`) : null, t.set.forced ? h("span", { class: "tag gules" }, "forced") : null] : "";
+        case "charge": return t.charge ? { may_charge_plus5: "Charge! (+5, mounted)", may_charge: "may charge (mounted)", no_charge: "no charge", enemy_charge: "Enemy knights charge!" }[t.charge.result] : "";
+        case "intensity": return t.intensity ? [`Intensity: `, h("b", { class: `o-${t.intensity.outcome}` }, OUT_WORD[t.intensity.outcome]),
+          { doubled: " — foes doubled", stands: " — the Encounter stands", choose: " — knights may choose", opportunity: " — an Opportunity" }[t.intensity.result]] : "";
+        case "picks": return Object.entries(t.picks).map(([pid, p]) => `${knightName(pid)}${p.crit ? " (crit)" : ""}: ${p.encounter}`).join(" · ") || "no picks";
+        case "select": return t.select ? [h("b", {}, t.select.encounter), t.select.card?.role === "opportunity" ? " ★ must be played" : ""] : "";
+        case "morale": return !t.morale ? "" : t.morale.kind === "forced_retire" ? "Not enough Morale — retired" : t.morale.negated ? "Loss negated (token)" : t.morale.amount ? `−${t.morale.amount} Morale` : "No Morale lost";
+        case "postures": return Object.entries(t.postures).map(([pid, p]) => `${knightName(pid)} ${p.posture}`).join(" · ");
+        case "rest": return t.rest != null ? `+${t.rest} Morale` : "";
+        case "field": return t.retired ? "Retired to the Rear" : "";
+        default: return "";
+      }
+    }
+
+    function stepper() {
+      const tk = `${b.day}.${b.turn}`;
+      if (ui.turnKey !== tk) Object.assign(ui, { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, turnKey: tk });
+      const items = b.step.items;
+      const rows = [];
+      for (const it of items) {
+        if (it.key === "intensity" && rows.length && rows.at(-1).dataset?.key === "charge") continue;   // drawn in the shared row
+        rows.push(stepRow(it, items));
+      }
+      return h("div", { class: "stepper" },
+        ui.lastUndo ? h("div", { class: "bl-undone" }, ui.lastUndo.text, " · ", h("button", { class: "linkish", onclick: async () => {
+          await post(`/api/battle/undo/${ui.lastUndo.id}/restore`); ui.lastUndo = null; } }, "Restore")) : null,
+        b.inconsistent?.length ? h("div", { class: "bl-inconsistent" }, h("span", { class: "tag gules" }, "Doesn't add up"),
+          ` An earlier step was struck, so ${b.inconsistent.length} later entr${b.inconsistent.length === 1 ? "y is" : "ies are"} ignored. Reopen the step to redo it.`) : null,
+        rows,
+        b.step.current === "set" ? h("div", { class: "row" }, h("button", { class: "btn danger sm", onclick: () => step("retire") }, "Retire to the Rear instead"),
+          turnScriptsInline()) : null);
+    }
+
+    function stepRow(it, items) {
+      const row = (state, num, name, res, extra) => h("div", { class: `step ${state}`, "data-key": it.key },
+        h("div", { class: "row" }, h("span", { class: "n" }, num), h("span", { class: "nm" }, name), h("span", { class: "res" }, res), extra || h("span")));
+      // ③ and ④ share one row (approved UX choice 3)
+      if (it.key === "charge") {
+        const inten = items.find((x) => x.key === "intensity");
+        const st = [it.state, inten.state];
+        const cur = st.includes("current");
+        const allDone = st.every((x) => x === "done" || x === "skipped");
+        const res = [it.state === "skipped" ? h("em", {}, it.reason) : ["Charge: ", summary("charge")], " · ",
+          inten.state === "skipped" ? h("em", {}, inten.reason) : summary("intensity") || h("em", {}, "Intensity roll")];
+        if (cur) return h("div", { class: "step cur", "data-key": "charge" },
+          h("div", { class: "row" }, h("span", { class: "n" }, "③④"), h("span", { class: "nm" }, "Charge · Intensity"), h("span", { class: "res" }, ""), h("span")),
+          h("div", { class: "body" }, chargeIntensityBody(it, inten)));
+        return row(allDone ? "done" : "todo", "③④", "Charge · Intensity", res,
+          allDone ? reopenBtn(it.state === "done" ? "charge" : "intensity") : null);
+      }
+      if (it.state === "done") return row("done", NUM[it.key], NAME[it.key], summary(it.key), reopenBtn(it.key));
+      if (it.state === "skipped") return row("skip", NUM[it.key], NAME[it.key], h("em", {}, it.reason));
+      if (it.state === "current" || (it.state === "optional" && b.step.current === it.key)) {
+        return h("div", { class: "step cur", "data-key": it.key },
+          h("div", { class: "row" }, h("span", { class: "n" }, NUM[it.key]), h("span", { class: "nm" }, NAME[it.key]), h("span", { class: "res" }, ""), h("span")),
+          h("div", { class: "body" }, stepBody(it.key)));
+      }
+      const hint = { set: "", picks: "picks from a failed Intensity roll", select: "the commander chooses", morale: "minimum check, then the Loss",
+        postures: b.prev_postures && Object.keys(b.prev_postures).length ? `last turn: ${Object.entries(b.prev_postures).map(([p, v]) => `${knightName(p)} ${v}`).join(" · ")}` : "",
+        fight: "Begin the fight → combat tracker", end: `KV Morale gain, then Turn ${b.turn + 1}` }[it.key] || "";
+      return row(it.state === "optional" ? "todo" : "todo", NUM[it.key], NAME[it.key], h("em", {}, hint));
+    }
+
+    function reopenBtn(key) {
+      return h("button", { class: "re linkish", title: "Undo this step and everything after it this turn", onclick: async () => {
+        const p = await api(`/api/battle/undo-preview?step=${key}`);
+        if (p.locked) return toast("Made before the battle was resumed — correct it with a Morale override instead", "err");
+        if (!(await confirmBox(`Undo from ${NAME[key]}?`, p.targets.map((t) => `• ${t.text}`).join("\n"), "Undo", true))) return;
+        const r = await post("/api/battle/undo", { step: key });
+        ui.lastUndo = { id: r.event.id, text: r.event.text };
+      } }, "reopen");
+    }
+
+    function gmMeta(c) {
+      return h("span", { class: "cm" }, c.role === "opportunity" ? `min ${c.morale_minimum ?? "—"} · loss ${c.morale_loss || "0"}`
+        : `min ${c.morale_minimum ?? "—"} · loss ${c.morale_loss || "—"} · KV ${c.kv_per_knight ?? "?"}`);
+    }
+
+    function deckKeys(role) {
+      const dd = b.day_def;
+      let deck = dd.deck || {};
+      for (const sc of dd.scripts || []) if (sc.turn === b.turn && sc.deck) deck = sc.deck;
+      return (role === "opportunity" ? deck.opportunities : deck.foes) || [];
+    }
+
+    function turnScriptsInline() {
+      const sc = (b.day_def.scripts || []).map((x, i) => ({ ...x, i })).filter((x) => x.turn === b.turn);
+      if (!sc.length) return null;
+      const shown = (i) => b.revealed_scripts.some((r) => r.day === b.day && r.index === i);
+      return h("div", { class: "bl-inline-scripts" }, sc.map((x) => h("span", { class: "hint" }, "Turn script (GM only): ", h("b", {}, `“${x.text}”`),
+        x.if_intensity ? h("span", { class: "faint small" }, " — shown to players after a successful Intensity roll")
+          : h("button", { class: "linkish", disabled: shown(x.i) || null, onclick: () => post("/api/battle/script", { day: b.day, index: x.i }) }, shown(x.i) ? " on the Table" : " Show on Table"))));
+    }
+
+    function stepBody(key) {
+      switch (key) {
+        case "set": return setBody();
+        case "picks": return picksBody();
+        case "select": return selectBody();
+        case "morale": return moraleBody();
+        case "postures": return posturesBody();
+        case "fight": return [h("div", { class: "hint" }, "Fights arrive in the next build — run this turn's fight in the Combat tool, then end the turn."), endButtons()];
+        case "rest": return restBody();
+        case "end": return endButtons();
+        default: return null;
+      }
+    }
+
+    function setBody() {
+      const keys = deckKeys("foe");
+      if (ui.flavour === null) ui.flavour = "";
+      const fl = h("input", { class: "input", placeholder: "Flavour line for the Table (defaults to the card's description)", value: ui.flavour,
+        oninput: (e) => { ui.flavour = e.target.value; } });
+      const forceAvail = b.tokens.force === "available";
+      return [
+        keys.length ? h("div", { class: "cards" }, keys.map((k) => {
+          const c = cardOf(k);
+          return h("button", { class: "gcard", title: c.description || k, onmouseenter: () => { if (!ui.flavour) fl.placeholder = c.description || fl.placeholder; },
+            onclick: () => step("set", { encounter: k, flavour: ui.flavour, forced: ui.forceArmed }) },
+            h("span", { class: "cn" }, k), gmMeta(c));
+        })) : h("div", { class: "hint" }, "No foes in today's deck: ", h("button", { class: "linkish", onclick: settingsDrawer }, "Edit deck"), " · ",
+          h("button", { class: "linkish", onclick: quickEncounter }, "+ New encounter")),
+        fl,
+        h("div", { class: "row" },
+          keys.length ? h("button", { class: "btn sm", title: "A random Foe from today's deck (not filtered by Morale)", onclick: () => step("set", { draw: true, flavour: ui.flavour, forced: ui.forceArmed }) }, icon("d6"), "Draw") : null,
+          forceAvail ? h("label", { class: "check small" }, h("input", { type: "checkbox", checked: ui.forceArmed, onchange: (e) => { ui.forceArmed = e.target.checked; } }),
+            "⚑ Force this Encounter (spends the token: no Intensity roll, no picks)") : null,
+          h("button", { class: "linkish", onclick: settingsDrawer }, "Edit deck"), h("button", { class: "linkish", onclick: quickEncounter }, "+ New encounter")),
+      ];
+    }
+
+    function chargeIntensityBody(ch, inten) {
+      const left = ch.state === "skipped" ? h("div", { class: "half skip" }, h("div", { class: "label" }, "Commander's charge roll"), h("em", {}, ch.reason))
+        : ch.state === "done" ? h("div", { class: "half" }, h("div", { class: "label" }, "Commander's charge roll"), summary("charge"))
+        : (() => {
+          let engaged = b.fought_last;
+          const tog = h("label", { class: "check small" }, h("input", { type: "checkbox", checked: engaged, onchange: (e) => { engaged = e.target.checked; } }), "Engaged last round");
+          return h("div", { class: "half" }, h("div", { class: "label" }, "Commander's charge roll"),
+            outcomeChips({ keys: true, onPick: (o) => step("charge", { outcome: o, engaged_last: engaged }) }), tog,
+            b.minus5 && b.turn === 1 ? h("div", { class: "bl-reminder" }, "−5 Battle this turn") : null);
+        })();
+      const right = inten.state === "skipped" ? h("div", { class: "half skip" }, h("div", { class: "label" }, "Intensity roll"), h("em", {}, inten.reason))
+        : inten.state === "current" ? h("div", { class: "half" }, h("div", { class: "label" }, `Intensity roll (${b.intensity_today})`),
+          h("div", { class: "row" }, h("button", { class: "btn primary sm", onclick: () => step("intensity", { roll_for_me: true }) }, icon("d20"), "Roll for me"),
+            outcomeChips({ keys: ch.state !== "current", onPick: (o) => step("intensity", { outcome: o }) })))
+        : h("div", { class: "half todo" }, h("div", { class: "label" }, "Intensity roll"), h("em", {}, "after the charge"));
+      const lines = b.t.charge?.result ? b.conroi_now.map((pid) => `${knightName(pid)}: ${({ may_charge_plus5: "charges +5", may_charge: "may charge", no_charge: "no charge", enemy_charge: "enemy knights charge!" })[b.t.charge.result]}${b.knights[pid]?.mounted ? "" : " (on foot)"}`) : [];
+      return [h("div", { class: "split2" }, left, right), lines.length ? h("div", { class: "hint" }, lines.join(" · ")) : null];
+    }
+
+    function picksBody() {
+      const foes = deckKeys("foe"), opps = deckKeys("opportunity");
+      const picks = b.t.picks;
+      const tokensOn = (k) => Object.entries(picks).filter(([, p]) => p.encounter === k);
+      const card = (k, opp) => {
+        const c = cardOf(k);
+        const spent = b.spent_opportunities.includes(k);
+        const isSet = b.t.set?.encounter === k;
+        return h("div", { class: `gcard ${opp ? "opp" : ""} ${spent ? "dis" : ""} ${isSet ? "set" : ""} ${ui.pickCard === k ? "picked" : ""}`,
+          onclick: () => { if (!spent) { ui.pickCard = ui.pickCard === k ? null : k; render(); } } },
+          h("span", { class: "cn" }, k), gmMeta(c), spent ? h("span", { class: "cm" }, "already played") : null,
+          h("span", { class: "picks" }, tokensOn(k).map(([pid, p]) => h("button", { class: `ptok ${p.crit ? "crit" : ""}`, title: "Toggle critical, or remove",
+            onclick: (e) => { e.stopPropagation(); menu(e.currentTarget, [
+              [p.crit ? "Not a critical" : "Mark critical", () => step("pick", { knight: pid, encounter: k, crit: !p.crit })],
+              ["Remove this pick", () => step("pick", { knight: pid, encounter: null })]]); } }, icon("shield"), knightName(pid).split(" ").slice(-1)[0], p.crit ? " · crit" : ""))));
+      };
+      const c = ui.pickCard ? cardOf(ui.pickCard) : null;
+      const isOpp = c && opps.includes(ui.pickCard);
+      return [
+        h("div", { class: "hint" }, "Tap a card, then the knight who picked it. Only successful Battle rolls count."),
+        h("div", { class: "cards" }, foes.map((k) => card(k, false)), opps.map((k) => card(k, true))),
+        ui.pickCard ? h("div", { class: "row" }, h("span", { class: "hint" }, `${ui.pickCard} — picked by:`),
+          b.conroi_now.map((pid) => [
+            !isOpp ? h("button", { class: "btn sm", onclick: () => { step("pick", { knight: pid, encounter: ui.pickCard, crit: false }); ui.pickCard = null; } }, knightName(pid)) : null,
+            h("button", { class: "btn sm crit", onclick: () => { step("pick", { knight: pid, encounter: ui.pickCard, crit: true }); ui.pickCard = null; } }, `${knightName(pid)} · crit`)])) : null,
+        h("div", { class: "hint" }, h("b", {}, "Opportunities"), " unlock only for a pick marked crit.",
+          c?.morale_minimum != null ? [" ", h("b", {}, ui.pickCard), ` needs Morale ${c.morale_minimum} — the conroi has ${b.morale.current} ${b.morale.current >= c.morale_minimum ? "✓" : "✗"}`] : null),
+        h("div", { class: "row" },
+          h("button", { class: "btn primary", onclick: commanderChooses }, "Commander chooses ▸"),
+          !Object.keys(picks).length ? h("button", { class: "btn ghost sm", onclick: () => step("select", { via: "keep" }) }, "No picks — keep the set Encounter") : null),
+        ui.choosing ? selectBody() : null,
+      ];
+    }
+
+    function candidates() {
+      const set = b.t.set?.encounter;
+      const picked = [...new Set(Object.values(b.t.picks).map((p) => p.encounter))];
+      const opps = picked.filter((k) => cardOf(k).role === "opportunity" || deckKeys("opportunity").includes(k));
+      return opps.length ? opps : [...new Set([set, ...picked])];
+    }
+
+    function commanderChooses() {
+      if (!Object.keys(b.t.picks).length) return step("select", { via: "keep" });
+      const cs = candidates();
+      if (cs.length === 1) return step("select", { encounter: cs[0], via: "commander" });       // §14.5
+      ui.choosing = true; render();
+    }
+
+    function selectBody() {
+      const io = b.t.intensity?.outcome;
+      if (b.t.charge?.result === "enemy_charge") {
+        const eligible = deckKeys("foe").filter((k) => cardOf(k).mounted_charge);
+        return [h("div", { class: "bl-reminder" }, "Enemy knights charge you! No countercharge, no choosing."),
+          h("div", { class: "hint" }, "On foot: enemy +5 Height; Set Spear possible with a spear."),
+          h("div", { class: "cards" }, eligible.map((k) => h("button", { class: "gcard", onclick: () => step("select", { encounter: k, via: "enemy_charge" }) }, h("span", { class: "cn" }, k), gmMeta(cardOf(k)))))];
+      }
+      if (io === "fumble") {
+        const opps = deckKeys("opportunity").filter((k) => !b.spent_opportunities.includes(k));
+        return [h("div", { class: "hint" }, "Intensity fumble: an Opportunity of your choice — or keep the set Encounter."),
+          h("div", { class: "cards" }, opps.map((k) => h("button", { class: "gcard opp", onclick: () => step("select", { encounter: k, via: "fumble" }) }, h("span", { class: "cn" }, k), gmMeta(cardOf(k))))),
+          h("button", { class: "btn ghost sm", onclick: () => step("select", { via: "fumble" }) }, `Keep ${b.t.set.encounter}`)];
+      }
+      const cs = candidates();
+      const mustOpp = cs.some((k) => deckKeys("opportunity").includes(k));
+      return [mustOpp ? h("div", { class: "hint" }, "An Opportunity was picked — it must be played.") : null,
+        h("div", { class: "cards" }, cs.map((k) => {
+          const c = cardOf(k);
+          const ok = b.morale.current >= (c.morale_minimum || 0);
+          return h("button", { class: `gcard ${deckKeys("opportunity").includes(k) ? "opp" : ""}`, onclick: () => step("select", { encounter: k, via: "commander" }) },
+            h("span", { class: "cn" }, k), gmMeta(c), h("span", { class: `cm ${ok ? "ok" : "bad"}` }, ok ? "within Morale ✓" : "below Minimum ✗"));
+        }))];
+    }
+
+    function moraleBody() {
+      const c = b.chosen?.card || {};
+      const min = c.morale_minimum || 0;
+      const ok = b.morale.current >= min && b.morale.current > 0;
+      if (!ok) return [h("div", { class: "hint" }, `GM only: Morale ${b.morale.current} < Minimum ${min} ✗`),
+        h("button", { class: "btn danger", onclick: () => step("morale", { kind: "forced_retire" }) }, "Not enough Morale — Retire to the Rear")];
+      return [
+        h("div", { class: "hint" }, `GM only: Morale ${b.morale.current} ≥ Minimum ${min} ✓ — ${b.chosen.encounter}`),
+        c.morale_loss ? amountEntry({ dice: c.morale_loss, min: 0, max: 99, placeholder: `Loss (${c.morale_loss})`,
+          onEnter: (v) => step("morale", { kind: "loss", amount: v }), rollForMe: () => step("morale", { kind: "loss", roll_for_me: true }) })
+          : h("button", { class: "btn", onclick: () => step("morale", { kind: "loss", amount: 0 }) }, "No Morale Loss"),
+        b.tokens.negate === "available" ? h("button", { class: "token glow", onclick: () => step("morale", { kind: "loss", negate: true }) }, "✋ Negate this loss (token)") : null,
+      ];
+    }
+
+    const PST = [["reckless", "R", 3], ["valorous", "V", 2], ["prudent", "P", 1], ["cowardly", "K", 0]];
+    function posturesBody() {
+      const firstCharge = b.first_charge_turn;
+      const ks = b.conroi_now.filter((pid) => !b.t.postures[pid]);
+      for (const pid of ks) ui.postures[pid] ||= { posture: b.prev_postures?.[pid] || null, amount: "", above: false };
+      const confirm = async () => {
+        for (const pid of ks) {
+          const p = ui.postures[pid];
+          if (!p.posture) return toast(`Choose ${knightName(pid)}'s posture`, "err");
+          if (firstCharge && !["reckless", "valorous"].includes(p.posture)) return toast("The first charge allows only Reckless or Valorous", "err");
+          if ((p.posture === "reckless" || p.posture === "prudent") && !p.amount) return toast(`Enter ${knightName(pid)}'s 1D3`, "err");
+          if (p.posture === "cowardly" && p.above && !p.amount) return toast(`Enter ${knightName(pid)}'s 1D6`, "err");
+        }
+        for (const pid of ks) {
+          const p = ui.postures[pid];
+          await step("posture", { knight: pid, posture: p.posture, amount: p.amount ? Number(p.amount) : null, above_half: p.posture === "cowardly" ? p.above : null });
+        }
+      };
+      const onFoot = b.conroi_now.some((pid) => !b.knights[pid]?.mounted);
+      return [
+        firstCharge ? h("div", { class: "hint" }, "First charge: Reckless or Valorous only.", onFoot ? [" ", h("span", { class: "tag purpure rule-gr", title: "The book assumes everyone is mounted on the first charge" }, "GM ruling"), " mounted knights must charge; knights on foot fight normally."] : null) : null,
+        ks.map((pid) => {
+          const p = ui.postures[pid];
+          const dice = { reckless: "1D3 gain", prudent: "1D3 loss", cowardly: "1D6 loss" }[p.posture];
+          return h("div", { class: "posture-row" }, h("span", { class: "kn" }, knightName(pid)),
+            h("div", { class: "chips" }, PST.map(([key, letter, rounds]) => h("button", {
+              class: `chip ${p.posture === key ? "on" : ""} ${b.prev_postures?.[pid] === key ? "prev" : ""}`, disabled: (firstCharge && !["reckless", "valorous"].includes(key)) || null,
+              title: `${key} — ${rounds} round${rounds === 1 ? "" : "s"}`, onclick: () => { p.posture = key; render(); } }, `${letter} · ${rounds}`))),
+            p.posture === "cowardly" ? h("label", { class: "check small" }, h("input", { type: "checkbox", checked: p.above, onchange: (e) => { p.above = e.target.checked; render(); } }), "above half HP?") : null,
+            dice && (p.posture !== "cowardly" || p.above) ? h("input", { class: "input num", type: "number", min: 1, max: p.posture === "cowardly" ? 6 : 3, placeholder: dice, value: p.amount,
+              oninput: (e) => { p.amount = e.target.value; } }) : null,
+            passionToggle(pid));
+        }),
+        h("div", { class: "faint small" }, "Trait checks: Reckless / Valorous / Prudent · Cowardly: −1 Honor (on paper)."),
+        h("button", { class: "btn primary", onclick: confirm }, "Confirm postures"),
+      ];
+    }
+
+    function passionToggle(pid) {
+      const k = b.knights[pid] || {};
+      return h("label", { class: "check small", title: "Once per battle day" }, h("input", { type: "checkbox", checked: !!k.passion_used, onchange: async (e) => {
+        await step("passion", { knight: pid, used: e.target.checked, name: b.passion || "" });
+      } }), "Passion used");
+    }
+
+    function restBody() {
+      return [h("div", { class: "hint" }, "The commander rolls 1D6 at the table. Morale can't rise above its start."),
+        amountEntry({ dice: "1D6", min: 1, max: 6, onEnter: (v) => step("rest", { amount: v }), rollForMe: () => step("rest", { roll_for_me: true }) }),
+        h("div", { class: "faint small" }, "First Aid 14+1D6 per knight (on paper) · a new horse → flip the knight's pill.")];
+    }
+
+    function endButtons() {
+      const last = b.turn >= b.turns_today;
+      return h("div", { class: "row" }, h("span", { class: "hint" }, last ? `Last turn of Day ${b.day}.` : `Then Turn ${b.turn + 1}.`),
+        h("button", { class: "btn primary", onclick: () => step(last ? "end_day" : "end_turn") }, last ? (b.day >= b.days ? "End the last day" : "End day") : "End turn"));
+    }
+
+    function rearPanel() {
+      const t = b.t;
+      if (!t.rear_choice) return h("div", { class: "panel" }, h("h3", {}, "The conroi is at the rear"),
+        turnScriptsInline(),
+        h("div", { class: "row" },
+          h("button", { class: "btn primary", onclick: () => step("rear", { choice: "rest" }) }, "Rest another turn"),
+          h("button", { class: "btn", onclick: () => step("rear", { choice: "return" }) }, "Return to the field"),
+          h("button", { class: "btn danger", onclick: async () => { if (await confirmBox("Leave the field?", "The conroi's part in the battle ends.", "Leave", true)) step("rear", { choice: "leave" }); } }, "Leave the field")),
+        h("div", { class: "faint small" }, "First Aid 14+1D6 per knight (on paper) · a new horse → flip the knight's pill."));
+      return stepper();
     }
 
     function scriptsPanel() {

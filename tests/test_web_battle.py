@@ -213,3 +213,261 @@ def test_settings_and_pause_events_gm_only(client):
     ok(client.post("/api/battle/pause"))
     types = [c["type"] for c in ok(client.get("/api/table"))["feed"]]
     assert "battle.settings" not in types and "battle.paused" not in types
+
+
+# -- S7: the turn loop ------------------------------------------------------------
+
+DECK = ["Pictish Knifemen", "Pictish Javeliniers", "Knights of Gorre", "Clash of Champions", "Rally the Division!"]
+
+
+def _step(client, step, **kw):
+    return ok(client.post("/api/battle/step", json={"step": step, **kw}))
+
+
+def _running(client, size="clash", days=1, start=21, turns=None):
+    pids = _party(client, "Sir Bors", "Sir Cai")
+    _quick(client, size, days)
+    if turns:
+        for d in range(1, days + 1):
+            ok(client.post("/api/battle/settings", json={"day": d, "patch": {"turns": turns}}))
+    for d in range(1, days + 1):
+        ok(client.post("/api/battle/deck", json={"day": d, "add": DECK}))
+    _muster(client, pids, start=start)
+    return pids
+
+
+def _postures(client, pids, posture="valorous", amount=None):
+    for p in pids:
+        _step(client, "posture", knight=p, posture=posture, **({"amount": amount} if amount else {}))
+
+
+def _cur(client):
+    return _battle(client)["step"]["current"]
+
+
+def test_turn_loop_without_fight(client):
+    pids = _running(client)
+    assert _cur(client) == "set"
+    _step(client, "set", encounter="Pictish Knifemen")
+    assert _cur(client) == "intensity"                       # turn 1: no charge roll (Q29)
+    _step(client, "intensity", outcome="success")
+    assert _cur(client) == "morale"
+    _step(client, "morale", kind="loss", amount=3)
+    _postures(client, pids)
+    assert _cur(client) in ("end", "fight")
+    _step(client, "end_turn")
+    b = _battle(client)
+    assert b["turn"] == 2 and b["morale"]["current"] == 18 and b["step"]["current"] == "set"
+
+
+def test_turn1_skips_charge(client):
+    _running(client)
+    items = {i["key"]: i for i in _battle(client)["step"]["items"]}
+    assert items["charge"]["state"] == "skipped" and "turn 1" in items["charge"]["reason"]
+
+
+def test_step_out_of_order_409(client):
+    _running(client)
+    r = client.post("/api/battle/step", json={"step": "morale", "kind": "loss", "amount": 2})
+    assert r.status_code == 409 and "Not now" in r.text
+
+
+def test_draw_picks_a_deck_foe_not_opportunity(client):
+    _running(client)
+    ev = _step(client, "set", draw=True)["events"][0]
+    assert ev["data"]["encounter"] in DECK[:3] and ev["data"]["drawn"]
+
+
+def _to_morale(client, encounter):
+    _step(client, "set", encounter=encounter)
+    _step(client, "intensity", outcome="success")
+
+
+def test_forced_retire_below_minimum(client):
+    _running(client, start=10)
+    _to_morale(client, "Knights of Gorre")                  # Minimum 13
+    assert client.post("/api/battle/step", json={"step": "morale", "kind": "loss", "amount": 1}).status_code == 400
+    _step(client, "morale", kind="forced_retire")
+    assert _cur(client) == "rest"
+    _step(client, "rest", amount=2)
+    _step(client, "end_turn")
+    b = _battle(client)
+    assert b["status"] == "rear" and b["morale"]["current"] == 10
+
+
+def test_morale_zero_only_retire(client):
+    _running(client, start=5)
+    ok(client.post("/api/battle/morale", json={"delta": -5, "reason": "rout"}))
+    assert client.post("/api/battle/step", json={"step": "set", "encounter": "Pictish Knifemen"}).status_code == 409
+    _step(client, "retire")
+    assert _cur(client) == "rest"
+
+
+def test_rest_capped_at_start(client):
+    _running(client, start=20)
+    ok(client.post("/api/battle/morale", json={"delta": -3, "reason": "arrows"}))
+    _step(client, "retire")
+    _step(client, "rest", amount=6)
+    assert _battle(client)["morale"]["current"] == 20
+    _step(client, "end_turn")
+    _step(client, "rear", choice="return")
+    assert _battle(client)["status"] == "turn" and _cur(client) == "set"
+
+
+def test_opportunity_pick_needs_crit_and_is_once_per_battle(client):
+    pids = _running(client, days=2, turns=2)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="failure")
+    assert client.post("/api/battle/step", json={"step": "pick", "knight": pids[0], "encounter": "Clash of Champions", "crit": False}).status_code == 400
+    _step(client, "pick", knight=pids[0], encounter="Clash of Champions", crit=True)
+    _step(client, "pick", knight=pids[1], encounter="Pictish Javeliniers")
+    assert client.post("/api/battle/step", json={"step": "select", "encounter": "Pictish Javeliniers"}).status_code == 400
+    _step(client, "select", encounter="Clash of Champions")
+    _step(client, "morale", kind="loss", amount=0)
+    _postures(client, pids)
+    _step(client, "end_turn")
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "charge", outcome="failure", engaged_last=True)
+    _step(client, "intensity", outcome="failure")
+    r = client.post("/api/battle/step", json={"step": "pick", "knight": pids[0], "encounter": "Clash of Champions", "crit": True})
+    assert r.status_code == 400 and "already played" in r.text
+    assert "Clash of Champions" in _battle(client)["spent_opportunities"]
+
+
+def test_force_token_skips_intensity_and_picks_and_expires_at_day_end(client):
+    pids = _party(client, "Sir Bors")
+    _quick(client, "clash", 2)
+    for d in (1, 2):
+        ok(client.post("/api/battle/settings", json={"day": d, "patch": {"turns": 1}}))
+        ok(client.post("/api/battle/deck", json={"day": d, "add": DECK}))
+    ok(client.post("/api/battle/army-roll", json={"side": "enemy", "outcome": "success"}))
+    _muster(client, pids)
+    _step(client, "set", encounter="Knights of Gorre", forced=True)
+    items = {i["key"]: i["state"] for i in _battle(client)["step"]["items"]}
+    assert items["intensity"] == "skipped" and items["picks"] == "skipped" and _cur(client) == "morale"
+    assert _battle(client)["tokens"]["force"] == "spent"
+    _step(client, "morale", kind="loss", amount=2)
+    _postures(client, pids)
+    _step(client, "end_day")
+    b = _battle(client)
+    assert b["status"] == "mustering" and b["day"] == 2 and b["tokens"]["force"] == "none"
+
+
+def test_negate_token_zeroes_loss_not_minimum(client):
+    pids = _party(client, "Sir Bors")
+    _quick(client, "clash")
+    ok(client.post("/api/battle/deck", json={"day": 1, "add": DECK}))
+    ok(client.post("/api/battle/army-roll", json={"side": "enemy", "outcome": "fumble"}))
+    _muster(client, pids, start=14)
+    _to_morale(client, "Knights of Gorre")
+    _step(client, "morale", kind="loss", negate=True)
+    b = _battle(client)
+    assert b["morale"]["current"] == 14 and b["tokens"]["negate"] == "spent"
+
+
+def test_negate_cannot_bypass_minimum(client):
+    pids = _party(client, "Sir Bors")
+    _quick(client, "clash")
+    ok(client.post("/api/battle/deck", json={"day": 1, "add": DECK}))
+    ok(client.post("/api/battle/army-roll", json={"side": "enemy", "outcome": "fumble"}))
+    _muster(client, pids, start=10)
+    _to_morale(client, "Knights of Gorre")
+    assert client.post("/api/battle/step", json={"step": "morale", "kind": "loss", "negate": True}).status_code == 400
+
+
+def test_posture_deltas_and_first_charge_limit(client):
+    pids = _party(client, "Sir Bors", "Sir Cai")
+    _quick(client, "clash")
+    ok(client.post("/api/battle/deck", json={"day": 1, "add": DECK}))
+    ok(client.post("/api/battle/army-roll", json={"side": "friendly", "outcome": "success"}))
+    _muster(client, pids, start=20)
+    _to_morale(client, "Pictish Knifemen")
+    _step(client, "morale", kind="loss", amount=5)
+    assert client.post("/api/battle/step", json={"step": "posture", "knight": pids[0], "posture": "prudent", "amount": 2}).status_code == 400
+    _step(client, "posture", knight=pids[0], posture="reckless", amount=3)
+    _step(client, "posture", knight=pids[1], posture="valorous")
+    assert _battle(client)["morale"]["current"] == 18
+
+
+def test_duplicate_posture_409(client):
+    pids = _running(client)
+    _to_morale(client, "Pictish Knifemen")
+    _step(client, "morale", kind="loss", amount=1)
+    _step(client, "posture", knight=pids[0], posture="valorous")
+    assert client.post("/api/battle/step", json={"step": "posture", "knight": pids[0], "posture": "valorous"}).status_code == 409
+
+
+def test_cowardly_moves_knight_to_rear(client):
+    pids = _running(client)
+    ok(client.post("/api/battle/settings", json={"day": 1, "patch": {"first_charge": False}}))
+    _to_morale(client, "Pictish Knifemen")
+    _step(client, "morale", kind="loss", amount=1)
+    _step(client, "posture", knight=pids[0], posture="cowardly", above_half=True, amount=4)
+    b = _battle(client)
+    assert b["knights"][pids[0]]["position"] == "rear" and b["morale"]["current"] == 16
+
+
+def test_cascade_undo_single_strike_event(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="success")
+    _step(client, "morale", kind="loss", amount=3)
+    prev = ok(client.get("/api/battle/undo-preview?step=intensity"))
+    assert len(prev["targets"]) == 2 and not prev["locked"]
+    strike = ok(client.post("/api/battle/undo", json={"step": "intensity"}))["event"]
+    assert strike["type"] == "meta.strike" and len(strike["data"]["targets"]) == 2
+    b = _battle(client)
+    assert b["step"]["current"] == "intensity" and b["morale"]["current"] == 21
+    ok(client.post(f"/api/battle/undo/{strike['id']}/restore"))
+    assert _battle(client)["morale"]["current"] == 18
+
+
+def test_undo_locked_before_resume(client):
+    pids = _party(client, "Sir Bors")
+    a = ok(client.post("/api/session/start", json={"title": "One"}))["session"]["id"]
+    _quick(client)
+    ok(client.post("/api/battle/deck", json={"day": 1, "add": DECK}))
+    _muster(client, pids)
+    _step(client, "set", encounter="Pictish Knifemen")
+    ok(client.post("/api/battle/pause"))
+    bid = _battle(client)["id"]
+    ok(client.post("/api/battle/resume", json={"battle_id": bid, "session_id": a}))
+    r = client.post("/api/battle/undo", json={"step": "set"})
+    assert r.status_code == 409
+
+
+def test_single_strike_marks_inconsistent(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    iev = _step(client, "intensity", outcome="failure")["events"][0]
+    _step(client, "pick", knight=pids[0], encounter="Pictish Javeliniers")
+    ok(client.post(f"/api/events/{iev['id']}/strike"))
+    b = _battle(client)
+    assert b["step"]["current"] == "intensity" and [x["type"] for x in b["inconsistent"]] == ["battle.pick"]
+
+
+def test_every_public_battle_event_has_table_text(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="failure")
+    _step(client, "pick", knight=pids[0], encounter="Pictish Javeliniers")
+    _step(client, "select", encounter="Pictish Javeliniers")
+    _step(client, "morale", kind="loss", roll_for_me=True)
+    _postures(client, pids)
+    _step(client, "passion", knight=pids[0], used=True, name="Love (Family)")
+    _step(client, "end_turn")
+    events = ok(client.get("/api/session/events"))["events"]
+    for e in events:
+        if e["type"].startswith("battle.") and e.get("visibility") != "gm":
+            assert e["data"].get("table_text"), e["type"]
+
+
+def test_table_never_sees_min_loss_or_intensity_die(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Knights of Gorre")
+    _step(client, "intensity", roll_for_me=True)
+    raw = client.get("/api/table").text
+    assert "morale_minimum" not in raw and "Minimum" not in raw and "1D6+3" not in raw
+    feed = ok(client.get("/api/table"))["feed"]
+    inten = next(c for c in feed if c["type"] == "battle.intensity")
+    assert "roll" not in inten["data"] and "rolled" not in inten["text"]

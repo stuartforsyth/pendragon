@@ -207,8 +207,9 @@ function renderLog() {
 function applyIncoming(events) {
   for (const ev of events) {
     if (ev.type.startsWith("meta.")) {
-      const target = S.events.find((e) => e.id === ev.data.target);
-      if (target) {
+      for (const id of ev.data.targets || [ev.data.target]) {      // a cascade undo strikes many
+        const target = S.events.find((e) => e.id === id);
+        if (!target) continue;
         if (ev.type === "meta.strike") target.struck = true;
         if (ev.type === "meta.unstrike") target.struck = false;
         if (ev.type === "meta.reveal") target.revealed = true;

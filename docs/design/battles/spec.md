@@ -883,7 +883,7 @@ Existing tests: `test_session_lifecycle_persists` must still pass (no battle →
 
 ---
 
-## S7 — Turn stepper ②–⑧ and ⑩, rest/rear, cascade undo, inconsistency flags (size **L**)
+## S7 — Turn stepper ②–⑧ and ⑩, rest/rear, cascade undo, inconsistency flags (size **L**) — ✅ DONE 2026-10-17
 
 **Goal.** A full turn can be run without the fight: set, charge, Intensity, picks, choice, Morale,
 postures, end turn and end day, plus retiring and resting. Answering a step completes it. A reopened

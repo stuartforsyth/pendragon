@@ -141,3 +141,13 @@ with a battle running writes `battle.paused`; **Resume** in a later session
 writes `battle.resumed` with a full snapshot. The Table's battle view shows the
 title band, the Morale gauge (number, draining bloodied fill, band word) and the
 Fray. Player rolls are resolved at the table; the GM records outcomes.
+
+Each turn runs as a **stepper** (Set Encounter → Charge · Intensity → Picks →
+Commander's choice → Morale → Postures → Fight → End turn), every outcome posted
+to `POST /api/battle/step` (the single entry point a future dice source can
+use). The reducer checks each event against the step machine; an event that no
+longer fits after a strike is listed as inconsistent, not applied. Reopening a
+step strikes it and everything after it this turn in **one** `meta.strike`
+with `targets` (Restore unstrikes them). Retiring, resting at the rear, forced
+retires, Opportunities once per battle and the Force/Negate tokens are handled
+here.

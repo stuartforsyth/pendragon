@@ -88,14 +88,16 @@ def flags(events):
     for ev in events:
         if ev["type"] not in META_TYPES:
             continue
-        target = ev["data"].get("target")
-        f = out.setdefault(target, {"struck": False, "revealed": False})
-        if ev["type"] == "meta.strike":
-            f["struck"] = True
-        elif ev["type"] == "meta.unstrike":
-            f["struck"] = False
-        elif ev["type"] == "meta.reveal":
-            f["revealed"] = True
+        d = ev.get("data") or {}
+        targets = d.get("targets") or [d.get("target")]     # a cascade undo strikes many at once
+        for target in targets:
+            f = out.setdefault(target, {"struck": False, "revealed": False})
+            if ev["type"] == "meta.strike":
+                f["struck"] = True
+            elif ev["type"] == "meta.unstrike":
+                f["struck"] = False
+            elif ev["type"] == "meta.reveal":
+                f["revealed"] = True
     return out
 
 

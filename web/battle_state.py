@@ -39,7 +39,8 @@ def apply(b, ev):
              "tokens_spent": {}, "morale": None, "commander": None, "conroi": list(d.get("knights", [])),
              "passion": "", "knights": knights, "revealed_scripts": [], "last_title_event": ev["id"],
              "closed": {"defeated": [], "glory": {}, "kv_by_turn": {}}, "paused_from": None,
-             "commander_by_day": {}}
+             "commander_by_day": {}, "t": new_turn(), "prev_postures": {}, "fought_last": False,
+             "spent_opportunities": [], "inconsistent": [], "retired_last": False}
         for pid in d.get("knights", []):
             _knight(b, pid)
         return b
@@ -104,6 +105,8 @@ def apply(b, ev):
                 b["knights"][pid]["mounted"] = False
         b["status"] = "turn"
         b["turn"] = 1
+        b["t"] = new_turn()
+        b["fought_last"] = False
     elif t == "battle.commander":
         b["commander"] = d.get("commander")
         b["commander_by_day"][str(b["day"])] = d.get("commander")
@@ -119,13 +122,252 @@ def apply(b, ev):
                 m["last"] = {"delta": m["current"] - before, "reason": d.get("reason", "")}
     elif t == "battle.script":
         b["revealed_scripts"].append({"day": d.get("day"), "index": d.get("index"), "text": d.get("text", "")})
+    elif t in STEP_EVENTS:
+        _apply_step(b, ev)
     elif t == "battle.mounted":
-        k = _knight(b, d["pid"])
+        k = _knight(b, d.get("pid") or d.get("knight"))
         k["mounted"] = bool(d.get("mounted"))
         k["on_foot_since"] = None if k["mounted"] else (b["day"], b["turn"])
     elif t == "battle.position":
-        _knight(b, d["pid"])["position"] = d.get("position") or "conroi"
+        _knight(b, d.get("pid") or d.get("knight"))["position"] = d.get("position") or "conroi"
     return b
+
+
+# ----------------------------------------------------------------- the turn
+
+STEP_ORDER = ("field", "set", "charge", "intensity", "picks", "select", "morale", "postures", "fight", "rest", "end")
+STEP_EVENTS = {"battle.field", "battle.rest", "battle.set", "battle.charge", "battle.intensity", "battle.pick",
+               "battle.select", "battle.morale", "battle.posture", "battle.passion", "battle.turn_ended",
+               "battle.day_ended", "battle.fight"}
+EVENT_STEP = {"battle.field": "field", "battle.rest": "rest", "battle.set": "set", "battle.charge": "charge",
+              "battle.intensity": "intensity", "battle.pick": "picks", "battle.select": "select",
+              "battle.morale": "morale", "battle.posture": "postures", "battle.turn_ended": "end",
+              "battle.day_ended": "end", "battle.fight": "fight"}
+
+
+def new_turn():
+    return {"retired": False, "set": None, "charge": None, "intensity": None, "picks": {}, "select": None,
+            "morale": None, "postures": {}, "rest": None, "rear_choice": None, "fight": None, "ended": False,
+            "events": {}}
+
+
+def chosen(b):
+    """The Encounter this turn is fought against, and its card."""
+    t = b["t"]
+    pick = t["select"] or t["set"]
+    return (pick["encounter"], pick["card"]) if pick else (None, None)
+
+
+def _enemy_charge_locked(b):
+    c = b["t"]["charge"]
+    return bool(c and c.get("result") == "enemy_charge")
+
+
+def conroi_ids(b):
+    return [pid for pid in b["conroi"] if b["knights"].get(pid, {}).get("position", "conroi") == "conroi"]
+
+
+def first_charge_turn(b):
+    return b["turn"] == 1 and first_charge(b)
+
+
+def steps(b):
+    """The turn's steps with their state (done / current / skipped / todo) —
+    what the GM stepper shows and what routes and replay validate against."""
+    t = b["t"]
+    items = []
+    if b["status"] == "rear":
+        items.append(("field", "done" if t["rear_choice"] else None, "", "At the rear: rest, return or leave"))
+        if t["rear_choice"] in ("rest",):
+            items.append(("rest", "done" if t["rest"] is not None else None, "", ""))
+            items.append(("end", "done" if t["ended"] else None, "", ""))
+        return _states(items)
+    if t["retired"] and not t["set"]:
+        items.append(("field", "done", "", "Retired to the Rear"))
+        items.append(("rest", "done" if t["rest"] is not None else None, "", ""))
+        items.append(("end", "done" if t["ended"] else None, "", ""))
+        return _states(items)
+    dd = _day_def(b)
+    forced = bool(t["set"] and t["set"].get("forced"))
+    items.append(("set", "done" if t["set"] else None, "", ""))
+    if b["turn"] == 1:
+        items.append(("charge", "skipped", "No charge roll on turn 1", ""))
+    elif dd.get("no_charge"):
+        items.append(("charge", "skipped", "No charge this day", ""))
+    elif forced:
+        items.append(("charge", "skipped", "Encounter forced by the enemy commander", ""))
+    else:
+        items.append(("charge", "done" if t["charge"] else None, "", ""))
+    locked = _enemy_charge_locked(b)
+    if forced or locked:
+        items.append(("intensity", "skipped", "Forced Encounter" if forced else "Enemy knights charge — no choice", ""))
+    else:
+        items.append(("intensity", "done" if t["intensity"] else None, "", ""))
+    io = (t["intensity"] or {}).get("outcome")
+    if io == "failure" and not forced and not locked:
+        items.append(("picks", "done" if t["select"] else None, "", ""))
+    else:
+        items.append(("picks", "skipped", "The Intensity roll held" if io in ("success", "critical") else "No choosing this turn" if io else "", ""))
+    needs_select = locked or io in ("failure", "fumble")
+    if needs_select and not forced:
+        items.append(("select", "done" if t["select"] else None, "", ""))
+    else:
+        items.append(("select", "skipped", "The set Encounter stands", ""))
+    m = t["morale"]
+    items.append(("morale", "done" if m else None, "", ""))
+    if m and m.get("kind") == "forced_retire":
+        items.append(("postures", "skipped", "Not enough Morale — retired", ""))
+        items.append(("fight", "skipped", "Retired to the Rear", ""))
+        items.append(("rest", "done" if t["rest"] is not None else None, "", ""))
+    else:
+        done_p = bool(conroi_ids(b)) and all(pid in t["postures"] for pid in conroi_ids(b))
+        items.append(("postures", "done" if done_p else None, "", ""))
+        items.append(("fight", "done" if t["fight"] else "optional", "", ""))
+    items.append(("end", "done" if t["ended"] else None, "", ""))
+    return _states(items)
+
+
+def _states(items):
+    out, current = [], None
+    for key, st, reason, summary in items:
+        if st in ("done", "skipped"):
+            state = st
+        elif st == "optional":
+            state = "optional"
+        elif current is None:
+            state, current = "current", key
+        else:
+            state = "todo"
+        out.append({"key": key, "state": state, "reason": reason, "summary": summary})
+    if current is None:
+        current = next((i["key"] for i in out if i["state"] == "optional"), None)
+    return {"items": out, "current": current}
+
+
+def current_step(b):
+    return steps(b)["current"] if b and b["status"] in ("turn", "rear") else None
+
+
+def _misfit(b, ev, reason):
+    b["inconsistent"].append({"event": ev["id"], "type": ev["type"], "reason": reason})
+
+
+def _apply_step(b, ev):
+    """Turn-loop events, checked against the step machine on replay: an event
+    that no longer fits (an earlier step was struck) is listed, not applied."""
+    t_type, d = ev["type"], ev.get("data", {})
+    if b["status"] not in ("turn", "rear"):
+        return _misfit(b, ev, "No turn in progress")
+    t = b["t"]
+    cur = current_step(b)
+    step = EVENT_STEP.get(t_type)
+    m = b["morale"]
+    if t_type == "battle.passion":
+        k = _knight(b, d.get("knight"))
+        k["passion_used"] = bool(d.get("used"))
+        k["passion_name"] = d.get("name", "")
+        return
+    if t_type == "battle.field":
+        if d.get("rear_choice"):
+            if b["status"] != "rear" or t["rear_choice"]:
+                return _misfit(b, ev, "Not at the rear")
+            t["rear_choice"] = d["rear_choice"]
+            if d["rear_choice"] == "return":
+                b["status"] = "turn"
+                b["t"] = new_turn()
+            elif d["rear_choice"] == "leave":
+                b["status"] = "aftermath"
+        else:
+            if cur != "set" or t["set"]:
+                return _misfit(b, ev, "Retire is chosen at the start of a turn")
+            t["retired"] = True
+        return
+    if step == "fight":
+        t["fight"] = dict(d)
+        return
+    if t_type == "battle.day_ended":
+        days = len(b["definition"].get("days", []))
+        b["t"] = new_turn()
+        if b["day"] >= days:
+            b["status"] = "aftermath"
+        else:
+            b["day"] += 1
+            b["turn"] = 0
+            b["status"] = "mustering"
+            b["fought_last"] = False
+            if _day_def(b).get("on_foot"):
+                for pid in b["conroi"]:
+                    _knight(b, pid)["mounted"] = False
+        return
+    if step == "end":
+        if cur != "end":
+            return _misfit(b, ev, "The turn isn't finished")
+        if t_type == "battle.turn_ended":
+            gain = int(d.get("kv_gain") or 0)
+            if gain and m:
+                before = m["current"]
+                m["current"] = B.apply_morale(m["current"], m["start"], gain)
+                m["last"] = {"delta": m["current"] - before, "reason": "foes defeated"}
+            retired = t["retired"] or (t["morale"] or {}).get("kind") == "forced_retire" or b["status"] == "rear"
+            b["prev_postures"] = {pid: p["posture"] for pid, p in t["postures"].items()} or b["prev_postures"]
+            b["fought_last"] = bool(t["fight"]) or bool(t["postures"])
+            b["retired_last"] = retired
+            b["turn"] += 1
+            b["status"] = "rear" if retired and b["status"] != "aftermath" else ("turn" if b["status"] != "aftermath" else "aftermath")
+            b["t"] = new_turn()
+        return
+    if step != cur and not (step == "select" and cur == "picks"):
+        return _misfit(b, ev, f"Out of step ({step} while {cur or 'nothing'} is open)")
+    if t_type == "battle.rest":
+        if m:
+            before = m["current"]
+            m["current"] = B.apply_morale(m["current"], m["start"], int(d.get("amount") or 0))
+            m["last"] = {"delta": m["current"] - before, "reason": "rest at the rear"}
+        t["rest"] = int(d.get("amount") or 0)
+    elif t_type == "battle.set":
+        t["set"] = {"encounter": d["encounter"], "card": d.get("card") or {}, "flavour": d.get("flavour", ""),
+                    "drawn": bool(d.get("drawn")), "forced": bool(d.get("forced"))}
+        if d.get("forced"):
+            b["tokens_spent"].setdefault(str(b["day"]), {})["force"] = True
+    elif t_type == "battle.charge":
+        t["charge"] = {"outcome": d["outcome"], "engaged_last": bool(d.get("engaged_last")),
+                       "result": d.get("result") or B.charge_opportunity(d["outcome"], bool(d.get("engaged_last")))}
+    elif t_type == "battle.intensity":
+        t["intensity"] = {"outcome": d["outcome"], "result": B.intensity_result(d["outcome"])}
+    elif t_type == "battle.pick":
+        pid = d.get("knight")
+        if d.get("encounter"):
+            t["picks"][pid] = {"encounter": d["encounter"], "card": d.get("card") or {}, "crit": bool(d.get("crit"))}
+        else:
+            t["picks"].pop(pid, None)
+    elif t_type == "battle.select":
+        t["select"] = {"encounter": d["encounter"], "card": d.get("card") or {}, "via": d.get("via", "commander")}
+        if (d.get("card") or {}).get("role") == "opportunity" and d["encounter"] not in b["spent_opportunities"]:
+            b["spent_opportunities"].append(d["encounter"])
+    elif t_type == "battle.morale":
+        t["morale"] = {"kind": d.get("kind", "loss"), "amount": d.get("amount"), "negated": bool(d.get("negated"))}
+        if d.get("negated"):
+            b["tokens_spent"].setdefault(str(b["day"]), {})["negate"] = True
+        elif d.get("kind") == "loss" and m:
+            before = m["current"]
+            m["current"] = B.apply_morale(m["current"], m["start"], -int(d.get("amount") or 0))
+            enc, _ = chosen(b)
+            m["last"] = {"delta": m["current"] - before, "reason": enc or "Encounter"}
+    elif t_type == "battle.posture":
+        pid = d.get("knight")
+        if pid in t["postures"]:
+            return _misfit(b, ev, "Posture already chosen this turn")
+        t["postures"][pid] = {"posture": d["posture"], "amount": d.get("amount"), "above_half": d.get("above_half")}
+        k = _knight(b, pid)
+        k["posture"] = d["posture"]
+        delta = B.posture_delta(d["posture"], d.get("amount") or None, bool(d.get("above_half"))) if d.get("amount") or d["posture"] == "valorous" else 0
+        if delta and m:
+            before = m["current"]
+            m["current"] = B.apply_morale(m["current"], m["start"], delta)
+            m["last"] = {"delta": m["current"] - before, "reason": f"{d['posture']} posture"}
+        if d["posture"] == "cowardly":
+            k["position"] = "rear"
+    t["events"].setdefault(step, []).append(ev["id"])
 
 
 def reduce(events):
@@ -175,6 +417,13 @@ def _names(party):
 def gm_view(b, party):
     if b is None:
         return None
+    if b["status"] in ("turn", "rear"):
+        b = copy.deepcopy(b)
+        b["step"] = steps(b)
+        enc, card = chosen(b)
+        b["chosen"] = {"encounter": enc, "card": card} if enc else None
+        b["first_charge_turn"] = first_charge_turn(b)
+        b["conroi_now"] = conroi_ids(b)
     names = _names(party)
     size = b["definition"].get("size", "clash")
     dd = _day_def(b)

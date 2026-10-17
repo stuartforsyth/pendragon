@@ -251,3 +251,14 @@ def test_clear_table_and_session_start(client):
     assert len(ok(client.get("/api/table"))["feed"]) == 2
     ok(client.post("/api/session/start", json={"title": "Fresh"}))
     assert ok(client.get("/api/table"))["feed"] == []
+
+
+def test_flags_targets_list():
+    from web.sessions import flags
+    evs = [{"id": 1, "type": "x"}, {"id": 2, "type": "y"},
+           {"id": 3, "type": "meta.strike", "data": {"targets": [1, 2]}},
+           {"id": 4, "type": "meta.unstrike", "data": {"targets": [2]}},
+           {"id": 5, "type": "meta.strike", "data": {"target": 2}}]
+    f = flags(evs)
+    assert f[1]["struck"] and f[2]["struck"]
+    assert not flags(evs[:4])[2]["struck"]

@@ -437,15 +437,360 @@ async def knight(request: Request, pid: str, body: dict):
     return {"event": ev}
 
 
-# -- the turn loop's single outcome entry point (S7 fills it in) ---------------------
+# -- the turn loop: one outcome entry point ---------------------------------------
+
+_POSTURE_WORD = {"reckless": "Reckless", "valorous": "Valorous", "prudent": "Prudent", "cowardly": "Cowardly"}
+
+
+def _today_deck(b, role="foe"):
+    """Today's deck, narrowed by this turn's script restriction if any."""
+    dd = BS._day_def(b)
+    deck = dd.get("deck") or {}
+    for sc in dd.get("scripts", []):
+        if sc.get("turn") == b["turn"] and sc.get("deck"):
+            deck = sc["deck"]
+    return list(deck.get("opportunities" if role == "opportunity" else "foes", []))
+
+
+def _rec(state, b, etype, text, step, data, table=None, title=None, visibility="public"):
+    return state.record(etype, text, title=title or _name(b), visibility=visibility,
+                        data={**data, "table_text": table or text, "battle": _link(b, step)})
+
+
+def _not_now(why):
+    bad(f"Not now: {why}", 409)
+
+
+def _pid_name(state, pid):
+    return _party_name(state, pid)
+
 
 def record_outcome(state, step, payload, source="gm"):
     """Every outcome a player reports goes through here — the GM today, a
-    dice source in a later phase (``source="dice"``)."""
-    bad("The turn loop arrives in the next build", 501)
+    dice source in a later phase (``source="dice"``). Validates against the
+    step machine and records one event (two for End day)."""
+    b = state.battle_state()
+    if not BS.is_live(b) or b["status"] == "mustering":
+        bad("No turn in progress", 409)
+    cur = BS.current_step(b)
+    t = b["t"]
+    m = b["morale"] or {"current": 0, "start": 0}
+    src = {"source": source}
+    evs = []
+
+    def rec(etype, text, st, data, **kw):
+        evs.append(_rec(state, b, etype, text, st, {**data, **src}, **kw))
+
+    if step == "retire":
+        if b["status"] != "turn" or cur != "set":
+            _not_now("the conroi retires at the start of a turn")
+        rec("battle.field", "The conroi retires to the rear", "field", {"choice": "retire"})
+    elif step == "rear":
+        choice = payload.get("choice")
+        if b["status"] != "rear" or cur != "field":
+            _not_now("the conroi isn't at the rear")
+        if choice not in ("rest", "return", "leave"):
+            bad("Rest, return or leave")
+        words = {"rest": "The conroi rests another turn", "return": "The conroi returns to the field",
+                 "leave": "The conroi leaves the field"}
+        rec("battle.field", words[choice], "field", {"rear_choice": choice})
+    elif step == "rest":
+        if cur != "rest":
+            _not_now("rest comes after retiring")
+        rolled = bool(payload.get("roll_for_me"))
+        amount = roll_expr("1D6") if rolled else to_int(payload.get("amount"), "rest roll")
+        if not 1 <= amount <= 6:
+            bad("A rest roll is 1D6: 1 to 6")
+        after = B.apply_morale(m["current"], m["start"], amount)
+        line = f"Rest at the rear: Morale +{after - m['current']} ({after} of {m['start']})"
+        rec("battle.rest", line, "rest", {"amount": amount, "rolled": rolled})
+    elif step == "set":
+        if cur != "set" or b["status"] != "turn":
+            _not_now("the Encounter is set at the start of a turn")
+        if m["current"] <= 0:
+            _not_now("Morale is 0 — the conroi must retire to the rear")
+        deck = _today_deck(b)
+        if payload.get("draw"):
+            import random
+            if not deck:
+                bad("No foes in today's deck")
+            key, drawn = random.choice(deck), True
+        else:
+            key, drawn = payload.get("encounter"), False
+            if key not in deck:
+                bad(f"'{key}' isn't a Foe in today's deck")
+        forced = bool(payload.get("forced"))
+        if forced and BS.tokens(b)["force"] != "available":
+            bad("No Force Encounter token available")
+        card = _card(state, key)
+        flavour = (payload.get("flavour") or card.get("description") or "").strip()
+        line = f"This turn: {key}" + (f" — {flavour}" if flavour else "")
+        gm = line + (" (drawn)" if drawn else "") + (" — forced by the enemy commander" if forced else "")
+        rec("battle.set", gm, "set", {"encounter": key, "card": card, "flavour": flavour, "drawn": drawn, "forced": forced},
+            table=line + (" — the enemy forces the issue!" if forced else ""))
+    elif step == "charge":
+        if cur != "charge":
+            _not_now("the charge roll comes after the Encounter is set")
+        outcome = payload.get("outcome")
+        if outcome not in B.OUTCOMES:
+            bad("Choose Critical, Success, Failure or Fumble")
+        engaged = bool(payload.get("engaged_last"))
+        result = B.charge_opportunity(outcome, engaged)
+        if result == "enemy_charge":
+            eligible = [k for k in _today_deck(b) if _card(state, k)["mounted_charge"]]
+            if not eligible:
+                result = "no_charge"              # no mounted knights in the enemy army: a simple failure
+        lines = []
+        for pid in BS.conroi_ids(b):
+            lines.append(f"{_pid_name(state, pid)}: {B.charge_line(result, b['knights'][pid]['mounted'])}")
+        head = {"may_charge_plus5": "Charge! (+5)", "may_charge": "Mounted knights may charge", "no_charge": "No charge",
+                "enemy_charge": "Enemy knights charge you!"}[result]
+        rec("battle.charge", f"Charge roll: {outcome.capitalize()} — {head}", "charge",
+            {"outcome": outcome, "engaged_last": engaged, "result": result, "lines": lines},
+            table=f"{head} — " + "; ".join(lines) if lines else head)
+    elif step == "intensity":
+        if cur != "intensity":
+            _not_now("the Intensity roll comes after the charge")
+        roll = None
+        if payload.get("roll_for_me"):
+            value = b["intensity"].get(str(b["day"]))
+            die, outcome = resolve_skill(int(value))
+            roll = {"roll": die, "value": value}
+        else:
+            outcome = payload.get("outcome")
+            if outcome not in B.OUTCOMES:
+                bad("Choose Critical, Success, Failure or Fumble")
+        words = {"critical": "Critical — the Encounter stands, and the foes are doubled!",
+                 "success": "Success — the Encounter stands", "failure": "Failure — the knights may choose their fate",
+                 "fumble": "Fumble — an Opportunity, at the GM's choice"}
+        line = f"Intensity roll: {words[outcome]}"
+        rec("battle.intensity", line + (f" (rolled {roll['roll']} vs {roll['value']})" if roll else ""), "intensity",
+            {"outcome": outcome, "roll": roll}, table=line)
+    elif step == "pick":
+        if cur != "picks":
+            _not_now("picks follow a failed Intensity roll")
+        pid = payload.get("knight")
+        if pid not in BS.conroi_ids(b):
+            bad("Only knights with the conroi pick")
+        key = payload.get("encounter")
+        crit = bool(payload.get("crit"))
+        card = None
+        if key:
+            card = _card(state, key)
+            if card["role"] == "opportunity":
+                if not crit:
+                    bad("An Opportunity needs a critical Battle roll")
+                if key in b["spent_opportunities"]:
+                    bad(f"{key} was already played in this battle")
+                if key not in _today_deck(b, "opportunity"):
+                    bad(f"'{key}' isn't in today's deck")
+            elif key not in _today_deck(b):
+                bad(f"'{key}' isn't in today's deck")
+        who = _pid_name(state, pid)
+        line = (f"{who}{' (critical)' if crit else ''} picks {key}{' ★' if card and card['role'] == 'opportunity' else ''}"
+                if key else f"{who} withdraws their pick")
+        rec("battle.pick", line, "picks", {"knight": pid, "encounter": key, "card": card, "crit": crit, "touches": [pid]})
+    elif step == "select":
+        if cur not in ("select", "picks"):
+            _not_now("the commander chooses after the picks")
+        via = payload.get("via", "commander")
+        key = payload.get("encounter")
+        set_key = t["set"]["encounter"]
+        if via == "keep":
+            if t["picks"]:
+                bad("Knights have picked — choose one of them or the set Encounter")
+            key = set_key
+        elif via == "fumble":
+            if (t["intensity"] or {}).get("outcome") != "fumble":
+                bad("Only an Intensity fumble brings an Opportunity")
+            key = key or set_key
+            if key != set_key:
+                if key not in _today_deck(b, "opportunity") or key in b["spent_opportunities"]:
+                    bad("Choose an unplayed Opportunity from today's deck")
+        elif via == "enemy_charge":
+            if not BS._enemy_charge_locked(b):
+                bad("No enemy charge this turn")
+            if not _card(state, key)["mounted_charge"]:
+                bad("Enemy knights charging must be a mounted-knight Encounter")
+        else:
+            options = {set_key} | {p["encounter"] for p in t["picks"].values()}
+            if key not in options:
+                bad("Choose the set Encounter or one the knights picked")
+            if any(state.combat_data.get("encounters", {}).get(p["encounter"], {}).get("battle_role") == "opportunity"
+                   for p in t["picks"].values()):
+                opp = [p["encounter"] for p in t["picks"].values()
+                       if state.combat_data.get("encounters", {}).get(p["encounter"], {}).get("battle_role") == "opportunity"]
+                if key not in opp:
+                    bad(f"An Opportunity was picked — it must be played ({opp[0]})")
+        card = _card(state, key)
+        if via == "keep" or key == set_key:
+            line = "No picks — the set Encounter stands" if via == "keep" else f"The commander keeps {key}"
+        elif via == "enemy_charge":
+            line = f"{key} charge the conroi!"
+        else:
+            line = f"The commander chooses {key}"
+        rec("battle.select", line, "select", {"encounter": key, "card": card, "via": via})
+    elif step == "morale":
+        if cur != "morale":
+            _not_now("Morale comes once the Encounter is chosen")
+        enc, card = BS.chosen(b)
+        kind = payload.get("kind", "loss")
+        minimum = card.get("morale_minimum")
+        if kind == "forced_retire":
+            if not B.forced_retire(m["current"], minimum):
+                bad("The conroi has the Morale to engage")
+            rec("battle.morale", f"Not enough Morale for {enc} — Retire to the Rear", "morale",
+                {"kind": "forced_retire", "amount": None, "rolled": False, "negated": False,
+                 "reason": "zero" if m["current"] == 0 else "minimum"},
+                table="Not enough Morale — Retire to the Rear")
+        else:
+            if B.forced_retire(m["current"], minimum):
+                bad("Below this Encounter's Minimum Morale — the conroi must retire")
+            if payload.get("negate"):
+                if BS.tokens(b)["negate"] != "available":
+                    bad("No Negate token available")
+                rec("battle.morale", f"The enemy commander's blunder — no Morale lost to {enc}", "morale",
+                    {"kind": "loss", "amount": 0, "rolled": False, "negated": True, "reason": None})
+            else:
+                rolled = bool(payload.get("roll_for_me"))
+                dice = card.get("morale_loss") or ""
+                if rolled:
+                    amount = roll_expr(dice) if dice else 0
+                else:
+                    amount = to_int(payload.get("amount") or 0, "Morale loss")
+                    if amount < 0:
+                        bad("Morale loss can't be negative")
+                after = B.apply_morale(m["current"], m["start"], -amount)
+                line = f"Morale −{amount} · {enc} ({after} of {m['start']})" if amount else f"No Morale lost to {enc}"
+                rec("battle.morale", line + (f" (rolled {dice})" if rolled else ""), "morale",
+                    {"kind": "loss", "amount": amount, "rolled": rolled, "negated": False, "reason": None}, table=line)
+    elif step == "posture":
+        if cur != "postures":
+            _not_now("postures come after Morale")
+        pid = payload.get("knight")
+        if pid not in BS.conroi_ids(b):
+            bad("Only knights with the conroi take a posture")
+        if pid in t["postures"]:
+            bad("Already chosen this turn — reopen Postures to change it", 409)
+        posture = payload.get("posture")
+        if posture not in B.POSTURES:
+            bad("Reckless, Valorous, Prudent or Cowardly")
+        if BS.first_charge_turn(b) and posture not in B.FIRST_CHARGE_POSTURES:
+            bad("The first charge allows only Reckless or Valorous")
+        P = B.POSTURES[posture]
+        above = payload.get("above_half")
+        amount, rolled = None, False
+        if P["dice"] and (posture != "cowardly" or above):
+            if payload.get("roll_for_me"):
+                amount, rolled = roll_expr(P["dice"]), True
+            else:
+                amount = to_int(payload.get("amount"), f"{P['dice']} roll")
+            try:
+                delta = B.posture_delta(posture, amount, bool(above))
+            except ValueError as exc:
+                bad(str(exc))
+        else:
+            delta = 0
+        who = _pid_name(state, pid)
+        line = f"{who} rides {_POSTURE_WORD[posture]} ({P['rounds']} round{'s' if P['rounds'] != 1 else ''})"
+        if posture == "cowardly":
+            line = f"{who} holds back — Cowardly, and rides to the rear"
+        if delta:
+            line += f" — Morale {delta:+d}"
+        rec("battle.posture", line, "postures", {"knight": pid, "posture": posture, "amount": amount, "rolled": rolled,
+                                                 "above_half": above, "touches": [pid]})
+    elif step == "passion":
+        pid = payload.get("knight")
+        if pid not in b["conroi"]:
+            bad("That knight isn't in the conroi")
+        used = bool(payload.get("used", True))
+        name = (payload.get("name") or "").strip()
+        who = _pid_name(state, pid)
+        line = f"{who} draws on {name or 'a Passion'}" if used else f"{who}'s Passion is unmarked"
+        rec("battle.passion", line, None, {"knight": pid, "used": used, "name": name, "touches": [pid]})
+    elif step in ("end_turn", "end_day"):
+        if cur != "end" and cur != "fight":
+            _not_now("finish the turn's steps first")
+        last = b["turn"] >= (BS._day_def(b).get("turns") or 1)
+        if step == "end_turn" and last and b["status"] == "turn":
+            bad("This is the day's last turn — End day")
+        gain = 0
+        line = f"End of Turn {b['turn']}"
+        if gain:
+            line += f" — Morale +{gain} for foes defeated"
+        rec("battle.turn_ended", line, "end", {"kv_gain": gain})
+        if step == "end_day":
+            b2 = state.battle_state()
+            days = len(b2["definition"]["days"])
+            dline = f"Day {b['day']} ends" + ("" if b["day"] < days else " — the battle is done")
+            evs.append(state.record("battle.day_ended", dline, title=_name(b),
+                                    data={"table_text": dline, "battle": {**_link(b, "end")}, **src}))
+    else:
+        bad("Unknown step")
+    return {"events": evs, "battle": BS.gm_view(state.battle_state(), state.party.items)}
 
 
 @router.post("/api/battle/step")
 async def step(request: Request, body: dict):
     state, b = _live(request)
     return record_outcome(state, body.get("step"), body, source="gm")
+
+
+# -- cascade undo ------------------------------------------------------------------
+
+def _undo_targets(state, b, step_key):
+    idx = BS.STEP_ORDER.index(step_key)
+    events = live_events(state.session.events)
+    resumed = max((e["id"] for e in events if e["type"] == "battle.resumed"), default=0)
+    out = []
+    for ev in events:
+        link = (ev.get("data") or {}).get("battle") or {}
+        if link.get("id") != b["id"] or link.get("day") != b["day"] or link.get("turn") != b["turn"]:
+            continue
+        st_ = link.get("step")
+        if st_ is None or st_ not in BS.STEP_ORDER:
+            continue
+        if BS.STEP_ORDER.index(st_) >= idx or st_ == "rest":
+            out.append(ev)
+    return out, any(e["id"] < resumed for e in out)
+
+
+@router.get("/api/battle/undo-preview")
+def undo_preview(request: Request, step: str):
+    state, b = _live(request)
+    if step not in BS.STEP_ORDER:
+        bad("Unknown step")
+    targets, locked = _undo_targets(state, b, step)
+    if not targets:
+        bad("That step isn't done", 404)
+    return {"targets": [{"id": e["id"], "type": e["type"], "text": e["text"]} for e in targets], "locked": locked}
+
+
+@router.post("/api/battle/undo")
+async def undo(request: Request, body: dict):
+    """Reopen a step: strike it and every later step of this turn in one
+    undoable event (Q12)."""
+    state, b = _live(request)
+    step_key = body.get("step")
+    if step_key not in BS.STEP_ORDER:
+        bad("Unknown step")
+    targets, locked = _undo_targets(state, b, step_key)
+    if not targets:
+        bad("That step isn't done", 404)
+    if locked:
+        bad("Those steps were made before the battle was resumed", 409)
+    ev = state.record("meta.strike", f"Undone from {step_key} of Turn {b['turn']} ({len(targets)} event{'s' if len(targets) != 1 else ''})",
+                      visibility="gm", data={"targets": [e["id"] for e in targets],
+                                             "cascade": {"battle": b["id"], "day": b["day"], "turn": b["turn"], "step": step_key}})
+    return {"event": ev}
+
+
+@router.post("/api/battle/undo/{strike_id}/restore")
+async def undo_restore(request: Request, strike_id: int):
+    state = st(request)
+    ev = next((e for e in state.session.events if e["id"] == strike_id), None)
+    if not ev or ev["type"] != "meta.strike" or not (ev.get("data") or {}).get("cascade"):
+        bad("Not an undone step", 404)
+    r = state.record("meta.unstrike", f"Restored: {ev['text']}", visibility="gm",
+                     data={"targets": ev["data"]["targets"]})
+    return {"event": r}

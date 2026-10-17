@@ -43,6 +43,18 @@ _SAFE_DATA = {
     "battle.script": ("text",),
     "battle.mounted": ("mounted",),
     "battle.position": ("position",),
+    "battle.field": ("choice", "rear_choice"),
+    "battle.rest": ("amount",),
+    "battle.set": ("encounter", "flavour", "drawn", "forced"),
+    "battle.charge": ("outcome", "engaged_last"),
+    "battle.intensity": ("outcome",),
+    "battle.pick": ("encounter", "crit"),
+    "battle.select": ("encounter", "via"),
+    "battle.morale": ("kind", "amount", "negated"),
+    "battle.posture": ("posture", "amount"),
+    "battle.passion": ("used", "name"),
+    "battle.turn_ended": (),
+    "battle.day_ended": (),
 }
 
 
