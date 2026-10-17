@@ -1,4 +1,4 @@
-# Piece 3 — Encounter decks & selection (in progress)
+# Piece 3 — Encounter decks & selection — CLOSED 2026-10-17
 
 ## Decisions so far
 1. Loop: create/set up an encounter → mark it battle-approved via an explicit battle role (Foe / Opportunity / none) → it becomes selectable in battles. Battle encounters carry Morale Minimum and Morale Loss (default from their adversaries' cards, editable).
