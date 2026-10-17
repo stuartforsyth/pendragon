@@ -45,8 +45,10 @@ export default {
       render();
     }
 
+    let pending = false;           // an update arrived while the GM was typing
     function render() {
-      if (el.querySelector(".bl input:focus, .bl textarea:focus")) return;
+      if (el.querySelector(".bl input:focus, .bl textarea:focus")) { pending = true; return; }
+      pending = false;
       const live = b && ["mustering", "turn", "rear"].includes(b.status);
       clear(body, h("div", { class: "bl" }, b?.status === "aftermath" ? aftermathPanel()
         : !live ? launchPanel() : b.status === "mustering" ? mustering() : running()));
@@ -103,9 +105,16 @@ export default {
       if (!muster.knights) muster.knights = b.conroi.length ? [...b.conroi] : active.map((m) => m.id);
       if (muster.commander === null) muster.commander = b.commander || b.definition.commander || null;
       if (muster.start === "" && b.morale) muster.start = b.morale.start;
-      const reason = !muster.commander ? "Set a commander" : !(Number(muster.start) >= 1) ? "Enter the starting Morale"
+      const whyNot = () => !muster.commander ? "Set a commander" : !(Number(muster.start) >= 1) ? "Enter the starting Morale"
         : b.intensity_today == null && dd.intensity?.mode !== "fixed" ? "Set today's Intensity" : "";
+      const reason = whyNot();
+      // Typing the Morale updates the Begin button in place — a full redraw on
+      // leaving the box would swallow the click that moved the cursor away.
+      const beginBtn = h("button", { class: "btn primary", disabled: !!reason || null, onclick: () => begin() }, day > 1 ? `Begin Day ${day} ▸` : "Begin Turn 1 ▸");
+      const beginWhy = h("span", { class: "faint small" }, reason || "Ready: commander and Morale are set.");
+      const refreshBegin = () => { const r = whyNot(); beginBtn.disabled = !!r; beginWhy.textContent = r || "Ready: commander and Morale are set."; };
       const begin = async () => {
+        const reason = whyNot();
         if (reason) return toast(reason, "err");
         await post("/api/battle/muster", { start: Number(muster.start), passion: muster.passion, commander: muster.commander, knights: muster.knights });
         Object.assign(muster, { knights: null, commander: null, start: "", passion: "" });
@@ -127,8 +136,8 @@ export default {
             h("button", { class: `chip ${muster.commander === id ? "on" : ""}`, onclick: () => { muster.commander = id; render(); } }, name))),
         h("div", { class: "row", style: { alignItems: "flex-end", marginTop: "8px" } },
           h("label", { class: "field" }, h("span", {}, "Starting Morale"),
-            h("input", { class: "input big-num", type: "number", min: 1, value: muster.start, oninput: (e) => { muster.start = e.target.value; },
-              onchange: () => render(), onkeydown: (e) => e.key === "Enter" && begin() })),
+            h("input", { class: "input big-num", type: "number", min: 1, value: muster.start, oninput: (e) => { muster.start = e.target.value; refreshBegin(); },
+              onkeydown: (e) => e.key === "Enter" && begin() })),
           h("label", { class: "field", style: { flex: 1 } }, h("span", {}, "Passion (optional)"),
             h("input", { class: "input", value: muster.passion, placeholder: "e.g. Loyalty (King)", oninput: (e) => { muster.passion = e.target.value; } }))),
         h("p", { class: "faint small" }, "The players work Morale out at the table: the average of their Passion, +5 if they all chose the same one."));
@@ -162,8 +171,7 @@ export default {
           h("span", { class: "sp" }, h("button", { class: "btn ghost sm", onclick: settingsDrawer }, "Battle settings"),
             h("button", { class: "btn ghost sm", onclick: pause }, "Pause"))),
         h("div", { class: "grid2" }, conroi, h("div", { class: "stack" }, army, intensity)),
-        h("div", { class: "row" }, h("button", { class: "btn primary", disabled: !!reason || null, onclick: begin }, day > 1 ? `Begin Day ${day} ▸` : "Begin Turn 1 ▸"),
-          h("span", { class: "faint small" }, reason || "Ready: commander and Morale are set.")),
+        h("div", { class: "row" }, beginBtn, beginWhy),
       ];
     }
 
@@ -749,7 +757,9 @@ export default {
     ctx.onEvent((evs, { reset }) => {
       if (reset || evs.some((e) => e.type.startsWith("battle.") || e.type.startsWith("meta.") || e.type.startsWith("session."))) loadSoon();
     });
-    el.addEventListener("focusout", () => setTimeout(render, 0));
+    // Catch up after typing — but only if something changed meanwhile, and only
+    // once the click that moved the cursor away has landed.
+    el.addEventListener("focusout", () => { if (pending) setTimeout(() => pending && render(), 250); });
     await load();
     return { async show() { await load(); }, async onLibrary() { await load(); } };
   },

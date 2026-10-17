@@ -79,7 +79,10 @@ def test_roster_scaling_and_preview(rules):
 def test_every_library_encounter_builds(rules):
     e = Encounter(rules)
     for name, defn in e.themes.items():
-        e.generate_from_definition(to_editable(defn), 3)
+        editable = to_editable(defn)
+        if not editable["roster"] and not editable.get("leader") and defn.get("battle_role") == "opportunity":
+            continue                     # an Opportunity may have nothing to fight (Rally the Division!)
+        e.generate_from_definition(editable, 3)
         assert e.combatants, name
 
 

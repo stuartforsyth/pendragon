@@ -230,3 +230,21 @@ def test_aftermath_finale_and_end(page, table, app_url):
     page.get_by_role("button", name="End battle").click()
     confirm(page, "End battle")
     expect(page.get_by_role("button", name="Launch battle")).to_be_visible()
+
+
+def test_change_commander_after_typing_morale(page, app_url):
+    """Typing the Morale and then clicking a commander must switch the commander."""
+    quick_launch(page, app_url)
+    page.locator(".chips .chip", has_text="Sir Bors").first.click()
+    page.locator("input.big-num").fill("20")
+    page.locator(".chips .chip", has_text="Dame Lynet").first.click()
+    expect(page.locator(".chips .chip.on", has_text="Dame Lynet")).to_have_count(1)
+    page.locator(".chips .chip", has_text="GM (NPC)").click()
+    expect(page.locator(".chips .chip.on", has_text="GM (NPC)")).to_have_count(1)
+    page.get_by_role("button", name=re.compile(r"^Roll for me \(")).click()
+    page.get_by_role("button", name="Begin Turn 1 ▸").click()
+    expect(page.locator(".mstrip .who")).to_contain_text("Commander: GM")
+    # and once running, the commander can be changed from the Morale strip
+    page.locator(".mstrip .who").click()
+    page.locator(".menu").get_by_role("button", name="Sir Cai").click()
+    expect(page.locator(".mstrip .who")).to_contain_text("Commander: Sir Cai")
