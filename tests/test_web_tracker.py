@@ -292,3 +292,15 @@ def test_brawling_override_saved_and_used(client):
     r = ok(client.post("/api/adversaries/brawling", json={"name": "Knights of Gorre", "category": "human",
                                                           "characteristics": {"STR": 15, "SIZ": 15}}))
     assert r == {"default": 10, "source": "STR ÷ 2, at least 10 for a knight", "damage": 5}
+
+
+def test_outnumbered_pill_takes_five_off_one_roll(client):
+    cs = _fight(client)
+    foe = _foes(cs)[0]
+    ev = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 1, "outnumbered": True}))["event"]
+    assert "−5 outnumbered" in ev["data"]["label"]
+    plain = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 1}))["event"]
+    assert "outnumbered" not in plain["data"]["label"]
+    assert ev["data"]["shown"] != plain["data"]["shown"]          # 15 −5 = 10 vs 15
+    three = ok(client.post(f"/api/combat/{foe['id']}/roll", json={"what": "attack", "key": 1, "outnumbered": -10}))["event"]
+    assert "−10 outnumbered" in three["data"]["label"]

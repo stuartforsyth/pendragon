@@ -144,6 +144,7 @@ export default {
     const openFoes = new Set();      // foe lines expanded to show their full stats
     let view = (() => { try { return localStorage.getItem("cbt-view") || "field"; } catch { return "field"; } })();
     let picked = null;               // the token whose controls are open (Field view)
+    const minus5 = new Map();        // foe id → −5 / −10 on its next attack roll (outnumbered)
 
     // Post a change; if it defeated a foe nobody was fighting, ask who gets the Glory.
     async function act(path, body) {
@@ -485,9 +486,18 @@ export default {
           disarmed ? "✋ " : "⚔ ", h("span", { class: "wn" }, a?.weapon || "Brawling"), " ",
           h("b", {}, noSkill ? "—" : skillDisplay(a.value)), h("span", { class: "faint" }, ` · ${a?.damage || "—"}`),
           disarmed ? h("span", { class: "tag gules" }, "Disarmed") : null, " ▾"),
+        h("button", { class: `chip pill-out ${minus5.get(c.id) ? "on" : ""}`,
+          title: "Outnumbered by knights: −5 for two, −10 for three, on this foe's next attack roll (click to cycle)",
+          onclick: () => { const v = { 0: -5, [-5]: -10, [-10]: 0 }[minus5.get(c.id) || 0]; v ? minus5.set(c.id, v) : minus5.delete(c.id); render(); } },
+          minus5.get(c.id) ? `${minus5.get(c.id)}`.replace("-", "−") : "−5"),
         h("button", { class: "btn sm atk-btn", disabled: c.down || noSkill || null,
           title: noSkill ? "No Brawling skill — set one in the Adversaries editor" : `${c.display_name} attacks ${c.engaged_with || "a knight"} with ${a.weapon}`,
-          onclick: () => (knightsIn ? attackDialog(c, key) : post(`/api/combat/${c.id}/roll`, { what: "attack", key }).then((r) => ctx.showLastRoll(r.event))) },
+          onclick: () => {
+            const outnumbered = minus5.get(c.id) || 0;           // one roll, then the pill switches off
+            minus5.delete(c.id); render();
+            return knightsIn ? attackDialog(c, key, outnumbered)
+              : post(`/api/combat/${c.id}/roll`, { what: "attack", key, outnumbered }).then((r) => { ctx.showLastRoll(r.event); render(); });
+          } },
           icon("swords"), "Attack"));
     }
     function weaponMenu(anchor, c, current) {
@@ -616,11 +626,11 @@ export default {
     // knight's result; the app decides whether the enemy's blow lands.
     const OUT = { critical: "Critical", success: "Success", failure: "Failure", fumble: "Fumble" };
 
-    async function attackDialog(c, i) {
+    async function attackDialog(c, i, outnumbered = 0) {
       const knights = cs.combatants.filter((o) => o.side === "party" && !o.down);
       if (!knights.length) return toast("No knights in the fight", "err");
       let target = (byName(c.engaged_with)?.side === "party" ? byName(c.engaged_with) : knights[0]).id;
-      const roll = (await post(`/api/combat/${c.id}/roll`, { what: "attack", key: i })).event;
+      const roll = (await post(`/api/combat/${c.id}/roll`, { what: "attack", key: i, outnumbered })).event;
       ctx.showLastRoll(roll);
       const d = roll.data, ok = d.outcome === "critical" || d.outcome === "success";
       const go = async (knight, close) => {

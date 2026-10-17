@@ -631,10 +631,15 @@ async def roll(request: Request, cid: str, body: dict):
         key = key if key == "brawl" else int(key)
         if what == "attack":
             height = _height(cs, c)
-            common["extra"].update(attack=key, height=height)
-            label = atk["weapon"] + (f" (Height {height:+d})" if height else "")
+            # The GM's one-roll pill for a foe outnumbered by knights: −5 per knight after
+            # the first (core.combat.multiple-opponents p.148) — two knights −5, three −10.
+            o = body.get("outnumbered")
+            outnumbered = -5 if o is True else max(-10, min(0, int(o))) if isinstance(o, (int, float)) and o is not False else 0
+            common["extra"].update(attack=key, height=height, outnumbered=outnumbered)
+            bits = ([f"Height {height:+d}"] if height else []) + ([f"−{-outnumbered} outnumbered"] if outnumbered else [])
+            label = atk["weapon"] + (f" ({', '.join(bits)})" if bits else "")
             ev = record_check(state, label=label, value=atk["value"],
-                              modifier=c.modifier + height, **common)
+                              modifier=c.modifier + height + outnumbered, **common)
         else:
             ev = record_damage(state, label=atk["weapon"], expr=atk["damage"],
                                critical=bool(body.get("critical")),

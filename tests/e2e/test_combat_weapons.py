@@ -51,3 +51,19 @@ def test_adversary_editor_brawling_default_and_override(page, app_url):
     page.wait_for_timeout(300)
     adv = page.request.get(app_url + "/api/adversaries/Knights of Gorre").json()["adversary"]
     assert adv["brawling"] == 12
+
+
+def test_outnumbered_minus5_pill(page, app_url):
+    _start(page, app_url, "Knights of Gorre")
+    row = page.locator(".cbt-foe").first
+    row.locator(".pill-out").click()
+    expect(page.locator(".cbt-foe").first.locator(".pill-out.on")).to_have_text("−5")
+    page.locator(".cbt-foe").first.locator(".pill-out").click()
+    expect(page.locator(".cbt-foe").first.locator(".pill-out.on")).to_have_text("−10")
+    page.locator(".cbt-foe").first.locator(".pill-out").click()
+    expect(page.locator(".cbt-foe").first.locator(".pill-out.on")).to_have_count(0)
+    page.locator(".cbt-foe").first.locator(".pill-out").click()
+    page.locator(".cbt-foe").first.get_by_role("button", name="Attack").click()
+    expect(page.locator(".modal .attack-roll")).to_contain_text("−5 outnumbered")
+    page.locator(".modal").get_by_role("button", name="Cancel").click()
+    expect(page.locator(".cbt-foe").first.locator(".pill-out.on")).to_have_count(0)   # one roll only

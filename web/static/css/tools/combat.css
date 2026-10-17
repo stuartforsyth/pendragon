@@ -203,3 +203,5 @@ span.chip-height { cursor: default; }
 .cbt-drawer .cbt-foe-line .cbt-hp { width: 150px; }
 .cbt-drawer .cbt-foe-line .cbt-wield { flex: 1 1 100%; order: 5; }
 @media (prefers-reduced-motion: reduce) { .cbt-link { animation: none; } }
+.pill-out { padding: 2px 9px; font-weight: 800; }
+.pill-out.on { border-color: var(--gules); color: #fff; background: var(--gules-deep); }
