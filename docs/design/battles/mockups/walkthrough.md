@@ -41,3 +41,5 @@ Revised total for the scenario: **≈ 13 clicks** outside the fight (≈ 9 on a 
 - Wizard (one step per screen): hides the turn's history; rejected in piece 5.
 - Auto-rolling the GM's Loss when ⑦ opens: removes the GM's moment of choice and the option to roll physically; kept as one click.
 - Postures defaulting to Valorous for everyone: silently picks for the players; "previous turn" default only applies from turn 2 and is visibly highlighted.
+
+Mockups: docs/design/battles/mockups/battles-ux-mockups.html (published privately at https://claude.ai/artifact/5h22dkrAiak61UpDS3pW3C) — awaiting user approval.

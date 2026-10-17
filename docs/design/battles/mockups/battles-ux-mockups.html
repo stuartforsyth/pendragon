@@ -1,0 +1,515 @@
+<title>Battles UX Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400&family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=UnifrakturMaguntia&display=swap">
+<style>
+/* Layout: a review page of fixed-size screen frames — GM console screens (the app's dark
+   "great hall") and Table screens (its parchment board) — each followed by short notes.
+   Single dark page by choice: the frames carry the app's own two palettes. */
+:root {
+  color-scheme: dark;
+  /* page */
+  --page: #0e0c0b; --page-ink: #e9dfcb; --page-dim: #a3947c; --page-line: #2c2621;
+  /* GM console tokens (from web/static/css/gm.css) */
+  --bg: #121010; --panel: #1c1917; --panel-2: #241f1b; --panel-3: #2d2620; --line: #3a312a; --line-2: #4a3f35;
+  --ink: #efe6d4; --ink-2: #c9bba3; --ink-dim: #9a8b75; --ink-faint: #6f6455;
+  --or: #d4a84b; --or-bright: #f0c96b; --or-deep: #8a6a2a; --vert: #5fae74; --gules: #d0574b; --gules-deep: #8f2e26; --azure: #6c9fd8; --purpure: #a77bd0;
+  /* Table tokens (from web/static/css/table.css) */
+  --parch: #efe3c6; --parch-2: #f6ecd2; --parch-dark: #cdb68a; --t-ink: #2a1d14; --t-ink-2: #4e3a28; --t-soft: #7a6247;
+  --t-gules: #8e2219; --t-or: #b08a36; --t-vert: #2f6b3e; --t-azure: #24507f; --note: #fbf4e2;
+  --f-display: "Cinzel", Georgia, serif; --f-deco: "Cinzel Decorative", "Cinzel", Georgia, serif;
+  --f-prose: "EB Garamond", Garamond, Georgia, serif; --f-ui: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --f-black: "UnifrakturMaguntia", "Cinzel Decorative", serif;
+}
+body { background: var(--page); color: var(--page-ink); font-family: var(--f-ui); font-size: 16px; }
+.wrap { max-width: 1360px; margin: 0 auto; padding: 30px 16px 60px; display: grid; gap: 18px; }
+header.intro h1 { font-family: var(--f-display); color: var(--or-bright); font-size: 28px; margin: 0 0 6px; letter-spacing: .04em; text-wrap: balance; }
+header.intro p { margin: 0; max-width: 72ch; color: var(--page-dim); line-height: 1.55; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
+nav.toc a { color: var(--or); text-decoration: none; border-bottom: 1px solid var(--or-deep); }
+nav.toc a:focus-visible, nav.toc a:hover { color: var(--or-bright); }
+h2.sec { font-family: var(--f-display); font-size: 19px; letter-spacing: .08em; color: var(--ink); margin: 26px 0 0; padding-top: 18px; border-top: 1px solid var(--page-line); }
+h2.sec small { font-family: var(--f-ui); font-size: 14px; letter-spacing: 0; color: var(--page-dim); margin-left: 10px; font-weight: 400; }
+.scroller { overflow-x: auto; width: max-content; max-width: 100%; border-radius: 8px; box-shadow: 0 10px 34px rgba(0,0,0,.6); }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 26px; margin: 0; padding: 0; list-style: none; }
+.notes li { color: var(--page-dim); line-height: 1.5; font-size: 15px; min-width: 0; }
+.notes li b { color: var(--page-ink); font-weight: 700; }
+
+/* ================= GM console frames ================= */
+.gm { width: 1240px; height: 800px; background: var(--bg); color: var(--ink); display: grid; grid-template-columns: 70px 1fr 300px; font-family: var(--f-ui); font-size: 15px; overflow: hidden; }
+.rail { background: #0f0d0c; border-right: 1px solid var(--line); display: grid; align-content: start; gap: 4px; padding-top: 14px; }
+.rail span { font-size: 11px; color: var(--ink-faint); text-align: center; padding: 8px 0; border-left: 3px solid transparent; }
+.rail span.on { color: var(--or-bright); border-left-color: var(--or); background: var(--panel); }
+.rail hr { border: 0; border-top: 1px solid var(--line); margin: 6px 10px; }
+.log { background: #141110; border-left: 1px solid var(--line); padding: 14px; display: grid; align-content: start; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.log h4 { margin: 0; font-family: var(--f-display); font-size: 13px; letter-spacing: .2em; color: var(--or); }
+.log .grp { font-family: var(--f-display); font-size: 11px; letter-spacing: .15em; color: var(--ink-dim); border-bottom: 1px solid var(--line); padding-bottom: 3px; margin-top: 4px; }
+.log .ev { line-height: 1.35; } .log .ev b { color: var(--ink); }
+.main { padding: 16px 20px; display: grid; align-content: start; gap: 12px; overflow: hidden; }
+.btn { font-family: var(--f-ui); font-weight: 700; font-size: 13px; border-radius: 7px; padding: 6px 12px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--ink); display: inline-flex; align-items: center; gap: 6px; }
+.btn.pri { background: var(--or); border-color: var(--or); color: #1b130a; }
+.btn.ghost { background: transparent; }
+.btn.danger { border-color: var(--gules-deep); color: var(--gules); background: transparent; }
+.btn.sm { padding: 3px 9px; font-size: 12px; }
+.kbd { font-size: 10px; border: 1px solid var(--line-2); border-radius: 3px; padding: 0 4px; color: var(--ink-dim); margin-left: 4px; font-weight: 500; }
+.lbl { font-family: var(--f-display); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-dim); }
+
+/* battle header + morale strip */
+.bhead { display: flex; align-items: center; gap: 14px; }
+.bhead .t { font-family: var(--f-display); font-size: 22px; color: var(--or-bright); letter-spacing: .04em; }
+.bhead .sub { color: var(--ink-dim); font-size: 14px; }
+.bhead .sp { margin-left: auto; display: flex; gap: 8px; }
+.mstrip { display: grid; grid-template-columns: auto 1fr auto auto; gap: 14px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; }
+.mval { font-family: var(--f-prose); font-size: 30px; font-weight: 600; line-height: 1; color: var(--ink); font-variant-numeric: lining-nums tabular-nums; }
+.mval small { font-size: 16px; color: var(--ink-dim); }
+.mbar { height: 10px; border-radius: 5px; background: var(--panel-3); overflow: hidden; position: relative; }
+.mbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--gules-deep), var(--or)); border-radius: 5px; }
+.token { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--or-deep); color: var(--or-bright); background: rgba(212,168,75,.1); }
+.token.glow { box-shadow: 0 0 0 2px rgba(240,201,107,.35); }
+.token.spent { opacity: .35; text-decoration: line-through; }
+.who { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13px; }
+
+/* stepper */
+.stepper { display: grid; gap: 6px; }
+.step { border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+.step .row { display: grid; grid-template-columns: 26px 150px 1fr auto; gap: 10px; align-items: center; padding: 7px 12px; }
+.step .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--panel-3); color: var(--ink-dim); }
+.step.done .n { background: rgba(95,174,116,.18); color: var(--vert); }
+.step .nm { font-family: var(--f-display); font-size: 13px; letter-spacing: .06em; color: var(--ink-2); }
+.step .res { color: var(--ink); font-size: 14px; }
+.step .res em { color: var(--ink-dim); font-style: normal; }
+.step .re { color: var(--ink-faint); font-size: 12px; }
+.step.skip { opacity: .4; }
+.step.cur { border-color: var(--or-deep); background: var(--panel-2); box-shadow: 0 0 0 1px rgba(212,168,75,.25); }
+.step.cur .n { background: var(--or); color: #1b130a; }
+.step.cur .body { padding: 2px 14px 14px 48px; display: grid; gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.oc { font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line-2); color: var(--ink-2); background: var(--panel-3); }
+.oc.c { color: var(--or-bright); } .oc.s { color: var(--vert); } .oc.f { color: var(--gules); } .oc.x { color: #b27cf0; }
+.oc.on { outline: 2px solid currentColor; outline-offset: 1px; }
+.cards { display: flex; flex-wrap: wrap; gap: 10px; }
+.gcard { width: 150px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel-3); padding: 8px 10px 9px; display: grid; gap: 4px; position: relative; }
+.gcard .cn { font-family: var(--f-display); font-size: 13px; color: var(--ink); line-height: 1.15; }
+.gcard .cm { font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.gcard.opp { border-color: var(--or-deep); }
+.gcard.opp .cn::before { content: "★ "; color: var(--or); }
+.gcard.dis { opacity: .4; }
+.gcard.set { border-color: var(--azure); }
+.gcard.set::after { content: "GM's set"; position: absolute; top: -9px; right: 8px; font-size: 10px; font-weight: 800; letter-spacing: .08em; background: var(--azure); color: #0f1a26; border-radius: 4px; padding: 1px 5px; }
+.gcard .picks { display: flex; gap: 4px; margin-top: 2px; }
+.ptok { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--ink); background: rgba(108,159,216,.18); border: 1px solid var(--azure); border-radius: 999px; padding: 1px 7px 1px 3px; }
+.ptok.crit { border-color: var(--or); background: rgba(212,168,75,.18); }
+.ksh { width: 14px; height: 16px; flex: none; }
+.hint { font-size: 13px; color: var(--ink-dim); }
+.hint b { color: var(--ink-2); }
+.script { border-left: 3px solid var(--purpure); background: rgba(167,123,208,.08); padding: 6px 10px; font-size: 13px; color: var(--ink-2); border-radius: 0 6px 6px 0; }
+
+/* mustering */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 9px; align-content: start; }
+.panel h3 { margin: 0; font-family: var(--f-display); font-size: 14px; letter-spacing: .12em; color: var(--ink); }
+.field { display: grid; gap: 4px; }
+.inp { background: #0f0d0c; border: 1px solid var(--line-2); border-radius: 6px; padding: 6px 10px; color: var(--ink); font-size: 15px; }
+.inp.big { font-family: var(--f-prose); font-size: 26px; width: 90px; text-align: center; font-variant-numeric: lining-nums; }
+.kchk { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.box { width: 14px; height: 14px; border: 1px solid var(--line-2); border-radius: 3px; display: grid; place-items: center; font-size: 11px; color: var(--vert); }
+.pill { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--line-2); color: var(--ink-2); }
+.pill.mt { border-color: var(--azure); color: var(--azure); }
+.pill.ft { border-color: var(--ink-faint); color: var(--ink-dim); }
+
+/* tracker */
+.lane { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+.lane .lh { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
+.lane .lh .kn { font-family: var(--f-display); font-size: 15px; color: var(--azure); font-weight: 700; }
+.lane .lh .meta { color: var(--ink-2); font-size: 13px; }
+.lane .lh .warn { color: var(--or-bright); font-size: 12px; font-weight: 700; }
+.lane .lh .gl { margin-left: auto; color: var(--or); font-weight: 800; font-size: 13px; }
+.thead { padding: 5px 12px; font-size: 12px; color: var(--ink-dim); border-bottom: 1px dashed var(--line); display: flex; gap: 10px; flex-wrap: wrap; }
+.thead b { color: var(--ink-2); font-family: var(--f-display); letter-spacing: .04em; }
+.thead u { text-decoration: none; color: var(--or); border-bottom: 1px dotted var(--or-deep); }
+.foe { display: grid; grid-template-columns: 110px 170px 72px 1fr auto; gap: 10px; align-items: center; padding: 6px 12px; border-bottom: 1px solid #221d19; font-size: 14px; }
+.foe:last-child { border-bottom: 0; }
+.foe .fn { color: var(--ink); font-weight: 700; }
+.hp { display: grid; gap: 2px; }
+.hp .bar { height: 8px; border-radius: 4px; background: var(--panel-3); overflow: hidden; position: relative; }
+.hp .bar i { position: absolute; inset: 0 auto 0 0; background: var(--vert); }
+.hp .bar i.w { background: var(--or); } .hp .bar i.b { background: var(--gules); }
+.hp span { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ws { font-size: 12px; color: var(--ink-dim); }
+.fchips { display: flex; gap: 5px; flex-wrap: wrap; }
+.fc { font-size: 11px; font-weight: 700; border-radius: 5px; padding: 1px 7px; border: 1px solid var(--line-2); color: var(--ink-2); }
+.fc.ht { color: var(--vert); border-color: rgba(95,174,116,.5); }
+.fc.hr { color: var(--or-bright); border-color: var(--or-deep); }
+.fc.tg { color: var(--azure); border-color: rgba(108,159,216,.5); }
+.facts { display: flex; gap: 5px; }
+.pool { border: 1px dashed var(--line-2); border-radius: 10px; padding: 8px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--ink-dim); font-size: 13px; }
+.pool .fc { cursor: grab; }
+.defeated { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--ink-dim); }
+.dchip { border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; color: var(--ink-2); background: var(--panel); }
+.banner { border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 13px; display: flex; gap: 14px; }
+.banner.cc { background: rgba(208,87,75,.12); border: 1px solid var(--gules-deep); color: var(--gules); }
+
+/* aftermath */
+.cols3 { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 12px; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 14px; color: var(--ink-2); }
+.kv b { color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
+.result { font-family: var(--f-display); font-size: 20px; color: var(--vert); letter-spacing: .08em; }
+table.gt { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.gt th { text-align: left; color: var(--ink-dim); font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 4px; border-bottom: 1px solid var(--line); }
+table.gt td { padding: 5px 4px; border-bottom: 1px solid #221d19; color: var(--ink-2); }
+table.gt td.n { text-align: right; color: var(--ink); }
+table.gt td.tot { text-align: right; color: var(--or-bright); font-weight: 800; }
+
+/* ================= Table frames ================= */
+.tb { width: 1280px; height: 720px; box-sizing: border-box; position: relative; color: var(--t-ink); font-family: var(--f-prose);
+  background: radial-gradient(ellipse at 45% 35%, var(--parch-2), var(--parch) 55%, var(--parch-dark) 140%); padding: 18px 26px; }
+.tb .band { display: flex; align-items: baseline; gap: 16px; border-bottom: 1.5px solid var(--t-or); padding-bottom: 8px; }
+.tb .band .bn { font-family: var(--f-deco); font-size: 25px; color: var(--t-gules); }
+.tb .band .bw { font-family: var(--f-display); font-size: 14px; letter-spacing: .12em; color: var(--t-ink-2); }
+.tb .band .bt { margin-left: auto; font-family: var(--f-display); font-size: 14px; letter-spacing: .2em; color: var(--t-soft); text-transform: uppercase; }
+.tb .band .int { font-family: var(--f-display); font-weight: 700; font-size: 15px; letter-spacing: .12em; color: var(--t-ink); border: 1.5px solid var(--t-or); border-radius: 4px; padding: 2px 10px; }
+.bv { display: grid; grid-template-columns: 210px 1fr 300px; gap: 22px; margin-top: 14px; height: 470px; }
+.gauge { border: 2px solid var(--t-or); border-radius: 10px; position: relative; overflow: hidden; display: grid; align-content: end; background: var(--note); }
+.gauge .fill { position: absolute; inset: auto 0 0 0; height: 67%; background:
+  radial-gradient(circle at 20% 15%, rgba(110,14,8,.55) 0 7px, transparent 8px),
+  radial-gradient(circle at 70% 35%, rgba(110,14,8,.5) 0 5px, transparent 6px),
+  radial-gradient(circle at 82% 88%, rgba(110,14,8,.45) 0 9px, transparent 10px),
+  linear-gradient(180deg, #b0632b, #8e2219); }
+.gauge .cap { position: relative; padding: 14px; text-align: center; display: grid; gap: 2px; }
+.gauge .lab { font-family: var(--f-display); font-size: 13px; letter-spacing: .3em; color: var(--t-ink-2); position: absolute; top: 12px; left: 0; right: 0; text-align: center; }
+.gauge .num { font-family: var(--f-prose); font-weight: 600; font-size: 92px; line-height: .9; color: var(--parch-2); text-shadow: 0 2px 0 rgba(0,0,0,.35); font-variant-numeric: lining-nums; }
+.gauge .of { font-family: var(--f-display); font-size: 15px; color: var(--parch-2); letter-spacing: .1em; }
+.gauge .word { font-family: var(--f-display); font-weight: 700; font-size: 20px; letter-spacing: .3em; color: var(--parch-2); text-transform: uppercase; margin-top: 6px; }
+.gauge .why { font-size: 15px; font-style: italic; color: var(--parch-2); opacity: .95; }
+.centre { display: grid; grid-template-rows: auto 1fr auto; gap: 10px; min-width: 0; }
+.resbanner { justify-self: center; font-family: var(--f-display); font-weight: 700; font-size: 18px; letter-spacing: .16em; color: var(--t-gules); border: 1.5px solid var(--t-gules); background: rgba(142,34,25,.06); padding: 6px 18px; border-radius: 4px; text-transform: uppercase; }
+.slots { display: flex; justify-content: center; align-items: center; gap: 22px; }
+.pcard { width: 190px; height: 260px; border-radius: 10px; background: var(--note); border: 2px solid var(--t-ink-2); box-shadow: 0 8px 22px rgba(42,29,20,.3); padding: 12px; box-sizing: border-box; display: grid; grid-template-rows: auto 1fr auto; gap: 8px; text-align: center; position: relative; }
+.pcard::before { content: ""; position: absolute; inset: 6px; border: 1px solid var(--parch-dark); border-radius: 6px; pointer-events: none; }
+.pcard .kind { font-family: var(--f-display); font-size: 11px; letter-spacing: .3em; color: var(--t-soft); }
+.pcard .dev { display: grid; place-items: center; }
+.pcard .cname { font-family: var(--f-display); font-weight: 700; font-size: 19px; line-height: 1.15; color: var(--t-ink); }
+.pcard .flav { font-style: italic; font-size: 15px; color: var(--t-ink-2); line-height: 1.25; }
+.pcard.opp { border-color: var(--t-or); box-shadow: 0 0 0 3px rgba(176,138,54,.35), 0 8px 22px rgba(42,29,20,.3); }
+.pcard.small { width: 150px; height: 205px; opacity: .92; }
+.pcard .toks { position: absolute; bottom: -14px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+.ttok { display: inline-flex; align-items: center; gap: 4px; background: var(--note); border: 1.5px solid var(--t-azure); border-radius: 999px; padding: 2px 9px 2px 4px; font-family: var(--f-display); font-size: 12px; font-weight: 700; color: var(--t-azure); }
+.ttok.crit { border-color: var(--t-or); color: var(--t-or); }
+.deck { display: grid; gap: 6px; }
+.deck .dl { font-family: var(--f-display); font-size: 12px; letter-spacing: .3em; color: var(--t-soft); }
+.drow { display: flex; gap: 8px; flex-wrap: wrap; }
+.dcard { font-family: var(--f-display); font-size: 13px; font-weight: 600; padding: 6px 10px; border: 1px solid var(--t-ink-2); border-radius: 5px; background: var(--note); color: var(--t-ink); }
+.dcard.opp { border-color: var(--t-or); color: #7a5a14; }
+.dcard.opp::before { content: "★ "; }
+.dcard.spent { opacity: .38; text-decoration: line-through; }
+.dcard.on { box-shadow: 0 0 0 2px var(--t-azure); }
+.fray { display: grid; gap: 7px; align-content: start; }
+.fray .fl { font-family: var(--f-display); font-size: 12px; letter-spacing: .3em; color: var(--t-soft); }
+.fe { background: rgba(251,244,226,.8); border: 1px solid var(--parch-dark); border-radius: 5px; padding: 6px 10px; font-size: 15px; line-height: 1.3; }
+.fe b { font-family: var(--f-display); font-size: 13px; letter-spacing: .03em; }
+.krow { position: absolute; left: 26px; right: 26px; bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.kc { background: var(--note); border: 1px solid var(--parch-dark); border-radius: 7px; padding: 8px 12px; display: grid; gap: 5px; }
+.kc .top { display: flex; align-items: center; gap: 9px; }
+.kc .kn { font-family: var(--f-display); font-weight: 700; font-size: 17px; color: var(--t-azure); line-height: 1.05; }
+.kc .glo { margin-left: auto; text-align: right; font-family: var(--f-display); font-size: 10px; letter-spacing: .2em; color: var(--t-soft); }
+.kc .glo b { display: block; font-family: var(--f-prose); font-size: 24px; letter-spacing: 0; color: var(--t-or); line-height: 1; font-variant-numeric: lining-nums; }
+.kc .glo .plus { font-family: var(--f-prose); font-size: 14px; color: var(--t-vert); font-weight: 600; letter-spacing: 0; }
+.tch { display: flex; flex-wrap: wrap; gap: 4px; }
+.tc { font-family: var(--f-display); font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 3px; border: 1px solid; }
+.tc.h { color: var(--t-gules); border-color: var(--t-gules); background: rgba(142,34,25,.07); }
+.tc.b { color: var(--t-vert); border-color: var(--t-vert); background: rgba(47,107,62,.08); }
+.tc.s { color: var(--t-ink-2); border-color: var(--parch-dark); background: var(--parch-2); }
+.hap { font-size: 14px; color: var(--t-ink-2); line-height: 1.25; }
+.hap i { font-family: var(--f-display); font-style: normal; font-size: 10px; letter-spacing: .2em; color: var(--t-soft); margin-right: 4px; }
+.tsh { width: 30px; height: 34px; flex: none; }
+/* fight view */
+.fv { margin-top: 10px; display: grid; gap: 10px; }
+.fhead { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.mini-g { display: flex; align-items: center; gap: 10px; }
+.mini-g .mb { width: 220px; height: 14px; border-radius: 7px; background: rgba(42,29,20,.15); overflow: hidden; position: relative; border: 1px solid var(--t-or); }
+.mini-g .mb i { position: absolute; inset: 0 auto 0 0; width: 58%; background: linear-gradient(90deg, #8e2219, #b0632b); }
+.mini-g .mn { font-family: var(--f-prose); font-weight: 600; font-size: 28px; font-variant-numeric: lining-nums; }
+.mini-g .mw { font-family: var(--f-display); font-size: 13px; letter-spacing: .25em; color: var(--t-gules); font-weight: 700; }
+.tlane { background: var(--note); border: 1px solid var(--parch-dark); border-radius: 8px; display: grid; grid-template-columns: 330px 1fr; overflow: hidden; }
+.tlane .lk { padding: 9px 12px; border-right: 1px solid var(--parch-dark); display: grid; gap: 5px; background: rgba(36,80,127,.05); }
+.tlane .lf { padding: 9px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-content: start; }
+.tfoe { display: flex; align-items: center; gap: 7px; border: 1px solid var(--parch-dark); border-radius: 6px; padding: 4px 10px 4px 5px; background: var(--parch-2); font-size: 15px; }
+.tfoe b { font-family: var(--f-display); font-size: 14px; }
+.tfoe .wd { font-style: italic; color: var(--t-soft); }
+.tfoe .wd.w { color: #8a5a10; } .tfoe .wd.u { color: var(--t-vert); }
+.tdef { font-size: 15px; color: var(--t-soft); }
+.tdef s { color: var(--t-ink-2); }
+.cc-banner { position: absolute; top: 64px; right: 26px; font-family: var(--f-display); font-weight: 700; letter-spacing: .14em; font-size: 14px; color: var(--t-gules); border: 1.5px solid var(--t-gules); padding: 3px 12px; border-radius: 4px; background: var(--note); text-transform: uppercase; }
+/* finale */
+.fin { display: grid; place-items: center; gap: 18px; height: 610px; align-content: center; }
+.fin .vict { font-family: var(--f-deco); font-size: 54px; color: var(--t-gules); letter-spacing: .06em; }
+.fin .vsub { font-family: var(--f-display); font-size: 16px; letter-spacing: .25em; color: var(--t-ink-2); }
+.fincards { display: grid; grid-template-columns: repeat(3, 300px); gap: 20px; }
+.fcd { background: var(--note); border: 1px solid var(--parch-dark); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; }
+.fcd .top { display: flex; gap: 10px; align-items: center; }
+.fcd .kn { font-family: var(--f-display); font-weight: 700; font-size: 19px; color: var(--t-azure); }
+.fcd .total { font-family: var(--f-prose); font-weight: 600; font-size: 50px; color: var(--t-or); line-height: 1; font-variant-numeric: lining-nums; }
+.fcd .total small { font-family: var(--f-display); font-size: 12px; letter-spacing: .25em; color: var(--t-soft); }
+.fcd ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 16px; }
+.fcd li { display: flex; justify-content: space-between; border-bottom: 1px dotted var(--parch-dark); padding-bottom: 3px; }
+.fcd li span:last-child { font-variant-numeric: lining-nums tabular-nums; }
+@media (prefers-reduced-motion: no-preference) { .token.glow { animation: tg 1.6s ease-in-out infinite alternate; } @keyframes tg { to { box-shadow: 0 0 0 4px rgba(240,201,107,.15); } } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ks" viewBox="0 0 44 50"><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="#24507f"/><path d="M6 32 22 18l16 14" fill="none" stroke="#d2a645" stroke-width="4"/><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="none" stroke="#4e3a28" stroke-width="2"/></symbol>
+    <symbol id="pict" viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" fill="none" stroke="#4e3a28" stroke-width="2"/><path d="M30 10c8 8 8 32 0 40M30 10c-8 8-8 32 0 40M14 22h32M12 38h36" fill="none" stroke="#8e2219" stroke-width="2.4"/></symbol>
+    <symbol id="crown" viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" fill="none" stroke="#b08a36" stroke-width="2"/><path d="M14 40 17 20l8 9 5-12 5 12 8-9 3 20Z" fill="#b08a36"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>Battles: UX pass mockups</h1>
+    <p>Stage 3½ of the design: the key screens as a whole, in one realistic moment of the Battle of Bedegraine (Day 1, Turn 3, your three knights). GM console screens use the app's dark hall; Table screens use its parchment board. Notes under each screen list the UX choices to approve. Proposed changes from the click-by-click walkthrough are marked <b>new</b>.</p>
+  </header>
+  <nav class="toc" aria-label="Screens">
+    <a href="#gm-turn">GM: turn stepper</a><a href="#gm-muster">GM: Mustering</a><a href="#gm-fight">GM: combat tracker</a><a href="#gm-after">GM: aftermath</a><a href="#t-battle">Table: battle view</a><a href="#t-fight">Table: fight view</a><a href="#t-finale">Table: finale</a>
+  </nav>
+
+  <!-- ================= GM: TURN STEPPER ================= -->
+  <h2 class="sec" id="gm-turn">GM · Battle tool · a turn in progress <small>Intensity has failed; recording the knights' picks</small></h2>
+  <div class="scroller"><div class="gm" role="img" aria-label="GM Battle tool with the turn stepper at the picks step">
+    <div class="rail"><span>NPCs</span><span>Cast</span><span>Combat</span><span class="on">Battle</span><span>Party</span><hr><span>Adversaries</span><span>Encounters</span><span>Battles</span><span>Rules</span></div>
+    <div class="main">
+      <div class="bhead"><span class="t">Battle of Bedegraine</span><span class="sub">Day 1 · Turn 3 of 5 · Intensity 14 · Huge</span>
+        <span class="sp"><span class="btn ghost sm">+ New encounter</span><span class="btn ghost sm">Battle settings</span><span class="btn ghost sm">Pause</span></span></div>
+      <div class="mstrip">
+        <div class="mval">14 <small>/ 21</small></div>
+        <div class="mbar"><i style="width:66%"></i></div>
+        <div class="chips"><span class="token">⚑ Force Encounter</span><span class="token spent">✋ Negate loss</span></div>
+        <div class="who"><svg class="ksh"><use href="#ks"/></svg>Commander: Sir Erik <span class="btn ghost sm">±</span></div>
+      </div>
+      <div class="stepper">
+        <div class="step done"><div class="row"><span class="n">②</span><span class="nm">Set Encounter</span><span class="res">Pictish Javeliniers <em>· "painted men with bundles of javelins"</em></span><span class="re">reopen</span></div></div>
+        <div class="step done"><div class="row"><span class="n">③④</span><span class="nm">Charge · Intensity</span><span class="res">Charge: <em>may charge (mounted)</em> &nbsp;·&nbsp; Intensity: <b style="color:var(--gules)">failed</b> — knights may choose</span><span class="re">reopen</span></div></div>
+        <div class="step cur">
+          <div class="row"><span class="n">⑤</span><span class="nm">Picks</span><span class="res">Tap a card, then the knight who picked it. Only successful Battle rolls count.</span><span></span></div>
+          <div class="body">
+            <div class="cards">
+              <div class="gcard set"><span class="cn">Pictish Javeliniers</span><span class="cm">min 7 · loss 1D6 · KV ⅛</span></div>
+              <div class="gcard"><span class="cn">Pictish Knifemen</span><span class="cm">min 5 · loss 1D3 · KV ⅛</span><span class="picks"><span class="ptok"><svg class="ksh"><use href="#ks"/></svg>Erik</span></span></div>
+              <div class="gcard"><span class="cn">Pictish Pikemen</span><span class="cm">min 8 · loss 1D6 · KV ⅛</span></div>
+              <div class="gcard opp"><span class="cn">Clash of Champions</span><span class="cm">min 14 · loss 0</span><span class="picks"><span class="ptok crit"><svg class="ksh"><use href="#ks"/></svg>Cwylog · crit</span></span></div>
+              <div class="gcard opp"><span class="cn">Rally the Division!</span><span class="cm">min 12 · loss 3D6</span></div>
+              <div class="gcard opp dis"><span class="cn">Rescue Captive Knights</span><span class="cm">played on turn 1</span></div>
+            </div>
+            <div class="hint"><b>Opportunities</b> unlock only for a pick marked crit. <b>Clash of Champions</b> needs Morale 14 — the conroi has 14 ✓.</div>
+            <div class="chips"><span class="btn pri">Commander chooses ▸ <span class="kbd">Enter</span></span><span class="btn ghost sm">No picks — keep the set Encounter</span></div>
+          </div>
+        </div>
+        <div class="step"><div class="row"><span class="n">⑥</span><span class="nm">Commander's choice</span><span class="res"><em>Opportunity picked — it must be played (Clash of Champions)</em></span><span></span></div></div>
+        <div class="step"><div class="row"><span class="n">⑦</span><span class="nm">Morale</span><span class="res"><em>minimum check, then the Loss</em></span><span></span></div></div>
+        <div class="step"><div class="row"><span class="n">⑧</span><span class="nm">Postures</span><span class="res"><em>last turn: Erik Reckless · Cwylog Valorous · Emrys Prudent</em></span><span></span></div></div>
+        <div class="step"><div class="row"><span class="n">⑨</span><span class="nm">Fight</span><span class="res"><em>Begin the fight → combat tracker</em></span><span></span></div></div>
+        <div class="step"><div class="row"><span class="n">⑩</span><span class="nm">End turn</span><span class="res"><em>KV Morale gain, then Turn 4</em></span><span></span></div></div>
+      </div>
+      <div class="chips"><span class="btn danger sm">Retire to the Rear instead</span><span class="hint">Turn script (GM only): <b>"Always choose the Pictish Knifemen this day."</b></span></div>
+    </div>
+    <div class="log"><h4>SESSION LOG</h4>
+      <div class="grp">DAY 1 · TURN 3</div>
+      <div class="ev"><b>Set Encounter</b> — Pictish Javeliniers</div>
+      <div class="ev"><b>Charge roll</b> — success: may charge</div>
+      <div class="ev"><b>Intensity</b> — failed (rolled 17 vs 14)</div>
+      <div class="ev"><b>Pick</b> — Sir Erik: Pictish Knifemen</div>
+      <div class="ev"><b>Pick</b> — Dame Cwylog (crit): Clash of Champions</div>
+      <div class="grp">DAY 1 · TURN 2</div>
+      <div class="ev"><b>Fight</b> — Pictish Knifemen ×3: 3 defeated</div>
+      <div class="ev"><b>Morale</b> +⅜ KV → 14</div>
+    </div>
+  </div></div>
+  <ul class="notes">
+    <li><b>Answering completes a step (new).</b> No Next buttons: each answer collapses the step to its one-line result and opens the next. Done steps reopen with cascade undo.</li>
+    <li><b>① is implicit (new).</b> The turn opens on Set Encounter; "Retire to the Rear instead" is a secondary button. Setting an Encounter means taking the field.</li>
+    <li><b>Charge and Intensity share a row (new).</b> Two quick GM records made together; a skipped half greys out.</li>
+    <li><b>Card-first picks (new).</b> Tap a card, then the knight; crit toggles on the token. Opportunities stay locked until a crit, spent ones are greyed. The GM sees Minimum, Loss and KV here only.</li>
+    <li><b>The turn script sits beside the step that needs it</b>, and the Force token glows at Set Encounter, Negate at Morale. Bedegraine's "always choose the Knifemen" would make the GM set Knifemen at ②; shown here as a reminder.</li>
+    <li><b>Keyboard:</b> C/S/F/X outcome chips, R/V/P/K postures, Enter for the step's main action.</li>
+  </ul>
+
+  <!-- ================= GM: MUSTERING ================= -->
+  <h2 class="sec" id="gm-muster">GM · Battle tool · Mustering <small>Day 1, before Turn 1</small></h2>
+  <div class="scroller"><div class="gm" role="img" aria-label="GM Mustering screen">
+    <div class="rail"><span>NPCs</span><span>Cast</span><span>Combat</span><span class="on">Battle</span><span>Party</span><hr><span>Adversaries</span><span>Encounters</span><span>Battles</span><span>Rules</span></div>
+    <div class="main">
+      <div class="bhead"><span class="t">Battle of Bedegraine</span><span class="sub">Mustering · Day 1 of 2 · Huge · 5 turns · first charge on</span></div>
+      <div class="grid2">
+        <div class="panel"><h3>The conroi</h3>
+          <div class="kchk"><span class="box">✓</span><svg class="ksh"><use href="#ks"/></svg>Sir Erik the Cruel <span class="pill mt">Mounted</span></div>
+          <div class="kchk"><span class="box">✓</span><svg class="ksh"><use href="#ks"/></svg>Dame Cwylog <span class="pill mt">Mounted</span></div>
+          <div class="kchk"><span class="box">✓</span><svg class="ksh"><use href="#ks"/></svg>Sir Emrys <span class="pill mt">Mounted</span></div>
+          <div class="lbl">Commander</div>
+          <div class="chips"><span class="oc on" style="color:var(--azure)">Sir Erik</span><span class="oc">Dame Cwylog</span><span class="oc">Sir Emrys</span><span class="oc">GM (NPC)</span></div>
+          <div class="grid2" style="grid-template-columns:auto 1fr; align-items:end">
+            <div class="field"><span class="lbl">Starting Morale</span><span class="inp big">21</span></div>
+            <div class="field"><span class="lbl">Passion (optional)</span><span class="inp">Loyalty (King)</span></div>
+          </div>
+          <div class="hint">The players work Morale out at the table: the average of their Passion, +5 if they all chose the same one.</div>
+        </div>
+        <div class="panel"><h3>Army commanders <span class="hint" style="font-family:var(--f-ui); letter-spacing:0">Clash and larger</span></h3>
+          <div class="lbl">Arthur (friendly)</div>
+          <div class="chips"><span class="oc c">Crit</span><span class="oc s on">Success</span><span class="oc f">Fail</span><span class="oc x">Fumble</span><span class="btn ghost sm">roll for me</span></div>
+          <div class="hint">Success → turn 1 is a mounted charge.</div>
+          <div class="lbl">King Lot (enemy)</div>
+          <div class="chips"><span class="oc c">Crit</span><span class="oc s on">Success</span><span class="oc f">Fail</span><span class="oc x">Fumble</span><span class="btn ghost sm">roll for me</span></div>
+          <div class="hint">Success → you hold a <b>Force Encounter</b> token for this day.</div>
+          <div class="hint">▸ Table 6.2 modifiers</div>
+          <div class="lbl">Day 1 Intensity</div>
+          <div class="chips"><span class="inp" style="width:60px; text-align:center">14</span><span class="hint">fixed by the saved battle</span></div>
+        </div>
+      </div>
+      <div class="chips"><span class="btn pri">Begin Turn 1 ▸</span><span class="hint">Ready: commander and Morale are set.</span></div>
+    </div>
+    <div class="log"><h4>SESSION LOG</h4><div class="grp">BEDEGRAINE</div><div class="ev"><b>Battle begins</b> — Battle of Bedegraine, Huge, 2 days</div><div class="ev"><b>Commander</b> — Sir Erik</div></div>
+  </div></div>
+  <ul class="notes">
+    <li><b>One screen, two panels:</b> who rides and their Morale on the left; the army-level rolls (Clash and up) on the right. Pre-filled from the saved battle; a quick battle shows only the left panel.</li>
+    <li><b>Each outcome explains itself</b> in one line, so the GM doesn't need Table 6.2's results from memory.</li>
+    <li><b>Begin Turn 1</b> stays disabled with a reason ("Set a commander") until commander and Morale exist.</li>
+  </ul>
+
+  <!-- ================= GM: COMBAT TRACKER ================= -->
+  <h2 class="sec" id="gm-fight">GM · Combat tracker, redesigned · battle fight <small>also the layout for every plain fight, without the battle frame</small></h2>
+  <div class="scroller"><div class="gm" role="img" aria-label="Redesigned combat tracker with lanes by knight">
+    <div class="rail"><span>NPCs</span><span>Cast</span><span class="on">Combat</span><span>Battle</span><span>Party</span><hr><span>Adversaries</span><span>Encounters</span><span>Battles</span><span>Rules</span></div>
+    <div class="main" style="gap:9px">
+      <div class="bhead"><span class="t">Pictish Knifemen</span><span class="sub">Bedegraine · Day 1 · Turn 3 · Round 2</span>
+        <span class="sp"><span class="btn pri sm">Next round</span><span class="btn sm">+ Add</span><span class="btn sm">End fight</span><span class="btn ghost sm">◂ Back to battle</span></span></div>
+      <div class="mstrip" style="padding:6px 12px"><div class="mval" style="font-size:22px">11 <small>/ 21</small></div><div class="mbar"><i style="width:52%"></i></div><div class="chips"><span class="token">⚑ Force</span></div><div class="who">GM notes ▸</div></div>
+      <div class="thead" style="border:1px solid var(--line); border-radius:8px; background:var(--panel)"><b>Pictish Knifemen</b> SIZ 8 · DEX 16 · STR 8 · CON 14 · <u>Dagger 15 (2D6+3)</u> · Armour 0 · attacks horses first · flee at ⅓ down <u>ⓘ</u></div>
+      <div class="lane">
+        <div class="lh"><svg class="ksh"><use href="#ks"/></svg><span class="kn">Sir Erik the Cruel</span><span class="pill mt">Mounted</span><span class="meta">Reckless · round 2 of 3</span><span class="warn">⚠ 2 foes · −5 vs each</span><span class="gl">✦ 10 this battle</span><span class="btn ghost sm">Down</span><span class="btn ghost sm">Out</span></div>
+        <div class="foe"><span class="fn">Knifeman 1</span><span class="hp"><span class="bar"><i class="w" style="width:58%"></i></span><span>7 / 12</span></span><span class="ws">Wounded</span><span class="fchips"><span class="fc hr">⇣ horse</span><span class="fc ht">Height: none</span><span class="fc tg">→ Sir Erik ▾</span></span><span class="facts"><span class="btn sm">Hit</span><span class="btn sm">±HP</span><span class="btn ghost sm">⋯</span></span></div>
+        <div class="foe"><span class="fn">Knifeman 2</span><span class="hp"><span class="bar"><i style="width:100%"></i></span><span>12 / 12</span></span><span class="ws">Unhurt</span><span class="fchips"><span class="fc hr">⇣ horse</span><span class="fc ht">Height: none</span><span class="fc tg">→ Sir Erik ▾</span></span><span class="facts"><span class="btn sm">Hit</span><span class="btn sm">±HP</span><span class="btn ghost sm">⋯</span></span></div>
+      </div>
+      <div class="lane">
+        <div class="lh"><svg class="ksh"><use href="#ks"/></svg><span class="kn">Dame Cwylog</span><span class="pill mt">Mounted</span><span class="meta">Valorous · round 2 of 2 · <b style="color:var(--or-bright)">withdraws after this round</b></span><span class="gl">✦ 10 this battle</span><span class="btn ghost sm">+1 round</span><span class="btn ghost sm">Down</span><span class="btn ghost sm">Out</span></div>
+        <div class="foe"><span class="fn">Knifeman 4</span><span class="hp"><span class="bar"><i class="b" style="width:25%"></i></span><span>3 / 12</span></span><span class="ws">Badly hurt</span><span class="fchips"><span class="fc ht">−5 Height (she is mounted)</span><span class="fc tg">→ Dame Cwylog ▾</span></span><span class="facts"><span class="btn sm">Hit</span><span class="btn sm">±HP</span><span class="btn ghost sm">⋯</span></span></div>
+      </div>
+      <div class="lane">
+        <div class="lh"><svg class="ksh"><use href="#ks"/></svg><span class="kn">Sir Emrys</span><span class="pill ft">On foot</span><span class="meta">Prudent · round 1 of 1 · horse killed turn 2</span><span class="gl">✦ 0 this battle</span><span class="btn ghost sm">Down</span><span class="btn ghost sm">Out</span></div>
+        <div class="foe"><span class="fn">Knifeman 5</span><span class="hp"><span class="bar"><i style="width:100%"></i></span><span>12 / 12</span></span><span class="ws">Unhurt</span><span class="fchips"><span class="fc ht">Height: none (both on foot)</span><span class="fc tg">→ Sir Emrys ▾</span></span><span class="facts"><span class="btn sm">Hit</span><span class="btn sm">±HP</span><span class="btn ghost sm">⋯</span></span></div>
+      </div>
+      <div class="pool"><span class="lbl">Not engaged</span><span class="fc">Knifeman 6</span><span class="fc">Knifeman 7</span><span class="hint">drag onto a knight, or click to assign</span></div>
+      <div class="defeated"><span class="lbl">Defeated</span><span class="dchip">✝ Knifeman 3 · slain · ✦10 Sir Erik</span><span class="dchip">⇢ Knifeman 8 · fled · ✦10 Dame Cwylog</span></div>
+    </div>
+    <div class="log"><h4>SESSION LOG</h4><div class="grp">DAY 1 · TURN 3 · FIGHT</div><div class="ev"><b>Knifeman 3</b> slain — +10 Glory, Sir Erik</div><div class="ev"><b>Knifeman 8</b> fled — +10 Glory, Dame Cwylog</div><div class="ev"><b>Knifeman 4</b> hit: 12 → 3</div><div class="ev"><b>Round 2</b></div></div>
+  </div></div>
+  <ul class="notes">
+    <li><b>Lanes by knight:</b> each knight's fight reads as one unit. The lane header carries everything about that knight, including the Multiple Opponents warning and posture rounds ("withdraws after this round").</li>
+    <li><b>One stat header per foe type</b> replaces nine repeated stat lines; attacks in it are still clickable to roll.</li>
+    <li><b>One line per foe</b> with a big HP bar; only Hit and ±HP as buttons, the rest in ⋯. Chips show the automatic Height and the "attacking the horse" toggle.</li>
+    <li><b>Retarget</b> by dragging a foe to another lane or with its "→ knight ▾" chip. <b>Defeated</b> foes collapse into one strip with their Glory credit.</li>
+  </ul>
+
+  <!-- ================= GM: AFTERMATH ================= -->
+  <h2 class="sec" id="gm-after">GM · Battle tool · Aftermath <small>a Clash fought to its end (computed outcome)</small></h2>
+  <div class="scroller"><div class="gm" role="img" aria-label="GM aftermath panel" style="height:560px">
+    <div class="rail"><span>NPCs</span><span>Cast</span><span>Combat</span><span class="on">Battle</span><span>Party</span><hr><span>Adversaries</span><span>Encounters</span><span>Battles</span></div>
+    <div class="main">
+      <div class="bhead"><span class="t">Clash at the Ford</span><span class="sub">Aftermath · Clash · 1 day</span><span class="sp"><span class="btn pri">Post to Table ▸</span></span></div>
+      <div class="cols3">
+        <div class="panel"><h3>Outcome</h3>
+          <div class="kv"><span>Enemy losses (dead + captured)</span><b>6 ⅜ KV</b><span>Friendly losses</span><b>2 KV</b><span>Outnumbering</span><b>none</b><span>Ratio</span><b>3.2</b></div>
+          <div class="result">Victory</div><div class="hint">Computed from KV. Every number above is editable.</div></div>
+        <div class="panel"><h3>Glory</h3>
+          <table class="gt"><thead><tr><th>Knight</th><th>Encounters</th><th>Participation</th><th>Total</th></tr></thead>
+          <tbody><tr><td>Sir Erik <span class="hint">conroi ×2</span></td><td class="n">110</td><td class="n">10 × 3½ = 35</td><td class="tot">145</td></tr>
+          <tr><td>Dame Cwylog</td><td class="n">60</td><td class="n">10 × 1½ = 15</td><td class="tot">75</td></tr>
+          <tr><td>Sir Emrys</td><td class="n">10</td><td class="n">10 × 1½ = 15</td><td class="tot">25</td></tr></tbody></table>
+          <div class="hint">Participation: Table 6.6 base × (outcome + leader). Clash base 10; Victory ×1½; conroi commander ×2.</div></div>
+        <div class="panel"><h3>Spoils</h3>
+          <div class="kv"><span>Opponent</span><b>Feudal army · £2</b><span>Plunder per knight</span><b>£2</b><span>Commander +⅓</span><b>£2 ⅔</b></div>
+          <div class="lbl">Captives</div>
+          <div class="kv"><span>Knight of Gorre — Sir Erik</span><b><span class="btn sm">Roll ransom</span></b><span>Squire — Dame Cwylog</span><b>£1</b></div></div>
+      </div>
+    </div>
+    <div class="log"><h4>SESSION LOG</h4><div class="grp">AFTERMATH</div><div class="ev"><b>Battle ends</b> after 3 turns</div></div>
+  </div></div>
+  <ul class="notes">
+    <li><b>Three columns read left to right</b>: what happened, what each knight earned, what they carry home. Every figure shows its working so the GM can check it at a glance.</li>
+    <li><b>Small battles and larger</b> show the computed result as a suggestion beside the GM's choice, and scripted battles arrive pre-set.</li>
+  </ul>
+
+  <!-- ================= TABLE: BATTLE VIEW ================= -->
+  <h2 class="sec" id="t-battle">Table · battle view <small>the same moment as the GM's turn screen: Intensity failed, picks shown</small></h2>
+  <div class="scroller"><div class="tb" role="img" aria-label="Table battle view">
+    <div class="band"><span class="bn">The Battle of Bedegraine</span><span class="bw">against King Lot and the northern kings</span><span class="bt">Day 1 · Turn 3 of 5</span><span class="int">Intensity 14</span></div>
+    <div class="bv">
+      <div class="gauge"><span class="lab">MORALE</span><div class="fill"></div><div class="cap"><span class="num">14</span><span class="of">of 21</span><span class="word">Shaken</span><span class="why">−3 · Pictish Knifemen</span></div></div>
+      <div class="centre">
+        <span class="resbanner">Intensity fails · choose your fate</span>
+        <div class="slots">
+          <div class="pcard small"><span class="kind">THE GM SETS</span><span class="dev"><svg width="64" height="64"><use href="#pict"/></svg></span><div><div class="cname">Pictish Javeliniers</div><div class="flav">painted men with bundles of javelins</div></div></div>
+          <div class="pcard"><span class="kind">PICKED</span><span class="dev"><svg width="84" height="84"><use href="#pict"/></svg></span><div><div class="cname">Pictish Knifemen</div><div class="flav">small, wiry men with wicked daggers</div></div><div class="toks"><span class="ttok"><svg class="ksh"><use href="#ks"/></svg>Erik</span></div></div>
+          <div class="pcard opp"><span class="kind">★ OPPORTUNITY</span><span class="dev"><svg width="84" height="84"><use href="#crown"/></svg></span><div><div class="cname">Clash of Champions</div><div class="flav">a champion rides out and calls a challenge</div></div><div class="toks"><span class="ttok crit"><svg class="ksh"><use href="#ks"/></svg>Cwylog · critical</span></div></div>
+        </div>
+        <div class="deck"><span class="dl">TODAY'S BATTLEFIELD</span>
+          <div class="drow"><span class="dcard on">Pictish Javeliniers</span><span class="dcard on">Pictish Knifemen</span><span class="dcard">Pictish Pikemen</span><span class="dcard opp on">Clash of Champions</span><span class="dcard opp">Rally the Division!</span><span class="dcard opp spent">Rescue Captive Knights</span></div></div>
+      </div>
+      <div class="fray"><span class="fl">THE FRAY</span>
+        <div class="fe"><b>Dame Cwylog</b> — a critical eye for the battle!</div>
+        <div class="fe"><b>Sir Erik</b> spots the Knifemen</div>
+        <div class="fe"><b>Intensity fails</b> — the knights may choose</div>
+        <div class="fe"><b>Charge!</b> Mounted knights may charge</div>
+        <div class="fe"><b>Turn 3</b> — Pictish Javeliniers ahead</div>
+      </div>
+    </div>
+    <div class="krow">
+      <div class="kc"><div class="top"><svg class="tsh"><use href="#ks"/></svg><span class="kn">Sir Erik the Cruel</span><span class="glo">GLORY<b>10</b></span></div><div class="tch"><span class="tc s">Commander</span><span class="tc b">May charge</span><span class="tc s">Reckless last turn</span></div><div class="hap"><i>LAST</i>Picked the Knifemen</div></div>
+      <div class="kc"><div class="top"><svg class="tsh"><use href="#ks"/></svg><span class="kn">Dame Cwylog</span><span class="glo">GLORY<b>10</b></span></div><div class="tch"><span class="tc b">Passion: Love (Family)</span><span class="tc s">Valorous last turn</span></div><div class="hap"><i>LAST</i>Critical Battle roll</div></div>
+      <div class="kc"><div class="top"><svg class="tsh"><use href="#ks"/></svg><span class="kn">Sir Emrys</span><span class="glo">GLORY<b>0</b></span></div><div class="tch"><span class="tc h">On foot · horse killed</span><span class="tc s">Prudent last turn</span></div><div class="hap"><i>LAST</i>Horse killed by Knifemen</div></div>
+    </div>
+  </div></div>
+  <ul class="notes">
+    <li><b>Morale is the biggest thing on screen</b>: the number, a draining fill that turns bloodied, and a word (Steady, Shaken, Bloodied, Breaking), so it never relies on colour alone. The last change and its reason sit under it.</li>
+    <li><b>The centre tells the turn's story</b>: a result banner, then the GM's card beside the knights' picks with their shield tokens. Players see names and flavour only, never Minimum, Loss or KV.</li>
+    <li><b>Today's battlefield</b> lists every card name; cards in play are outlined, spent Opportunities struck through.</li>
+    <li><b>Each knight finds themselves in the bottom row</b>: shield, Glory, effect chips (red harm, green boon, grey state) and the last thing that happened to them.</li>
+  </ul>
+
+  <!-- ================= TABLE: FIGHT VIEW ================= -->
+  <h2 class="sec" id="t-fight">Table · fight view <small>during the Encounter</small></h2>
+  <div class="scroller"><div class="tb" role="img" aria-label="Table fight view">
+    <div class="band"><span class="bn">Pictish Knifemen</span><span class="bw">Bedegraine · Day 1 · Turn 3</span><span class="bt">Round 2</span></div>
+    <span class="cc-banner">They go for the horses!</span>
+    <div class="fv">
+      <div class="fhead"><div class="mini-g"><span class="lbl" style="color:var(--t-soft)">MORALE</span><span class="mb"><i></i></span><span class="mn">11</span><span class="mw">Shaken</span></div><span></span></div>
+      <div class="tlane"><div class="lk"><div class="top" style="display:flex; gap:9px; align-items:center"><svg class="tsh"><use href="#ks"/></svg><span class="kn" style="font-family:var(--f-display); font-weight:700; font-size:18px; color:var(--t-azure)">Sir Erik the Cruel</span><span class="glo" style="margin-left:auto; font-family:var(--f-display); font-size:10px; letter-spacing:.2em; color:var(--t-soft); text-align:right">GLORY<b style="display:block; font-family:var(--f-prose); font-size:24px; color:var(--t-or); letter-spacing:0">20</b></span></div>
+          <div class="tch"><span class="tc s">Reckless · round 2 of 3</span><span class="tc h">−5 two foes</span><span class="tc b">+5 Height</span></div><div class="hap"><i>LAST</i>+10 Glory · Knifeman 3 slain</div></div>
+        <div class="lf"><span class="tfoe"><svg width="22" height="22"><use href="#pict"/></svg><b>Knifeman 1</b><span class="wd w">Wounded</span></span><span class="tfoe"><svg width="22" height="22"><use href="#pict"/></svg><b>Knifeman 2</b><span class="wd u">Unhurt</span></span></div></div>
+      <div class="tlane"><div class="lk"><div class="top" style="display:flex; gap:9px; align-items:center"><svg class="tsh"><use href="#ks"/></svg><span style="font-family:var(--f-display); font-weight:700; font-size:18px; color:var(--t-azure)">Dame Cwylog</span><span style="margin-left:auto; font-family:var(--f-display); font-size:10px; letter-spacing:.2em; color:var(--t-soft); text-align:right">GLORY<b style="display:block; font-family:var(--f-prose); font-size:24px; color:var(--t-or); letter-spacing:0">20</b></span></div>
+          <div class="tch"><span class="tc s">Valorous · last round</span><span class="tc b">+5 Height</span></div><div class="hap"><i>LAST</i>+10 Glory · Knifeman 8 fled</div></div>
+        <div class="lf"><span class="tfoe"><svg width="22" height="22"><use href="#pict"/></svg><b>Knifeman 4</b><span class="wd">Badly hurt</span></span></div></div>
+      <div class="tlane"><div class="lk"><div class="top" style="display:flex; gap:9px; align-items:center"><svg class="tsh"><use href="#ks"/></svg><span style="font-family:var(--f-display); font-weight:700; font-size:18px; color:var(--t-azure)">Sir Emrys</span><span style="margin-left:auto; font-family:var(--f-display); font-size:10px; letter-spacing:.2em; color:var(--t-soft); text-align:right">GLORY<b style="display:block; font-family:var(--f-prose); font-size:24px; color:var(--t-or); letter-spacing:0">0</b></span></div>
+          <div class="tch"><span class="tc h">On foot</span><span class="tc s">Prudent · round 1 of 1</span></div><div class="hap"><i>LAST</i>Engaged by Knifeman 5</div></div>
+        <div class="lf"><span class="tfoe"><svg width="22" height="22"><use href="#pict"/></svg><b>Knifeman 5</b><span class="wd u">Unhurt</span></span></div></div>
+      <div class="tdef">Defeated: <s>Knifeman 3</s> slain · <s>Knifeman 8</s> fled &nbsp;·&nbsp; Waiting: Knifeman 6, Knifeman 7</div>
+    </div>
+  </div></div>
+  <ul class="notes">
+    <li><b>The players' lanes mirror the GM's</b>, so "who am I fighting" is answered by finding your own shield. Foes show wound words, never HP numbers.</li>
+    <li><b>Effect chips are the reminder sheet</b> for knights on paper: +5 Height, −5 two foes, posture rounds. They update the moment the GM retargets a foe.</li>
+    <li><b>Glory ticks up in place</b> with the reason on the "last" line, so a defeat lands as a moment for that player.</li>
+  </ul>
+
+  <!-- ================= TABLE: FINALE ================= -->
+  <h2 class="sec" id="t-finale">Table · finale <small>after "Post to Table"</small></h2>
+  <div class="scroller"><div class="tb" role="img" aria-label="Table finale">
+    <div class="band"><span class="bn">Clash at the Ford</span><span class="bt">The battle is done</span></div>
+    <div class="fin"><div class="vict">Victory</div><div class="vsub">THE ENEMY BREAKS AND FLIES THE FIELD</div>
+      <div class="fincards">
+        <div class="fcd"><div class="top"><svg class="tsh"><use href="#ks"/></svg><span class="kn">Sir Erik the Cruel</span></div><div class="total">145 <small>GLORY</small></div><ul><li><span>Foes defeated</span><span>110</span></li><li><span>Participation (commander)</span><span>35</span></li><li><span>Plunder</span><span>£2 ⅔</span></li><li><span>Ransom · Knight of Gorre</span><span>£4</span></li></ul></div>
+        <div class="fcd"><div class="top"><svg class="tsh"><use href="#ks"/></svg><span class="kn">Dame Cwylog</span></div><div class="total">75 <small>GLORY</small></div><ul><li><span>Foes defeated</span><span>60</span></li><li><span>Participation</span><span>15</span></li><li><span>Plunder</span><span>£2</span></li><li><span>Ransom · Squire</span><span>£1</span></li></ul></div>
+        <div class="fcd"><div class="top"><svg class="tsh"><use href="#ks"/></svg><span class="kn">Sir Emrys</span></div><div class="total">25 <small>GLORY</small></div><ul><li><span>Foes defeated</span><span>10</span></li><li><span>Participation</span><span>15</span></li><li><span>Plunder</span><span>£2</span></li></ul></div>
+      </div></div>
+  </div></div>
+  <ul class="notes">
+    <li><b>The payoff screen</b>: outcome first, then one card per knight with a big Glory total and its breakdown, ready to copy onto paper sheets.</li>
+  </ul>
+</div>
