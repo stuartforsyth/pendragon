@@ -4422,7 +4422,7 @@
       "against": "King Lot and the northern kings, with hordes of Picts",
       "notes": "Scripted battle (Sword Campaign). Arthur leads the conroi in his own bataille (Battle 13). Each day is a separate engagement for Morale and Passions; 60 Glory per day for participation.",
       "outcome": null,
-      "commander": "gm",
+      "commander": null,
       "army_commanders": {
         "friendly": {
           "name": "King Arthur",
@@ -4558,7 +4558,7 @@
       "against": "King Lot and the rebel kings",
       "notes": "Scripted battle (Sword Campaign). King Leodegrance leads the conroi (Battle 18). The conroi will need to retire to the rear at least once.",
       "outcome": null,
-      "commander": "gm",
+      "commander": null,
       "army_commanders": {
         "friendly": {
           "name": "King Arthur",

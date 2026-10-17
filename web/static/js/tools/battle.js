@@ -103,7 +103,7 @@ export default {
       const day = b.day, days = b.days, dd = b.day_def;
       const active = party.filter((m) => m.active !== false || b.conroi.includes(m.id));
       if (!muster.knights) muster.knights = b.conroi.length ? [...b.conroi] : active.map((m) => m.id);
-      if (muster.commander === null) muster.commander = b.commander || b.definition.commander || null;
+      if (muster.commander === null) muster.commander = b.commander || null;     // yesterday's, on a later day
       if (muster.start === "" && b.morale) muster.start = b.morale.start;
       const whyNot = () => !muster.commander ? "Set a commander" : !(Number(muster.start) >= 1) ? "Enter the starting Morale"
         : b.intensity_today == null && dd.intensity?.mode !== "fixed" ? "Set today's Intensity" : "";

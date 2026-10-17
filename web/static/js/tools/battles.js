@@ -29,7 +29,6 @@ export default {
     useCss("battles");
     let library = [];      // [{key, size, days, source}]
     let decks = [];        // /api/battle-decks cards
-    let party = [];        // the Party, for the commander choice
     let q = "";
     let key = null, draft = null, baseline = "";
 
@@ -54,8 +53,7 @@ export default {
 
     // ---------------------------------------------------------------- data
     async function refreshLibrary() {
-      const [b, d, pp] = await Promise.all([api("/api/battles"), api("/api/battle-decks"), api("/api/party")]);
-      party = pp.party;
+      const [b, d] = await Promise.all([api("/api/battles"), api("/api/battle-decks")]);
       library = b.battles;
       decks = d.cards;
       renderList();
@@ -213,14 +211,7 @@ export default {
       const notes = h("textarea", { class: "input", rows: 3, placeholder: "Background, sources, what's at stake — GM only." }, d.notes);
       notes.addEventListener("input", () => { d.notes = notes.value; touched(); });
 
-      // Conroi commander: a knight, the GM, or chosen at Mustering. Pre-selected
-      // when the battle is launched; changeable at Mustering and while it runs.
-      const gm = h("div", { class: "chips" });
-      const drawCommander = () => clear(gm,
-        [[null, "Choose at Mustering"], ...party.filter((m) => m.active !== false || m.id === d.commander).map((m) => [m.id, m.name]), ["gm", "GM (NPC)"]]
-          .map(([id, label]) => h("button", { class: `chip ${(d.commander || null) === id ? "on" : ""}`, title: id === "gm" ? "An NPC leads, e.g. King Arthur at Bedegraine" : "",
-            onclick: () => { d.commander = id; touched(); drawCommander(); } }, label)));
-      drawCommander();
+
 
       const armyRow = (side, text) => {
         const a = d.army_commanders[side];
@@ -248,7 +239,6 @@ export default {
           fld("Where", txt("where", { placeholder: "e.g. Bedegraine forest" })),
           fld("Against", txt("against", { placeholder: "e.g. the eleven rebel kings" })),
           fld("Notes", notes, "span-2"),
-          h("div", { class: "field" }, h("span", {}, "Conroi commander"), gm),
           outcome || h("div"),
           army));
 

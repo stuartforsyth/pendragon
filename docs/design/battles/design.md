@@ -867,3 +867,12 @@ runs, **Battle settings** edits the battle (name, size, where, against, notes), 
 rolls (correctable all day; latest wins), and today's and later days; the commander changes from
 the Morale strip. Past days stay locked (piece 1, U5) because they are history; turn outcomes are
 corrected with reopen/undo.
+
+## 16. Template vs launch (user direction, 2026-10-17)
+
+A saved battle is a **template of the scenario**, reusable for any group: name, size, flavour,
+army commanders, preset outcome, and the days (Intensity, turns, switches, decks, notes, turn
+scripts). Everything about **the group** is entered when it is launched, at Mustering: which
+knights ride, **who commands the conroi** (a knight or GM (NPC)), starting Morale, Passion, Mounted
+pills, and army rolls / Intensity not fixed by the template. The template holds no commander
+(supersedes Open point 8's `commander` field; `definition.commander` is always null).

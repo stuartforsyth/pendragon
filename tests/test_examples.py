@@ -127,7 +127,7 @@ def test_example_battles_valid():
     bed = d["battles"]["The Battle of Bedegraine"]
     assert bed["size"] == "huge" and bed["days"][1]["on_foot"] and bed["days"][1]["no_charge"]
     assert [x["intensity"]["value"] for x in bed["days"]] == [14, 18]
-    assert d["battles"]["The Battle of Carlion"]["commander"] == "gm"
+    assert all(b["commander"] is None for b in d["battles"].values())   # chosen at launch, never in the template
 
 
 def test_examples_merge_adds_battles():

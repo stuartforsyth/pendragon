@@ -178,7 +178,7 @@ def test_build_bedegraine_in_the_editor_and_play_it(page, app_url):
     page.get_by_placeholder("e.g. Bedegraine", exact=True).fill("Bedegraine by hand")
     page.locator(".bt-sizes button", has_text="Huge Battle").click()
     page.get_by_placeholder("e.g. Bedegraine forest").fill("Bedegraine, on the River Trent")
-    page.locator(".field", has_text="Conroi commander").locator(".chip", has_text="Sir Cai").click()
+    expect(page.get_by_text("Conroi commander")).to_have_count(0)      # chosen at launch, not in the template
     page.get_by_placeholder("e.g. King Arthur").fill("King Arthur")
     page.get_by_placeholder("e.g. King Lot").fill("King Lot")
     day1 = page.locator(".day-card").nth(0)
@@ -197,9 +197,10 @@ def test_build_bedegraine_in_the_editor_and_play_it(page, app_url):
     page.get_by_role("button", name="Save").click()
     expect(page.locator(".bt-item", has_text="Bedegraine by hand")).to_contain_text("Huge Battle · 2 days")
     page.get_by_role("button", name="Launch", exact=True).click()
-    # Mustering: Sir Cai pre-selected as commander, Intensity fixed at 14, army commanders named
+    # Mustering: the commander is chosen here; Intensity fixed at 14, army commanders named
     expect(page.locator(".bhead")).to_contain_text("Mustering · Day 1 of 2")
-    expect(page.locator(".bl .chips .chip.on", has_text="Sir Cai")).to_have_count(1)
+    expect(page.locator(".bl .chips .chip.on")).to_have_count(0)
+    page.locator(".bl .chips .chip", has_text="Sir Cai").click()
     expect(page.get_by_text("King Arthur (friendly)")).to_be_visible()
     page.locator(".army-row", has_text="King Arthur").get_by_role("button", name="Success").click()
     page.locator(".army-row", has_text="King Lot").get_by_role("button", name="Success").click()
