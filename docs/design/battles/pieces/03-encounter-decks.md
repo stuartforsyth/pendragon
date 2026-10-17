@@ -10,7 +10,14 @@
 
 ## Notes
 - Visual: when an Encounter is set, a physical-looking card is "played" on the players' board (→ piece 8).
-- Selection flow under redesign (see below).
+- Selection flow: decided below.
+
+## Decisions (selection flow, accepted 2026-10-17)
+7. Intensity is visible to players (RAW, GM Book p.122): number on the title card/board, and each Intensity roll's result (stands / crit doubles foes / fumble Opportunity / fails — choose). GM's raw die can stay private. (Corrects piece 1.)
+8. Deck spread on the board: the day's cards, names only (Foes and Opportunities rows), never mechanics; mid-battle additions appear; played Opportunities shown spent.
+9. Turn selection flow in the GM Battle tool, board updating each step: ① Set Encounter (pick or Draw) + editable flavour line → card flips into "This turn"; ② commander's Charge roll outcome (skipped on turn-1 first charge; "Enemy knights charge you!" locks a mounted-knight Encounter); ③ Intensity (roll for me or outcome); ④ on failure, picks per successful knight (card + success/crit); ⑤ commander's choice (an Opportunity, if picked, must be played); ⑥ Morale check → forced retire, or Loss (roll for me) applied; ⑦ begin the fight in the combat tracker. Non-applicable steps skipped; every step undoable.
+10. Picks: record only successful knights with their card and crit flag; failed Battle rolls aren't entered; Opportunities only on a crit pick (or Intensity fumble, GM's choice).
+11. Card data to add (minimal): `mounted`, card rules + flavour text (as text), Kerns armor/shield fix, the 5 Opportunity cards in the minimal shape. Other audited mechanics stay as text played at the table.
 
 ## Battle-card data audit (2026-10-17, read-only, vs battlecards.pdf)
 - examplecombat.json: all numbers on the 12 foe cards match the PDF (stats, attacks, HP/KD/MW/Unc, armor+shield, Morale Min/Loss, Glory, KV, ransom, counts).

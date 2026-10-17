@@ -28,7 +28,7 @@
 - Rail: **Battle** (play group, beside Combat) — launch panel when idle, live battle when running. **Battles** (prep group, beside Encounters) — saved-battle library editor (list + form + Launch), Encounters pattern.
 - Launch panel: Paused battles (Resume, shows day/turn/Morale) · Quick battle (Size chips with turns + Intensity dice hint, Days stepper, Name, folded flavour: where/against/notes, Launch) · Saved battles list (Launch). Quick launch = 2 clicks.
 - Saved-battle editor: header (name, Size, flavour) + one card per day (Intensity roll-from-Size or fixed; Turns stepper, hint when over Table 6.1 max — scenario override, not blocked; First charge toggle; deck picker → piece 3; notes; turn scripts: turn #, text, restricted deck, "only if Intensity succeeds") + Add day.
-- Launch → `battle.started` (full definition copy) → Battle tool in **Mustering** (Turn 0, piece 2) → Table switches to Battle mode with a title card (name, where, against, Day). Rolled Intensity is rolled at the start of each day (GM "roll for me" or entered). ~~Intensity never shown on the Table~~ — REOPENED in piece 3: RAW the GM announces Intensity to the players (GM Book p.122); pending decision.
+- Launch → `battle.started` (full definition copy) → Battle tool in **Mustering** (Turn 0, piece 2) → Table switches to Battle mode with a title card (name, where, against, Day). Rolled Intensity is rolled at the start of each day (GM "roll for me" or entered). ~~Intensity never shown on the Table~~ — CORRECTED in piece 3 (decision 7): Intensity is shown to players, RAW.
 - Live "Battle settings" drawer edits current + future days (past locked), every change a logged event. "Save as template" copies a running battle's definition (no live state) to the library.
 
 ## House rules
