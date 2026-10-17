@@ -63,3 +63,8 @@ def test_pin_rules(client):
     assert not ok(client.post(f"/api/rules/{rid}/pin", json={"pinned": False}))["pinned"]
     assert ok(client.get("/api/rules/pins"))["pins"] == []
     assert client.post("/api/rules/nope/pin", json={}).status_code == 404
+
+
+def test_static_files_are_always_revalidated(client):
+    r = client.get("/static/js/gm.js")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
