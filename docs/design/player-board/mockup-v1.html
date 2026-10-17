@@ -1,0 +1,235 @@
+<title>Pendragon Table Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=UnifrakturMaguntia&display=swap">
+<style>
+/* Layout: a 16:9 shared-screen board — spotlight left, the fellowship (one card per knight) right,
+   the scene's running thread along the bottom. Single parchment theme by choice: it is the
+   app's existing Table look, always shown on a screenshare. */
+:root {
+  color-scheme: light;
+  --parch: #efe3c6; --parch-2: #f6ecd2; --parch-dark: #cdb68a;
+  --ink: #2a1d14; --ink-2: #4e3a28; --ink-soft: #7a6247;
+  --gules: #8e2219; --or: #b08a36; --vert: #2f6b3e; --azure: #24507f;
+  --page: #e4d5b2; --note: #fbf4e2;
+  --f-display: "Cinzel Decorative", "Cinzel", Georgia, serif;
+  --f-caps: "Cinzel", Georgia, serif;
+  --f-prose: "EB Garamond", Garamond, Georgia, serif;
+  --f-black: "UnifrakturMaguntia", "Cinzel Decorative", serif;
+}
+body { background: var(--page); color: var(--ink); font-family: var(--f-prose); font-size: 17px; }
+.wrap { max-width: 1340px; margin: 0 auto; padding: 28px 16px 48px; display: grid; gap: 22px; }
+.intro h1 { font-family: var(--f-caps); font-size: 26px; letter-spacing: .06em; margin: 0 0 4px; text-wrap: balance; color: var(--gules); }
+.intro p { margin: 0; max-width: 68ch; color: var(--ink-2); line-height: 1.5; }
+.frame-label { font-family: var(--f-caps); font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-soft); }
+.scroller { overflow-x: auto; width: max-content; max-width: 100%; border-radius: 6px; box-shadow: 0 8px 30px rgba(42,29,20,.25); }
+
+/* ---------- the board (a 1280x720 screen) ---------- */
+.board {
+  width: 1280px; height: 720px; position: relative; box-sizing: border-box;
+  background: radial-gradient(ellipse at 40% 30%, var(--parch-2), var(--parch) 55%, var(--parch-dark) 140%);
+  display: grid; grid-template-columns: 1fr 400px; grid-template-rows: auto 1fr auto;
+  grid-template-areas: "top top" "spot fellow" "thread fellow"; column-gap: 26px; padding: 18px 26px 18px 30px;
+}
+.top { grid-area: top; display: flex; align-items: baseline; gap: 18px; border-bottom: 1.5px solid var(--or); padding-bottom: 8px; }
+.top .sess { font-family: var(--f-display); color: var(--gules); font-size: 26px; }
+.top .scene { font-family: var(--f-caps); font-size: 15px; letter-spacing: .14em; color: var(--ink-2); }
+.top .scene b { color: var(--ink); font-weight: 700; }
+.top .when { margin-left: auto; font-family: var(--f-caps); font-size: 13px; letter-spacing: .25em; color: var(--ink-soft); text-transform: uppercase; }
+
+/* spotlight */
+.spot { grid-area: spot; display: grid; align-content: center; gap: 18px; padding: 10px 6px 10px 0; }
+.spot .kicker { display: flex; align-items: center; gap: 10px; font-family: var(--f-caps); font-size: 14px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-soft); }
+.roll { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; }
+.roll .num { font-family: var(--f-prose); font-weight: 600; font-size: 120px; line-height: .9; font-variant-numeric: lining-nums; color: var(--vert); }
+.roll .what { font-family: var(--f-caps); font-size: 30px; font-weight: 700; letter-spacing: .04em; }
+.roll .res { font-family: var(--f-caps); font-size: 22px; letter-spacing: .28em; text-transform: uppercase; color: var(--vert); font-weight: 700; }
+.roll .vs { font-size: 20px; color: var(--ink-2); }
+.consequence { background: var(--note); border: 1px solid var(--parch-dark); border-left: 5px solid var(--gules); padding: 12px 16px; font-size: 21px; line-height: 1.4; max-width: 640px; }
+.consequence .lbl { font-family: var(--f-caps); font-size: 12px; letter-spacing: .25em; text-transform: uppercase; color: var(--gules); display: block; margin-bottom: 2px; }
+.prose { font-size: 25px; font-style: italic; line-height: 1.45; max-width: 640px; color: var(--ink); }
+.prose::first-letter { font-family: var(--f-black); font-style: normal; float: left; font-size: 3.1em; line-height: .85; color: var(--gules); margin: 4px 8px 0 0; }
+
+/* shields */
+.sh { width: 30px; height: 34px; flex: none; }
+.sh.big { width: 46px; height: 52px; }
+
+/* the running thread of this scene */
+.thread { grid-area: thread; display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--parch-dark); }
+.thread .hd { display: flex; gap: 10px; align-items: baseline; font-family: var(--f-caps); font-size: 13px; letter-spacing: .25em; text-transform: uppercase; color: var(--ink-soft); }
+.thread .hd .earlier { margin-left: auto; letter-spacing: .08em; text-transform: none; font-size: 14px; }
+.beats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.beat { background: rgba(251,244,226,.75); border: 1px solid var(--parch-dark); border-radius: 4px; padding: 7px 9px; display: grid; gap: 3px; min-width: 0; }
+.beat .t { display: flex; align-items: center; gap: 6px; font-family: var(--f-caps); font-weight: 700; font-size: 13px; letter-spacing: .03em; }
+.beat .t .sh { width: 16px; height: 18px; }
+.beat .d { font-size: 15px; line-height: 1.25; color: var(--ink-2); }
+.beat.now { border-color: var(--or); background: var(--note); }
+
+/* the fellowship */
+.fellow { grid-area: fellow; display: grid; align-content: start; gap: 10px; padding-top: 12px; }
+.fellow .hd { font-family: var(--f-caps); font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-soft); display: flex; justify-content: space-between; }
+.knight { background: var(--note); border: 1px solid var(--parch-dark); border-radius: 5px; padding: 10px 12px 10px; display: grid; gap: 7px; }
+.knight.lit { border-color: var(--or); box-shadow: 0 0 0 2px rgba(176,138,54,.45), 0 6px 18px rgba(176,138,54,.25); }
+.knight .id { display: flex; gap: 10px; align-items: center; }
+.knight .nm { font-family: var(--f-caps); font-weight: 700; font-size: 18px; line-height: 1.1; color: var(--azure); }
+.knight .pl { font-style: italic; color: var(--ink-soft); font-size: 15px; }
+.knight .glory { margin-left: auto; text-align: right; font-family: var(--f-caps); font-size: 11px; letter-spacing: .2em; color: var(--ink-soft); text-transform: uppercase; }
+.knight .glory b { display: block; font-family: var(--f-prose); font-size: 26px; letter-spacing: 0; color: var(--or); line-height: 1; font-variant-numeric: lining-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-family: var(--f-caps); font-size: 12px; font-weight: 600; letter-spacing: .04em; padding: 2px 8px; border-radius: 3px; border: 1px solid; }
+.chip.harm { color: var(--gules); border-color: var(--gules); background: rgba(142,34,25,.07); }
+.chip.state { color: var(--ink-2); border-color: var(--parch-dark); background: var(--parch-2); }
+.chip.boon { color: var(--vert); border-color: var(--vert); background: rgba(47,107,62,.07); }
+.last { font-size: 15px; color: var(--ink-2); line-height: 1.3; }
+.last b { font-family: var(--f-caps); font-size: 11px; letter-spacing: .2em; color: var(--ink-soft); font-weight: 600; margin-right: 4px; }
+.sheet { border-top: 1px dashed var(--parch-dark); padding-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 15px; }
+.sheet .k { font-family: var(--f-caps); font-size: 11px; letter-spacing: .2em; color: var(--gules); width: 100%; }
+.sheet span { white-space: nowrap; }
+.sheet .tick { color: var(--vert); font-weight: 600; }
+
+/* callout pins */
+.pin { position: absolute; width: 24px; height: 24px; border-radius: 50%; background: var(--gules); color: var(--parch-2); font-family: var(--f-caps); font-weight: 700; font-size: 13px; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+
+/* ---------- end-of-session frame ---------- */
+.board.end { grid-template-columns: 1fr; grid-template-rows: auto 1fr; grid-template-areas: "top" "cards"; }
+.endcards { grid-area: cards; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-content: center; }
+.endcard { background: var(--note); border: 1px solid var(--parch-dark); border-radius: 6px; padding: 18px 20px; display: grid; gap: 10px; align-content: start; }
+.endcard .id { display: flex; gap: 12px; align-items: center; }
+.endcard .nm { font-family: var(--f-caps); font-weight: 700; font-size: 22px; color: var(--azure); }
+.endcard .big { font-family: var(--f-prose); font-weight: 600; font-size: 54px; color: var(--or); line-height: 1; font-variant-numeric: lining-nums; }
+.endcard .big small { font-family: var(--f-caps); font-size: 13px; letter-spacing: .25em; color: var(--ink-soft); display: block; }
+.endcard ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 18px; }
+.endcard li { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dotted var(--parch-dark); padding-bottom: 4px; }
+.endcard li em { color: var(--ink-soft); }
+
+/* notes under the boards */
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 26px; }
+.note { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; min-width: 0; }
+.note .pin { position: static; }
+.note h3 { margin: 0 0 2px; font-family: var(--f-caps); font-size: 16px; color: var(--ink); }
+.note p { margin: 0; line-height: 1.45; color: var(--ink-2); font-size: 16px; }
+@media (prefers-reduced-motion: no-preference) {
+  .knight.lit { animation: glow 2.4s ease-in-out infinite alternate; }
+  @keyframes glow { from { box-shadow: 0 0 0 2px rgba(176,138,54,.35), 0 6px 18px rgba(176,138,54,.15); } to { box-shadow: 0 0 0 2px rgba(176,138,54,.6), 0 6px 22px rgba(176,138,54,.35); } }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="knightShield" viewBox="0 0 44 50"><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="#24507f"/><path d="M6 32 22 18l16 14" fill="none" stroke="#d2a645" stroke-width="4"/><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="none" stroke="#4e3a28" stroke-width="2"/></symbol>
+    <symbol id="npcShield" viewBox="0 0 44 50"><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="#7a2f55"/><path d="M14 36V24a8 8 0 0 1 16 0v12M22 16v20M17 26h10" fill="none" stroke="#efe3c6" stroke-width="3"/><path d="M22 2 3 7v14c0 13 8 21 19 27 11-6 19-14 19-27V7Z" fill="none" stroke="#4e3a28" stroke-width="2"/></symbol>
+    <symbol id="dieIcon" viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7z M3 7l9 5 9-5 M12 12v10" fill="none" stroke="#8e2219" stroke-width="1.6"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Player board: the proposed Chronicle view</h1>
+    <p>A mockup of the shared Table screen during ordinary play (not combat), using your party and the app's existing parchment look. Red pins match the notes below. The second screen is the end-of-session summary.</p>
+  </div>
+
+  <div class="frame-label">During play</div>
+  <div class="scroller">
+    <div class="board" role="img" aria-label="Mockup of the Table board during play">
+      <div class="top">
+        <span class="sess">Session 14</span>
+        <span class="scene">Scene 3 · <b>The toll at Arden Ford</b></span>
+        <span class="when">Spring, 511</span>
+      </div>
+
+      <div class="spot">
+        <div class="kicker"><svg class="sh"><use href="#knightShield"/></svg> Sir Erik the Cruel</div>
+        <div class="roll">
+          <div class="num">9</div>
+          <div>
+            <div class="what">Intimidation</div>
+            <div class="res">Success</div>
+            <div class="vs">rolled 9 against 14</div>
+          </div>
+        </div>
+        <div class="consequence"><span class="lbl">What it means</span>The outlaw's nerve breaks. He drops his cudgel and offers to guide you to the ford for free.</div>
+      </div>
+
+      <div class="thread">
+        <div class="hd">This scene <span class="earlier">Earlier: ① Leaving Sarum · ② Arden at dusk</span></div>
+        <div class="beats">
+          <div class="beat"><div class="t"><svg class="sh"><use href="#npcShield"/></svg>Hob the Outlaw</div><div class="d">Steps from the trees and demands a toll.</div></div>
+          <div class="beat"><div class="t"><svg class="sh"><use href="#knightShield"/></svg>Dame Cwylog</div><div class="d">Awareness — critical. Spots two archers in the oaks.</div></div>
+          <div class="beat"><div class="t"><svg class="sh"><use href="#knightShield"/></svg>Sir Emrys</div><div class="d">Struck by an arrow: 3 damage.</div></div>
+          <div class="beat now"><div class="t"><svg class="sh"><use href="#knightShield"/></svg>Sir Erik</div><div class="d">Intimidation — success. The outlaw yields.</div></div>
+        </div>
+      </div>
+
+      <div class="fellow">
+        <div class="hd"><span>The fellowship</span><span>Glory this session</span></div>
+
+        <div class="knight lit">
+          <div class="id"><svg class="sh big"><use href="#knightShield"/></svg>
+            <div><div class="nm">Sir Erik the Cruel</div><div class="pl">Jason</div></div>
+            <div class="glory">Glory<b>+25</b></div></div>
+          <div class="last"><b>JUST NOW</b>Cowed Hob the Outlaw</div>
+          <div class="sheet"><span class="k">FOR YOUR SHEET</span><span class="tick">✓ Intimidation</span><span>+25 Glory</span><span>Check Proud</span></div>
+        </div>
+
+        <div class="knight">
+          <div class="id"><svg class="sh big"><use href="#knightShield"/></svg>
+            <div><div class="nm">Dame Cwylog</div><div class="pl">Michael</div></div>
+            <div class="glory">Glory<b>+10</b></div></div>
+          <div class="chips"><span class="chip boon">Inspired: Love (Family)</span></div>
+          <div class="last"><b>LAST</b>Spotted the archers (critical)</div>
+          <div class="sheet"><span class="k">FOR YOUR SHEET</span><span class="tick">✓ Awareness</span><span>+10 Glory</span><span>Passion used</span></div>
+        </div>
+
+        <div class="knight">
+          <div class="id"><svg class="sh big"><use href="#knightShield"/></svg>
+            <div><div class="nm">Sir Emrys</div><div class="pl">Paul</div></div>
+            <div class="glory">Glory<b>0</b></div></div>
+          <div class="chips"><span class="chip harm">−3 HP this session</span><span class="chip state">On foot</span></div>
+          <div class="last"><b>LAST</b>Arrow from the oaks: 3 damage</div>
+          <div class="sheet"><span class="k">FOR YOUR SHEET</span><span>−3 HP</span><span>Horse lamed (Rouncy)</span></div>
+        </div>
+      </div>
+
+      <span class="pin" style="left:3px; top:203px">1</span>
+      <span class="pin" style="left:3px; top:385px">2</span>
+      <span class="pin" style="left:3px; top:612px">3</span>
+      <span class="pin" style="left:829px; top:76px">4</span>
+      <span class="pin" style="left:829px; top:236px">5</span>
+    </div>
+  </div>
+
+  <div class="frame-label">End of session</div>
+  <div class="scroller">
+    <div class="board end" role="img" aria-label="Mockup of the end-of-session summary">
+      <div class="top">
+        <span class="sess">Session 14 ends</span>
+        <span class="scene">Write these on your sheets</span>
+        <span class="when">Spring, 511</span>
+      </div>
+      <div class="endcards">
+        <div class="endcard">
+          <div class="id"><svg class="sh big"><use href="#knightShield"/></svg><div class="nm">Sir Erik the Cruel</div></div>
+          <div class="big">+75<small>Glory</small></div>
+          <ul><li>Checks <em>Intimidation, Sword, Proud</em></li><li>Hit points <em>no change</em></li><li>Money <em>+£2 ransom</em></li></ul>
+        </div>
+        <div class="endcard">
+          <div class="id"><svg class="sh big"><use href="#knightShield"/></svg><div class="nm">Dame Cwylog</div></div>
+          <div class="big">+40<small>Glory</small></div>
+          <ul><li>Checks <em>Awareness, Love (Family)</em></li><li>Hit points <em>−6</em></li><li>Passion <em>Love (Family) used</em></li></ul>
+        </div>
+        <div class="endcard">
+          <div class="id"><svg class="sh big"><use href="#knightShield"/></svg><div class="nm">Sir Emrys</div></div>
+          <div class="big">+10<small>Glory</small></div>
+          <ul><li>Checks <em>Lance</em></li><li>Hit points <em>−3</em></li><li>Horse <em>Rouncy lamed</em></li></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><span class="pin">1</span><div><h3>Whose moment it is</h3><p>The spotlight names the knight first, with their shield. A player sees in a glance that this one is theirs.</p></div></div>
+    <div class="note"><span class="pin">2</span><div><h3>What it means</h3><p>A short consequence line the GM can add to any roll, so the result reads as story, not just a number.</p></div></div>
+    <div class="note"><span class="pin">3</span><div><h3>This scene</h3><p>The last few beats of the current scene, each tagged with who it involved. Earlier scenes fold into one line, so the history stays readable.</p></div></div>
+    <div class="note"><span class="pin">4</span><div><h3>The fellowship</h3><p>Every knight is always on screen. The knight in the spotlight glows. Glory earned this session sits top right of each card.</p></div></div>
+    <div class="note"><span class="pin">5</span><div><h3>Effects and "for your sheet"</h3><p>Red chips are harm, green are boons, grey are states. The dashed list is what to write down, built as play happens and gathered at the end.</p></div></div>
+  </div>
+</div>

@@ -20,3 +20,4 @@ Goal (user): make the Table easier for players to follow what has happened, and 
 | 3 | Feed structure | scenes (GM-marked), longer readable history, event-type styling, knight shields on events that touch them |
 | 4 | Session recap | "Previously…" card at session start from the last session |
 | 5 | Shared with battles | effect chips, Glory counters, Morale gauge — reuse battles piece 8 components |
+- Mockup v1 (2026-10-17): docs/design/player-board/mockup-v1.html — published privately at https://claude.ai/artifact/Vnb7TvxdRqWpAvPCzjDbLK
