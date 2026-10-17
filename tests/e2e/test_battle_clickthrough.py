@@ -199,7 +199,7 @@ def test_build_bedegraine_in_the_editor_and_play_it(page, app_url):
     page.get_by_role("button", name="Launch", exact=True).click()
     # Mustering: Sir Cai pre-selected as commander, Intensity fixed at 14, army commanders named
     expect(page.locator(".bhead")).to_contain_text("Mustering · Day 1 of 2")
-    expect(page.locator(".chips .chip.on", has_text="Sir Cai")).to_have_count(1)
+    expect(page.locator(".bl .chips .chip.on", has_text="Sir Cai")).to_have_count(1)
     expect(page.get_by_text("King Arthur (friendly)")).to_be_visible()
     page.locator(".army-row", has_text="King Arthur").get_by_role("button", name="Success").click()
     page.locator(".army-row", has_text="King Lot").get_by_role("button", name="Success").click()
