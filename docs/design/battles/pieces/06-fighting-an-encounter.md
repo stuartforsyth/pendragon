@@ -1,4 +1,4 @@
-# Piece 6 — Fighting an Encounter (in progress)
+# Piece 6 — Fighting an Encounter — CLOSED 2026-10-17
 
 ## Decisions so far
 1. (H3′) Height ±5 automatic from the engaged pair's Mounted pills (taller side +5 / other −5; knights get a reminder since they're on paper); overridable per foe (e.g. two-handed spear/halberd negates). Each foe has an "Attacking the horse" toggle that cancels the foe's −5 while the mounted knight keeps +5 (RAW core.combat.action-attack); Pictish Knifemen card flag defaults it on; it clears when the knight is on foot. Large-shield −2 mounted = reminder chip only (some cards already include it, e.g. Malahaut).
@@ -17,3 +17,16 @@
 12. (U14) Defeated strip: unconscious/dead/fled/surrendered foes collapse to one line with fate, Glory credit and captured flag; click to undo or reassign.
 13. (U15) Descriptions folded into the type header ⓘ (deduplicated); encounter GM notes as one collapsed line at the top.
 14. Retargeting on the fly: the GM can change who a foe is attacking at any moment — drag a foe to another knight's lane (or the pool), or click the foe's target chip and pick a knight; one action, logged as today's combat.engage event, undoable.
+15. (H9) Multiple Opponents chip on the knight lane header ("2 foes · −5 vs each", RAW core.combat.multiple-opponents), live as foes are retargeted; warning (not a block) beyond 3 foes on foot / 2 mounted on one knight.
+
+## House rules
+- None.
+
+## Rejected / out of scope
+- Remount rules, automatic Alone on the Field, horse-loss reasons; automated Large-shield penalty; automated escort/Honor/Horsemanship rolls; per-round barrage hit location.
+
+## Open questions
+- None.
+
+## Interfaces
+- Piece 7: captives (ransom, enemy KV losses), Glory ledger per knight, who fought ≥1 Encounter. Piece 8: board shows lanes/pairings, Height/charge/barrage results, Glory tally. Piece 9: new events (mounted pill, position, captured, glory award, horse toggle); combat.engage reused for retargeting.
