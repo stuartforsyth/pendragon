@@ -4,6 +4,7 @@ the Table that never shows a foe's numbers), and records it."""
 
 from fastapi import APIRouter, Request
 
+from core import battle as B
 from core.combat import (CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_breakdown,
                          resolve_attack, resolve_blow, roll_ransom, surrender_check)
 from core.dice import NotationError, roll_notation, skill_display
@@ -37,6 +38,20 @@ def _combatant(cs, cid):
 
 def _is_foe(c):
     return getattr(c, "side", "foe") != "party"
+
+
+def _engaged_knight(cs, c):
+    """The knight a foe is fighting, or None."""
+    return next((k for k in cs["combatants"] if not _is_foe(k)
+                 and k.display_name == c.engaged_with), None) if c.engaged_with else None
+
+
+def _height(cs, c):
+    """Height Advantage on this foe's rolls against its engaged knight."""
+    k = _engaged_knight(cs, c)
+    if k is None or not _is_foe(c):
+        return 0
+    return B.height(c.mounted, k.mounted, c.height_override, c.attacks_horse)[0]
 
 
 def _descriptions(combatants):
@@ -105,8 +120,9 @@ async def start(request: Request, body: dict):
     if lone is not None:
         foes = [lone]
     knights = []
+    mounted = body.get("knights_mounted", True) is not False
     for m in party:
-        k = Combatant.from_party(m)
+        k = Combatant.from_party(m, mounted=mounted)
         k.id = f"p-{m['id']}"
         knights.append(k)
     if not foes and not knights:
@@ -316,6 +332,88 @@ async def engage(request: Request, cid: str, body: dict):
     return {"event": ev}
 
 
+# -- mounted pills, attacking the horse, Height override, captives (S2) -------
+
+@router.post("/api/combat/{cid}/mounted")
+async def mounted(request: Request, cid: str, body: dict):
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    on = bool(body.get("mounted"))
+    if on == c.mounted:
+        return {"event": None}
+    line = f"{c.display_name} is {'mounted' if on else 'on foot'}"
+    data = {"cid": cid, "mounted": on, "table_text": line}
+    if not _is_foe(c):
+        data["touches"] = [c.party_id]
+    ev = state.record("combat.mounted", line, title=c.display_name, data=data)
+    return {"event": ev}
+
+
+@router.post("/api/combat/{cid}/horse")
+async def horse(request: Request, cid: str, body: dict):
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    if not _is_foe(c):
+        bad("Only a foe can go for a knight's horse")
+    on = bool(body.get("on"))
+    if on == c.attacks_horse:
+        return {"event": None}
+    k = _engaged_knight(cs, c)
+    line = (f"{c.display_name} goes for {k.display_name + chr(39) + 's' if k else 'the'} horse" if on
+            else f"{c.display_name} turns from the horse to the rider")
+    ev = state.record("combat.horse", line, title=c.display_name,
+                      data={"cid": cid, "on": on, "table_text": line})
+    return {"event": ev}
+
+
+@router.post("/api/combat/{cid}/height")
+async def height_override(request: Request, cid: str, body: dict):
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    if not _is_foe(c):
+        bad("Height is set on the foe")
+    override = body.get("override")
+    if override not in (None, "none"):
+        bad("Height override is automatic or none")
+    if override == c.height_override:
+        return {"event": None}
+    line = (f"{c.display_name}: no Height advantage (two-handed spear or halberd)" if override
+            else f"{c.display_name}: Height worked out from who is mounted")
+    ev = state.record("combat.height", line, title=c.display_name,
+                      data={"cid": cid, "override": override, "table_text": line})
+    return {"event": ev}
+
+
+@router.post("/api/combat/{cid}/captured")
+async def captured(request: Request, cid: str, body: dict):
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    if not _is_foe(c):
+        bad("A knight can't be taken captive here")
+    if "by" in body and body["by"] is None:
+        if not c.captured_by:
+            return {"event": None}
+        line = f"{c.display_name} is released"
+        ev = state.record("combat.captured", line, title=c.display_name,
+                          data={"cid": cid, "by": None, "table_text": line, "touches": [c.captured_by]})
+        return {"event": ev}
+    if c.status not in ("unconscious", "surrendered"):
+        bad("Only an unconscious or surrendered foe can be taken captive")
+    by = body.get("by")
+    if by:
+        k = next((x for x in cs["combatants"] if not _is_foe(x) and x.party_id == by), None)
+        if k is None:
+            bad("That knight isn't in the fight")
+    else:
+        k = _engaged_knight(cs, c)
+        if k is None:
+            bad("Say which knight took them captive")
+    line = f"{c.display_name} is taken captive by {k.display_name}"
+    ev = state.record("combat.captured", line, title=c.display_name,
+                      data={"cid": cid, "by": k.party_id, "table_text": line, "touches": [k.party_id]})
+    return {"event": ev}
+
+
 @router.post("/api/combat/{cid}/remove")
 async def remove(request: Request, cid: str):
     state, cs = _active(request)
@@ -345,9 +443,11 @@ async def roll(request: Request, cid: str, body: dict):
         except (TypeError, ValueError, IndexError):
             bad("Unknown attack")
         if what == "attack":
-            common["extra"]["attack"] = int(key)
-            ev = record_check(state, label=atk["weapon"], value=atk["value"],
-                              modifier=c.modifier, **common)
+            height = _height(cs, c)
+            common["extra"].update(attack=int(key), height=height)
+            label = atk["weapon"] + (f" (Height {height:+d})" if height else "")
+            ev = record_check(state, label=label, value=atk["value"],
+                              modifier=c.modifier + height, **common)
         else:
             ev = record_damage(state, label=atk["weapon"], expr=atk["damage"],
                                critical=bool(body.get("critical")),
@@ -366,7 +466,9 @@ async def roll(request: Request, cid: str, body: dict):
 async def surrender(request: Request, cid: str):
     state, cs = _active(request)
     c = _combatant(cs, cid)
-    roll_, outcome, line = surrender_check(c)
+    k = _engaged_knight(cs, c)
+    minus5 = -5 if (k is not None and k.mounted and not c.mounted) else 0
+    roll_, outcome, line = surrender_check(c, modifier=minus5)
     ev = state.record("combat.check", line, title=f"{c.display_name} — Surrender check",
                       data={"cid": cid, "roll": roll_, "outcome": outcome,
                             "label": "Surrender check"})

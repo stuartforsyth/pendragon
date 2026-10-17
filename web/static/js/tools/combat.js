@@ -12,7 +12,7 @@ export default {
     let cs = null;             // GM view of the combat
     let encounters = [], advs = [], party = [], npcs = [];
     let pending = false;       // a re-render waiting for an input to lose focus
-    let launchQuery = "", selected = "", players = null, includeParty = true;
+    let launchQuery = "", selected = "", players = null, includeParty = true, knightsMounted = true;
 
     const body = h("div");
     clear(el, body);
@@ -72,6 +72,8 @@ export default {
                 h("span", { class: "faint small" }, activeParty.length ? `${activeParty.length} active knight${activeParty.length === 1 ? "" : "s"} in the Party` : "No Party yet — add knights under Party"))),
               h("label", { class: "check" }, h("input", { type: "checkbox", checked: includeParty, onchange: (e) => { includeParty = e.target.checked; } }),
                 "Knights join the fight"),
+              h("label", { class: "check" }, h("input", { type: "checkbox", checked: knightsMounted, onchange: (e) => { knightsMounted = e.target.checked; } }),
+                "Knights mounted"),
               h("button", { class: "btn primary", onclick: () => launch() }, icon("swords"), "Launch encounter"),
               h("button", { class: "btn", onclick: pickSingle }, icon("dragon"), "Fight a single adversary or NPC…"),
               h("div", { class: "faint small" }, "Build new encounters in the Encounter Creator."))),
@@ -101,12 +103,12 @@ export default {
     }
 
     const pickSingle = () => pickFoe("Fight a single adversary or NPC", (a) =>
-      post("/api/combat/start", a.isNpc ? { cast: a.cast_id, include_party: includeParty } : { adversary: a.key, include_party: includeParty }));
+      post("/api/combat/start", { ...(a.isNpc ? { cast: a.cast_id } : { adversary: a.key }), include_party: includeParty, knights_mounted: knightsMounted }));
 
     async function launch(key = selected) {
       if (!key) return toast("Search, then pick an encounter to launch", "err");
       const activeParty = party.filter((m) => m.active !== false);
-      await post("/api/combat/start", { encounter: key, players: players ?? (activeParty.length || 4), include_party: includeParty });
+      await post("/api/combat/start", { encounter: key, players: players ?? (activeParty.length || 4), include_party: includeParty, knights_mounted: knightsMounted });
     }
 
     // ------------------------------------------------------------ running
@@ -215,7 +217,12 @@ export default {
           h("span", { class: "cbt-knight" }, k.display_name),
           k.player ? h("span", { class: "faint small" }, k.player) : null,
           tag ? h("span", { class: `tag ${tag[1]}` }, tag[0]) : null,
-          h("span", { class: "cbt-lane-slots" }),
+          mountedPill(k),
+          h("span", { class: "cbt-lane-slots" },
+            k.mo?.n > 1 ? h("span", { class: `chip-mo ${k.mo.over ? "warn" : ""}`,
+              title: k.mo.over ? `More than ${k.mo.limit} ${k.mo.limit === 2 ? "mounted foes" : "foes on foot"} can't all attack one knight` : "Multiple Opponents: the knight applies this to each opponent" },
+              `⚠ ${k.mo.n} foes · −${-k.mo.mod} vs each`) : null,
+            heightReminders(k.height_chips || [])),
           k.down ? h("button", { class: "btn ghost sm", onclick: () => mark(null) }, "Back in the fight")
             : [h("button", { class: "btn ghost sm", onclick: () => mark("unconscious") }, "Down"),
                h("button", { class: "btn ghost sm", onclick: () => mark("fled") }, "Out")]),
@@ -241,7 +248,7 @@ export default {
             h("div", { class: "hp-bar big" }, h("i", { class: hpTone, style: { width: `${pct}%` } })),
             h("span", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`))),
           h("span", { class: "ws faint small" }, c.wound_state),
-          h("span", { class: "cbt-chips" }),
+          h("span", { class: "cbt-chips" }, foeChips(c)),
           h("button", { class: `cbt-target ${c.engaged_with ? "set" : ""}`, title: "Who is this foe fighting?",
             onclick: (e) => targetMenu(e.currentTarget, c) }, `→ ${c.engaged_with || "nobody"} ▾`),
           h("button", { class: "btn sm hit-btn", title: `A knight hit ${c.display_name}: enter the damage rolled`, onclick: () => hitDialog(c) }, icon("swords"), "Hit"),
@@ -250,6 +257,42 @@ export default {
         open ? h("div", { class: "cbt-foe-more" }, statLine(c, false),
           h("div", { class: "row" }, h("div", { class: "cbt-mod" }, h("span", { class: "faint small" }, "Mod"), modInput(c)), flavour(c))) : null);
       return draggable(line, c);
+    }
+
+    // The knight's own Height reminders, grouped: "+5 Height vs 3 foes".
+    function heightReminders(chips) {
+      const by = new Map();
+      for (const ch of chips) by.set(ch.mod, [...(by.get(ch.mod) || []), ch.foe]);
+      return [...by].map(([mod, names]) => h("span", { class: `chip-height ${mod > 0 ? "up" : "down"}`,
+        title: `Reminder for the player — Height Advantage against ${names.join(", ")}` },
+        `${mod > 0 ? "+" : "−"}${Math.abs(mod)} Height vs ${names.length === 1 ? names[0] : `${names.length} foes`}`));
+    }
+
+    function mountedPill(c) {
+      return h("button", { class: `pill-mounted ${c.mounted ? "on" : ""}`, title: "Click to toggle mounted / on foot",
+        onclick: () => post(`/api/combat/${c.id}/mounted`, { mounted: !c.mounted }) }, c.mounted ? "Mounted" : "On foot");
+    }
+
+    // Height chip (click: automatic or negated) and the attacking-the-horse
+    // toggle, shown only when this foe's knight is mounted.
+    function foeChips(c) {
+      const hgt = c.height || { foe: 0, knight: 0 };
+      const word = c.height_chip || "";
+      const chips = [];
+      if (c.engaged_with && word) chips.push(h("button", { class: `chip-height ${hgt.foe > 0 ? "up" : hgt.foe < 0 ? "down" : ""}`,
+        title: "Height Advantage on this foe's rolls — click to override",
+        onclick: (e) => menu(e.currentTarget, [
+          ["Automatic (from who is mounted)", () => post(`/api/combat/${c.id}/height`, { override: null })],
+          ["Negated (two-handed spear or halberd)", () => post(`/api/combat/${c.id}/height`, { override: "none" })]]) }, word));
+      if (c.knight_mounted && !c.mounted) chips.push(h("button", { class: `chip-horse ${c.attacks_horse ? "on" : ""}`,
+        title: c.attacks_horse ? "Attacking the horse: no −5 for this foe; the rider keeps +5" : "Click if this foe goes for the horse",
+        onclick: () => post(`/api/combat/${c.id}/horse`, { on: !c.attacks_horse }) }, "⇣ horse"));
+      return chips;
+    }
+
+    function captiveMenu(c) {
+      const knights = cs.combatants.filter((o) => o.side === "party");
+      return knights.map((k) => [`Captured by ${k.display_name}`, () => post(`/api/combat/${c.id}/captured`, { by: k.party_id })]);
     }
 
     // A plain HP change (healing, a fall): damage as negative, healing positive.
@@ -281,10 +324,13 @@ export default {
         down.map((c) => h("button", { class: "cbt-chip-foe down", title: "Revive or reactivate",
           onclick: (e) => menu(e.currentTarget, [
             [c.status === "fled" ? "Reactivate (back in the fight)" : "Revive", () => post(`/api/combat/${c.id}/status`, { out: null }), { icon: "heart" }],
-            c.status !== "dead" ? ["Slay", () => post(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }] : null,
-            c.ransom ? ["Roll ransom", () => post(`/api/combat/${c.id}/ransom`), { icon: "d6" }] : null,
-          ].filter(Boolean)) },
-          `${FATE[c.status][0]} ${c.display_name}`, h("span", { class: "faint small" }, ` · ${FATE[c.status][1]}`))));
+            c.status !== "dead" ? ["Slay", () => post(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }] : false,
+            c.ransom ? ["Roll ransom", () => post(`/api/combat/${c.id}/ransom`), { icon: "d6" }] : false,
+            ...(["unconscious", "surrendered"].includes(c.status) ? [null, ...captiveMenu(c)] : []),
+            c.captured_by ? ["Release the captive", () => post(`/api/combat/${c.id}/captured`, { by: null })] : false,
+          ].filter((x) => x !== undefined && x !== false && x !== "")) },
+          `${FATE[c.status][0]} ${c.display_name}`, h("span", { class: "faint small" }, ` · ${FATE[c.status][1]}`),
+          c.captured_by_name ? h("span", { class: "tag-captured" }, `captured by ${c.captured_by_name}`) : null)));
     }
 
     function addMenu(anchor, knights) {
@@ -410,6 +456,13 @@ export default {
         () => post(`/api/combat/${c.id}/status`, { out: c.status === "unconscious" || c.status === "dead" ? null : "unconscious" }), { icon: "heart" }]);
       if (c.status !== "dead") items.push(["Slay", () => post(`/api/combat/${c.id}/status`, { out: "dead" }), { icon: "x" }]);
       if (!isKnight && c.status !== "surrendered") items.push(["Surrenders", () => post(`/api/combat/${c.id}/status`, { out: "surrendered" }), { icon: "flag" }]);
+      if (!isKnight) {
+        items.push(null);
+        items.push([c.mounted ? "Dismount (on foot)" : "Mount (mounted)", () => post(`/api/combat/${c.id}/mounted`, { mounted: !c.mounted }), { icon: "shield" }]);
+        items.push([c.attacks_horse ? "Stop attacking the horse" : "Attacking the horse", () => post(`/api/combat/${c.id}/horse`, { on: !c.attacks_horse })]);
+        items.push([c.height_override ? "Height: automatic" : "Height: negated (spear/halberd)", () => post(`/api/combat/${c.id}/height`, { override: c.height_override ? null : "none" })]);
+        if (["unconscious", "surrendered"].includes(c.status)) items.push(...captiveMenu(c));
+      }
       items.push([c.status === "fled" ? "Reactivate (resume tracking)" : "Deactivate (fled / not tracked)",
         () => post(`/api/combat/${c.id}/status`, { out: c.status === "fled" ? null : "fled" }), { icon: "flag" }]);
       if (!isKnight) {

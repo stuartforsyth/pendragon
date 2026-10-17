@@ -7,13 +7,73 @@ override, a promotion). So striking any event and replaying always gives the
 correct state — that is how "undo" works.
 """
 
+from core import battle as B
 from core.combat import Combatant
 
 COMBAT_STATE_TYPES = {
     "combat.started", "combat.added", "combat.hp", "combat.status",
     "combat.promote", "combat.modifier", "combat.engage", "combat.removed",
     "combat.round", "combat.ended", "combat.blow",
+    "combat.mounted", "combat.horse", "combat.height", "combat.captured",
 }
+
+
+def apply(state, ev, promotion_cfg=None):
+    """Fold one event into the combat state and return the new state."""
+    t, d = ev["type"], ev.get("data", {})
+    if t not in COMBAT_STATE_TYPES:
+        return state
+    if t == "combat.started":
+        return {"active": True, "name": d.get("name", "Encounter"),
+                "round": 1, "players": d.get("players", 0),
+                "descriptions": d.get("descriptions", []),
+                "started_event": ev["id"],
+                "combatants": [Combatant.from_dict(c) for c in d.get("combatants", [])]}
+    if state is None or not state["active"]:
+        return state
+    if t == "combat.ended":
+        state["active"] = False
+        return state
+    if t == "combat.round":
+        state["round"] = d.get("round", state["round"] + 1)
+        return state
+    if t == "combat.added":
+        state["combatants"].append(Combatant.from_dict(d["combatant"]))
+        return state
+    c = next((x for x in state["combatants"] if x.id == d.get("cid")), None)
+    if c is None:
+        return state
+    if getattr(c, "side", "foe") == "party" and t in ("combat.hp", "combat.blow"):
+        return state                    # knights' health is the players' business
+    if t == "combat.hp":
+        c.apply_hp(int(d.get("delta", 0)))
+    elif t == "combat.blow":
+        if d.get("delta"):
+            c.apply_hp(int(d["delta"]))
+        if d.get("shield_broken"):
+            c.shield = 0
+    elif t == "combat.status":
+        c.set_out(d.get("out"))
+    elif t == "combat.promote":
+        if d.get("promote"):
+            c.promote(d.get("cfg") or promotion_cfg or {})
+        else:
+            c.demote()
+    elif t == "combat.modifier":
+        c.modifier = int(d.get("value", 0))
+    elif t == "combat.engage":
+        c.engaged_with = d.get("with", "")
+    elif t == "combat.removed":
+        state["combatants"].remove(c)
+    elif t == "combat.mounted":
+        c.mounted = bool(d.get("mounted"))
+    elif t == "combat.horse":
+        c.attacks_horse = bool(d.get("on"))
+    elif t == "combat.height":
+        c.height_override = d.get("override")
+    elif t == "combat.captured":
+        c.captured_by = d.get("by")
+    return state
 
 
 def reduce(events, promotion_cfg=None):
@@ -21,52 +81,7 @@ def reduce(events, promotion_cfg=None):
     for the most recent combat (or ``None`` if the session has had none)."""
     state = None
     for ev in events:
-        t, d = ev["type"], ev.get("data", {})
-        if t not in COMBAT_STATE_TYPES:
-            continue
-        if t == "combat.started":
-            state = {"active": True, "name": d.get("name", "Encounter"),
-                     "round": 1, "players": d.get("players", 0),
-                     "descriptions": d.get("descriptions", []),
-                     "started_event": ev["id"],
-                     "combatants": [Combatant.from_dict(c) for c in d.get("combatants", [])]}
-            continue
-        if state is None or not state["active"]:
-            continue
-        if t == "combat.ended":
-            state["active"] = False
-            continue
-        if t == "combat.round":
-            state["round"] = d.get("round", state["round"] + 1)
-            continue
-        if t == "combat.added":
-            state["combatants"].append(Combatant.from_dict(d["combatant"]))
-            continue
-        c = next((x for x in state["combatants"] if x.id == d.get("cid")), None)
-        if c is None:
-            continue
-        if getattr(c, "side", "foe") == "party" and t in ("combat.hp", "combat.blow"):
-            continue                    # knights' health is the players' business
-        if t == "combat.hp":
-            c.apply_hp(int(d.get("delta", 0)))
-        elif t == "combat.blow":
-            if d.get("delta"):
-                c.apply_hp(int(d["delta"]))
-            if d.get("shield_broken"):
-                c.shield = 0
-        elif t == "combat.status":
-            c.set_out(d.get("out"))
-        elif t == "combat.promote":
-            if d.get("promote"):
-                c.promote(d.get("cfg") or promotion_cfg or {})
-            else:
-                c.demote()
-        elif t == "combat.modifier":
-            c.modifier = int(d.get("value", 0))
-        elif t == "combat.engage":
-            c.engaged_with = d.get("with", "")
-        elif t == "combat.removed":
-            state["combatants"].remove(c)
+        state = apply(state, ev, promotion_cfg)
     return state
 
 
@@ -118,11 +133,65 @@ def _types(combatants):
     return out
 
 
+def _height_word(foe_mod, knight_mod, foe, knight):
+    """The foe-line Height chip, in words: blank when the pair is level and
+    nothing was cancelled, so routine fights stay uncluttered."""
+    if foe.height_override == "none" and knight is not None and foe.mounted != knight.mounted:
+        return "No Height"
+    if foe_mod:
+        return f"{foe_mod:+d} Height".replace("-", "−")
+    if knight_mod and foe.attacks_horse:
+        return "No Height"
+    return ""
+
+
+def _derive(state, rows, view):
+    """Height per engaged pair, Multiple Opponents per knight, captor names —
+    computed from the pills on every serialise, never stored."""
+    cs = state["combatants"]
+    knights = {c.display_name: c for c in cs if getattr(c, "side", "foe") == "party"}
+    by_id = {r["id"]: r for r in rows}
+    for c in cs:
+        r = by_id[c.id]
+        if getattr(c, "side", "foe") == "party":
+            mine = [f for f in cs if getattr(f, "side", "foe") != "party"
+                    and f.status == "active" and f.engaged_with == c.display_name]
+            n = len(mine)
+            limit = B.mo_limit(any(f.mounted for f in mine))
+            chips = []
+            for f in mine:
+                _, k = B.height(f.mounted, c.mounted, f.height_override, f.attacks_horse)
+                if k:
+                    chips.append({"foe": f.display_name, "mod": k})
+            r["mounted"] = c.mounted
+            if view == "gm":
+                r.update(mo={"n": n, "mod": B.multiple_opponents(n), "limit": limit, "over": n > limit},
+                         height_chips=chips)
+            else:
+                r.update(mo_mod=B.multiple_opponents(n), mo_n=n,
+                         height_chips=[{"foe": ch["foe"], "text": f"{ch['mod']:+d} Height".replace("-", "−")} for ch in chips])
+            continue
+        knight = knights.get(c.engaged_with)
+        if knight is not None:
+            fm, km = B.height(c.mounted, knight.mounted, c.height_override, c.attacks_horse)
+        else:
+            fm = km = 0
+        captor = next((k.display_name for k in knights.values()
+                       if getattr(k, "party_id", None) == c.captured_by), None) if c.captured_by else None
+        r["mounted"] = c.mounted
+        r["height_chip"] = _height_word(fm, km, c, knight)
+        r["captured_by_name"] = captor
+        if view == "gm":
+            r["height"] = {"foe": fm, "knight": km}
+            r["knight_mounted"] = knight.mounted if knight is not None else None
+
+
 def serialise(state, view):
     if state is None:
         return None
     fn = gm_view if view == "gm" else table_view
     rows = [fn(c) for c in state["combatants"]]
+    _derive(state, rows, view)
     for r in rows:   # who is fighting each combatant (the reverse of engaged_with)
         r["engaged_by"] = [o["display_name"] if view == "gm" else o["name"] for o in rows
                            if o is not r and o.get("engaged_with") and

@@ -305,6 +305,15 @@ export default {
           return fld(label, inp);
         })));
 
+      // battle flags: drive automatic Height, countercharges and the horse toggle
+      const flag = (f, label, title) => h("label", { class: "check", title },
+        h("input", { type: "checkbox", checked: !!d[f], onchange: (e) => { d[f] = e.target.checked; touched(); } }), label);
+      const battleFlags = h("div", { class: "panel" }, h("h3", {}, "Battle flags"),
+        h("div", { class: "row", style: { flexWrap: "wrap", gap: "8px 18px" } },
+          flag("mounted", "Mounted by default", "Starts a fight on horseback (Height Advantage against foes on foot)"),
+          flag("countercharge", "Countercharges (lance)", "Armed with lances: countercharges a mounted charge"),
+          flag("attacks_horse", "Attacks the horse first", "Goes for a rider's horse: no −5 Height for this foe")));
+
       // attacks
       const atkList = h("div", { class: "atk-list" });
       const drawAttacks = () => clear(atkList, d.attacks.length ? [
@@ -374,7 +383,7 @@ export default {
         h("div", { class: "row" }, fld("Gender", gGender), fld("Class", gClass),
           h("button", { class: "btn", style: { alignSelf: "flex-end" }, onclick: () => autoGen(gGender.value, gClass.value) }, icon("refresh"), "Auto-generate all")));
 
-      clear(editor, headEl, identity, chars, creature, attacks, armour, statLists,
+      clear(editor, headEl, identity, chars, creature, battleFlags, attacks, armour, statLists,
         h("div", { class: "panel" }, h("h3", {}, "Mechanics & notes"), notes), auto);
       touched();
     }

@@ -364,7 +364,7 @@ Existing `test_web.py` combat tests keep passing unchanged.
 
 ---
 
-## S2 — Mounted pill, automatic Height, attacking the horse, Height override, MO chip, captured, surrender −5 (size **M**)
+## S2 — Mounted pill, automatic Height, attacking the horse, Height override, MO chip, captured, surrender −5 (size **M**) — ✅ DONE 2026-10-17
 
 **Goal.** Height ±5 is applied to foes' attack rolls automatically from the engaged pair's pills. Knights
 see their own modifiers as reminder chips. Multiple Opponents is warned about, and captives are flagged.

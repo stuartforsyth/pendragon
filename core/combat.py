@@ -117,6 +117,10 @@ class Combatant:
         # A named adversary (a specific NPC) reads distinctly in the tracker,
         # much like a promoted champion.
         self.named = template.get("kind") == "named"
+        # Battle flags from the card (S2): horsed, lance-armed, goes for horses.
+        self.mounted = bool(template.get("mounted"))
+        self.attacks_horse = bool(template.get("attacks_horse"))
+        self.countercharge = bool(template.get("countercharge"))
 
         ch = template["characteristics"]
         app_raw = ch.get("APP", "2D6+3")  # battle-card foes list no APP
@@ -290,7 +294,7 @@ class Combatant:
         return c
 
     @classmethod
-    def from_party(cls, member):
+    def from_party(cls, member, mounted=True):
         """A player knight in a fight: a name to fight against, nothing more.
         Players keep their knights' Hit Points, armour and wounds on their own
         sheets, so the app never tracks a knight's health."""
@@ -301,6 +305,7 @@ class Combatant:
                     "other": {}, "notes": member.get("notes", "")}
         c = cls(name, template, name, hp_jitter=False)
         c.side = "party"
+        c.mounted = bool(mounted)
         c.party_id = member.get("id")
         c.player = member.get("player", "")
         return c
@@ -457,11 +462,14 @@ class CombatLog:
         return "\n".join(out) + "\n"
 
 
-def surrender_check(c, roll=None):
+def surrender_check(c, roll=None, modifier=0):
     """The rulebook Surrender check: a foe at half Hit Points or less rolls
-    unopposed Valorous (GM Handbook Ch.6). Returns (roll, outcome, line)."""
-    roll, outcome = resolve_skill(c.valorous, roll)
-    shown = skill_display(c.valorous)
+    unopposed Valorous, −5 if on foot against a mounted knight
+    (gm.battle.battlefield-position-and-surrender). Returns (roll, outcome, line)."""
+    roll, outcome = resolve_skill(c.valorous + modifier, roll)
+    shown = skill_display(c.valorous + modifier)
+    if modifier:
+        shown += f" ({modifier:+d} on foot vs a mounted knight)"
     note = "" if c.cur_hp * 2 <= c.max_hp else \
         "  (note: the check normally applies only at ½ Hit Points or less)"
     line = (f"{c.log_name} surrender check — Valorous {shown}: "

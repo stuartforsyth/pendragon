@@ -81,6 +81,12 @@ shared stat header per foe type (attacks clickable to roll), one line per foe
 (HP bar, wound word, target chip, Hit, ±HP, ⋯), a **Not engaged** pool and a
 **Defeated** strip (unconscious, slain, fled, surrendered). Drag a foe to a lane
 or use its target chip to retarget (`combat.engage`; `with: ""` = the pool).
+Each combatant has a **Mounted / On foot** pill (`combat.mounted`; knights start
+mounted unless the launcher says otherwise). Height ±5 is worked out from the
+engaged pair's pills and added to foe attack rolls automatically; a foe going for
+the horse (`combat.horse`) loses its −5, and the GM can negate Height for a
+two-handed spear (`combat.height`). Knight lanes show their own Height and
+Multiple Opponents reminders; captives are flagged with `combat.captured`.
 
 Player knights are run on paper: the app never tracks their Hit Points,
 armour, wounds or death. It only tracks the enemies.
