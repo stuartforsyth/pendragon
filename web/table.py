@@ -33,6 +33,7 @@ _SAFE_DATA = {
     "combat.started": ("name",),
     "combat.round": ("round",),
     "combat.ended": ("name",),
+    "combat.tally": ("round", "final", "ranking"),
     "combat.mounted": ("mounted",),
     "combat.prone": ("on",),
     "combat.stance": ("stance",),

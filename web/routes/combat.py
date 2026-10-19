@@ -9,6 +9,7 @@ from fastapi import APIRouter, Request
 from core.rules import roll_expr
 
 from core import battle as B
+from web import battle_state as BS, combat_state as CS
 from core.combat import (blow_narrative, CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_breakdown, STANCES, DEFEND_BONUS, DEFENSIVE, HORSE_DAMAGE, is_spear,
                          missile_attack, SHIELD_MISSILE_PENALTY, SHIELD_WORD, weapon_fate, is_charge, is_couched,
                          resolve_attack, resolve_blow, roll_ransom, surrender_check)
@@ -113,6 +114,30 @@ def _descriptions(combatants):
 
 def _active_party(state):
     return [m for m in state.party.items if m.get("active", True)]
+
+
+def _glory_tally(state, cs, final):
+    """Write each knight's Glory, highest first, to the log and the Fray —
+    before a round turns over or the fight closes. The figures match the
+    knight cards: the battle's running Glory when the fight is part of one."""
+    b = state.battle_state() if (cs.get("battle") or {}).get("id") else None
+    glory = BS.battle_glory(b) if b and b.get("id") == cs["battle"]["id"] else CS.glory_tally(cs)
+    knights = [c for c in cs["combatants"] if getattr(c, "side", "foe") == "party"]
+    if not knights:
+        return None
+    rows = sorted(({"pid": k.party_id, "name": k.display_name, "glory": int(glory.get(k.party_id, 0))} for k in knights),
+                  key=lambda r: (-r["glory"], r["name"]))
+    top = rows[0]["glory"]
+    rank = 0
+    for i, r in enumerate(rows):
+        if i == 0 or r["glory"] != rows[i - 1]["glory"]:
+            rank = i + 1
+        r["rank"], r["winner"] = rank, top > 0 and r["glory"] == top
+    winners = [r["name"] for r in rows if r["winner"]]
+    head = "Final Glory" if final else f"Glory after round {cs['round']}"
+    line = f"{head}: " + ", ".join(f"{r['name']} {r['glory']}" for r in rows) + (f" — {' & '.join(winners)} leads" if winners else "")
+    return state.record("combat.tally", line, title=head,
+                        data={"round": cs["round"], "final": final, "ranking": rows, "table_text": line})
 
 
 def _end(state, cs, reason="ended"):
@@ -277,6 +302,7 @@ async def add_party(request: Request, body: dict):
 async def next_round(request: Request):
     state, cs = _active(request)
     n = cs["round"] + 1
+    _glory_tally(state, cs, False)
     ev = state.record("combat.round", f"Round {n}", title=f"Round {n}", data={"round": n})
     return {"event": ev}
 
@@ -284,6 +310,7 @@ async def next_round(request: Request):
 @router.post("/api/combat/end")
 async def end(request: Request):
     state, cs = _active(request)
+    _glory_tally(state, cs, True)
     _end(state, cs)
     return {"ok": True}
 

@@ -478,3 +478,15 @@ body {
 .fray-divider .fd-text { white-space: nowrap; }
 .fray-divider.round { color: var(--ink-soft); }
 .fray-divider.round .fd-line { background: linear-gradient(90deg, transparent, var(--parch-dark) 25%, var(--parch-dark) 75%, transparent); }
+
+/* Glory ranking written to the Fray at the end of a round / fight */
+.card.tally { padding: 8px 12px; }
+.tally-rows { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.tally-row { display: flex; align-items: baseline; gap: 10px; padding: 2px 6px; border-radius: 4px; font-size: 16px; color: var(--ink-2); }
+.tally-row .tr-rank { width: 1.4em; text-align: center; font-family: var(--f-caps); font-weight: 700; color: var(--ink-soft); }
+.tally-row .tr-name { flex: 1; min-width: 0; }
+.tally-row .tr-glory { font-family: var(--f-prose); font-variant-numeric: lining-nums; font-weight: 600; }
+.tally-row.winner { background: linear-gradient(90deg, rgba(210,166,69,.45), rgba(210,166,69,.12)); border: 1.5px solid var(--or-bright);
+  font-size: 21px; font-weight: 700; color: var(--ink); padding: 5px 8px; box-shadow: 0 0 10px rgba(210,166,69,.45); }
+.tally-row.winner .tr-rank { color: var(--or); font-size: 22px; }
+.tally-row.winner .tr-glory { font-size: 24px; color: var(--gules); }

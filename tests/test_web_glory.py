@@ -130,3 +130,21 @@ def test_old_session_without_glory_events_replays(client):
               {"id": 2, "type": "combat.round", "data": {"round": 2}}]
     state = reduce(events)
     assert state["round"] == 2 and state["credits"] == {}
+
+
+def test_glory_tally_written_before_round_and_end(client):
+    cs, (bors, cai) = _fight(client)
+    ok(client.post("/api/glory", json={"knight": cai, "amount": 30, "reason": "a deed"}))
+    ok(client.post("/api/glory", json={"knight": bors, "amount": 10, "reason": "a lesser deed"}))
+    ok(client.post("/api/combat/round"))
+    feed = list(reversed(ok(client.get("/api/table"))["feed"]))
+    types = [c["type"] for c in feed]
+    i = types.index("combat.tally")
+    assert types[i + 1] == "combat.round"                      # the tally lands before the new round
+    rows = feed[i]["data"]["ranking"]
+    assert [(r["name"], r["glory"], r["winner"]) for r in rows] == [("Sir Cai", 30, True), ("Sir Bors", 10, False)]
+    ok(client.post("/api/combat/end"))
+    feed = list(reversed(ok(client.get("/api/table"))["feed"]))
+    types = [c["type"] for c in feed]
+    last = len(types) - 1 - types[::-1].index("combat.tally")
+    assert types[last + 1] == "combat.ended" and feed[last]["data"]["final"] is True

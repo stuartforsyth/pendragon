@@ -160,7 +160,7 @@ function buildLog() {
   const list = h("div", { class: "log-list", id: "logList" });
   const filters = h("div", { class: "chips", style: { padding: "8px 12px 0" } },
     FILTERS.map(([k, label]) => h("button", { class: `chip ${k === S.filter ? "on" : ""}`, "data-f": k,
-      onclick: () => { S.filter = k; filters.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.f === k)); renderLog(); } }, label)));
+      onclick: () => { S.filter = k; S.logLimit = LOG_SHOW; filters.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.f === k)); renderLog(); } }, label)));
   clear($("log"),
     h("div", { class: "log-head" }, h("h2", {}, "Session Log"), h("span", { class: "spacer" }),
       h("button", { class: "btn ghost sm", title: "Export the chronicle", onclick: (e) => exportMenu(e.currentTarget) }, icon("download"), "Export")),
@@ -226,11 +226,23 @@ function entryEl(ev) {
     actions);
 }
 
+// The page keeps only the newest LOG_SHOW entries in the DOM (a long battle is
+// thousands, and Firefox balloons); "Show earlier" reveals LOG_STEP more. The
+// full log stays in S.events, and in the file.
+const LOG_SHOW = 300, LOG_STEP = 300;
+
 function renderLog() {
   const list = $("logList");
   S.groups = battleGroups(S.events);
-  const shown = S.events.filter(matchesFilter);
+  const all = S.events.filter(matchesFilter);
+  S.logLimit = S.logLimit || LOG_SHOW;
+  const shown = all.slice(-S.logLimit);
+  S.rendered = shown.length;
   const rows = [];
+  if (all.length > shown.length) {
+    rows.push(h("button", { class: "btn ghost sm log-earlier", onclick: () => { S.logLimit += LOG_STEP; renderLog(); list.scrollTop = 0; } },
+      `Show ${Math.min(LOG_STEP, all.length - shown.length)} earlier (${all.length - shown.length} hidden)`));
+  }
   let last = null;
   for (const ev of shown) {
     const g = S.groups.get(ev.id) || null;
@@ -238,6 +250,7 @@ function renderLog() {
     last = g;
     rows.push(entryEl(ev));
   }
+  S.lastGroup = last;
   clear(list, rows.length ? rows :
     h("div", { class: "empty", style: { margin: "12px" } }, icon("scroll"),
       S.session?.scratch ? "No session started — rolls still reach the Table but aren't saved." : "Nothing yet. Roll some dice!"));
@@ -265,6 +278,7 @@ async function loadSession() {
   S.session = r.session;
   S.suggested = r.suggested_title;
   S.events = r.events;
+  S.logLimit = LOG_SHOW;
   S.lastId = r.events.length ? r.events[r.events.length - 1].id : 0;
   renderSessionBar();
   renderLog();
@@ -278,10 +292,21 @@ async function fetchNew() {
   const list = $("logList");
   const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
   applyIncoming(r.events);
-  if (r.events.some((e) => e.type.startsWith("meta.") || e.type.startsWith("battle.") || e.data?.battle || S.groups?.size) || S.events.length < 3) renderLog();
+  // Only a strike/reveal changes entries already on the page; everything else
+  // (battle groups included — a group depends only on the events before it)
+  // is appended, so a long battle log isn't rebuilt from scratch on every event.
+  if (r.events.some((e) => e.type.startsWith("meta.")) || S.events.length < 3) renderLog();
   else {
     list.querySelector(".empty")?.remove();
-    for (const ev of r.events.filter(matchesFilter)) list.append(entryEl(ev));
+    S.groups = battleGroups(S.events);
+    for (const ev of r.events.filter(matchesFilter)) {
+      const g = S.groups.get(ev.id) || null;
+      if (g && g !== S.lastGroup) list.append(h("div", { class: "log-group" }, g));
+      S.lastGroup = g;
+      list.append(entryEl(ev));
+      S.rendered++;
+    }
+    if (S.rendered > S.logLimit + 100) { renderLog(); list.scrollTop = list.scrollHeight; }
     if (atBottom) list.scrollTop = list.scrollHeight;
   }
   renderSessionBar();
