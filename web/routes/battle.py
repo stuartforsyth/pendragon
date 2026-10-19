@@ -893,15 +893,21 @@ async def fight(request: Request):
     fighting = [pid for pid in BS.conroi_ids(b) if t["postures"].get(pid, {}).get("posture") != "cowardly"]
     alone = [pid for pid in b["conroi"] if b["knights"].get(pid, {}).get("position") == "alone"]
     overrides = {}
+    cr = (t.get("charge") or {}).get("result") or ("first_charge" if BS.first_charge_turn(b) else None)
+    may_charge = cr in ("may_charge", "may_charge_plus5", "first_charge")
     for pid in fighting + alone:
         k = b["knights"][pid]
         p_ = t["postures"].get(pid, {}).get("posture")
         overrides[pid] = {"mounted": k["mounted"], "posture": p_, "rounds": B.POSTURES.get(p_, {}).get("rounds"),
-                          "extra_rounds": 0, "position": k.get("position", "conroi")}
+                          "extra_rounds": 0, "position": k.get("position", "conroi"),
+                          "lance": bool(may_charge and k["mounted"])}          # couched for the charge
     doubled = (t.get("intensity") or {}).get("outcome") == "critical"
     from web.routes.combat import start as combat_start
-    link = {"id": b["id"], "day": b["day"], "turn": b["turn"], "step": "fight", "encounter": enc, "doubled": doubled}
+    link = {"id": b["id"], "day": b["day"], "turn": b["turn"], "step": "fight", "encounter": enc, "doubled": doubled,
+            "barrage": (t.get("barrage") or {}).get("rounds") or 0}
+    cc = t.get("countercharge") or ({"yes": True} if card.get("countercharge") and b["turn"] == 1 else {})
     return await combat_start(request, {"encounter": enc, "players": max(1, len(fighting)), "_battle": link,
+                                        "_countercharge": bool(cc.get("yes")),
                                         "_knights": fighting + alone, "_knight_overrides": overrides,
                                         "_multiplier": 2 if doubled else 1,
                                         "_prefix": f"Day {b['day']}, Turn {b['turn']}: "})

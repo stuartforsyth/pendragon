@@ -77,6 +77,21 @@ async def resume_session(request: Request, body: dict):
     return {"session": s.meta()}
 
 
+@router.delete("/api/sessions/{sid}")
+async def delete_session(request: Request, sid: str):
+    """Bin a saved session (test runs, false starts). It goes to
+    ``sessions/.trash/``, not oblivion; the session in progress can't be binned."""
+    state = st(request)
+    try:
+        state.sessions.delete(sid)
+    except (KeyError, OSError):
+        bad("No such session", 404)
+    except ValueError as exc:
+        bad(str(exc), 409)
+    state.notify("session")
+    return {"ok": True}
+
+
 # -- corrections -----------------------------------------------------------
 
 def _target(state, event_id):

@@ -20,6 +20,10 @@ _SAFE_DATA = {
     "roll.dice": ("expr", "terms", "total", "label"),
     "roll.check": ("label", "outcome", "roll", "kind", "actor", "shown", "value"),
     "combat.attack": ("verdict", "result"),
+    "combat.volley": ("knight", "count", "weapon", "shots", "rider_damage", "mount_damage"),
+    "divider": ("text", "kind"),
+    "combat.break": (),
+    "combat.lance": ("on", "broken"),
     "combat.blow": ("attacker", "weapon", "target", "blow", "breakdown", "major", "mortal",
                     "to_knight", "knight_shield", "narrative"),
     "roll.opposed": ("a", "b", "winner"),
@@ -30,6 +34,8 @@ _SAFE_DATA = {
     "combat.round": ("round",),
     "combat.ended": ("name",),
     "combat.mounted": ("mounted",),
+    "combat.prone": ("on",),
+    "combat.stance": ("stance",),
     "combat.captured": (),
     "glory.awarded": ("knight_name", "amount", "reason"),
     "glory.reassigned": ("knight_name", "foe", "amount"),
@@ -138,7 +144,11 @@ def _effects(k, battle=None):
             out.append({"key": "charge", "label": "May charge", "tone": "boon"})
         elif cr == "first_charge":
             out.append({"key": "charge", "label": "First charge!", "tone": "boon"})
-    if not k.get("mounted", True):
+    if k.get("lance"):
+        out.append({"key": "lance", "label": "Lance couched", "tone": "boon"})
+    if k.get("prone"):
+        out.append({"key": "prone", "label": "Prone", "tone": "harm"})
+    elif not k.get("mounted", True):
         out.append({"key": "on_foot", "label": "On foot", "tone": "state"})
     seen = set()
     for ch in k.get("height_chips", []):
@@ -225,7 +235,7 @@ def knight_cards(events, fl, combat, battle=None):
                  "chips": ["Disarmed"] if f.get("disarmed") else []}
                 for f in rows if f["side"] != "party" and k["name"] in (f.get("linked") or []) and f["status"] == "active"]
         cards.append({"pid": pid, "name": k["name"], "player": k.get("player", ""), "mounted": k.get("mounted", True),
-                      "status": k["status"],
+                      "prone": bool(k.get("prone")), "status": k["status"],
                       "glory": {"value": ((battle or {}).get("glory") or {}).get(pid, 0) if linked
                                 else (combat.get("glory") or {}).get(pid, 0), "scope": "battle" if linked else "fight", "last": last},
                       "effects": _effects(k, battle if linked else None), "happened": happened, "lane": {"foes": foes},

@@ -94,29 +94,51 @@
 @media (prefers-reduced-motion: reduce) { .mg-fill { transition: none; } .mgauge.changed .mg-cap { animation: none; } }
 
 /* ---------- battle cards and deck (S9) ---------- */
-.pcard { width: 190px; height: 250px; border-radius: 10px; background: #fbf4e2; border: 2px solid var(--ink-2); box-shadow: 0 8px 22px rgba(42,29,20,.3);
-  padding: 12px; box-sizing: border-box; display: grid; grid-template-rows: auto 1fr auto; gap: 6px; text-align: center; position: relative; animation: card-in .5s ease-out; }
-.pcard::before { content: ""; position: absolute; inset: 6px; border: 1px solid var(--parch-dark); border-radius: 6px; pointer-events: none; }
-.pcard .kind { font-family: var(--f-caps); font-size: 11px; letter-spacing: .3em; color: var(--ink-soft); text-transform: uppercase; }
-.pcard .dev { display: grid; place-items: center; }
-.pcard .cname { font-family: var(--f-caps); font-weight: 700; font-size: 19px; line-height: 1.15; color: var(--ink); }
-.pcard .flav { font-style: italic; font-size: 15px; color: var(--ink-2); line-height: 1.25; overflow-wrap: anywhere; }
+.pcard { width: 200px; height: 280px; border-radius: 8px; background: linear-gradient(180deg, #ece0c6, #e4d6b8); border: 1.5px solid #4e3a28;
+  box-shadow: 0 8px 22px rgba(42,29,20,.3); padding: 10px 10px 8px; box-sizing: border-box; display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 0;
+  text-align: center; position: relative; animation: card-in .5s ease-out; overflow: hidden; }
+.pcard .kind { font-family: var(--f-caps); font-size: 10.5px; letter-spacing: .3em; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 4px; }
+.pcard .band { background: linear-gradient(180deg, #4f7a3a, #355a2a); color: #fbf4e2; border-radius: 5px; padding: 10px 8px 9px; min-height: 86px;
+  display: grid; align-content: center; gap: 4px; box-shadow: inset 0 0 0 1.5px rgba(251,244,226,.35), inset 0 0 18px rgba(0,0,0,.25); }
+.pcard .cname { font-family: var(--f-display); font-weight: 700; font-size: 19px; line-height: 1.1; color: #fbf4e2; text-wrap: balance; }
+.pcard .flav { font-family: var(--f-prose); font-style: italic; font-weight: 500; font-size: 13.5px; color: #f3e6c8; line-height: 1.25; overflow-wrap: anywhere; }
+.pcard .braid { height: 8px; margin: 6px -2px 4px; background:
+  repeating-linear-gradient(135deg, #8e2219 0 5px, #b3342a 5px 7px, #8e2219 7px 10px, #d2a645 10px 11px); opacity: .9; }
+.pcard .body { min-height: 0; }
+.pcard .foot { display: grid; place-items: center; position: relative; padding-top: 4px; border-top: 1px solid var(--parch-dark); }
+.pcard .dragons { width: 100%; height: 30px; display: block; }
+.pcard .mm { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); display: grid; justify-items: center; line-height: 1;
+  background: #fbf4e2; border: 1.5px solid #8e2219; border-radius: 50%; width: 54px; height: 54px; align-content: center; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.pcard .mm-l { font-family: var(--f-caps); font-size: 7.5px; letter-spacing: .08em; text-transform: uppercase; color: #8e2219; font-weight: 700; }
+.pcard .mm-n { font-family: var(--f-display); font-weight: 700; font-size: 20px; color: #8e2219; margin-top: 1px; }
+.pcard.opp .band { background: linear-gradient(180deg, #b08a36, #7a5a14); }
 .pcard.opp { border-color: var(--or); box-shadow: 0 0 0 3px rgba(176,138,54,.35), 0 8px 22px rgba(42,29,20,.3); }
-.pcard.small { width: 150px; height: 205px; opacity: .92; }
+.pcard.small { width: 142px; height: 198px; padding: 7px 7px 6px; }
+.pcard.small .band { min-height: 64px; padding: 7px 6px 6px; }
+.pcard.small .cname { font-size: 14px; }
+.pcard.small .flav { font-size: 10.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.pcard.small .braid { height: 6px; margin: 4px -2px 3px; }
+.pcard.small .dragons { height: 22px; }
+.pcard.small .mm { width: 42px; height: 42px; }
+.pcard.small .mm-l { font-size: 6px; }
+.pcard.small .mm-n { font-size: 15px; }
+.pcard.on { outline: 3px solid var(--azure); outline-offset: 2px; }
+.pcard.cant { filter: grayscale(.85); opacity: .6; }
+.pcard.cant .mm { border-color: #5c554b; } .pcard.cant .mm-l, .pcard.cant .mm-n { color: #5c554b; }
+.pcard .cant-rib { position: absolute; left: -30%; right: -30%; top: 46%; transform: rotate(-14deg); background: rgba(42,29,20,.82); color: #fbf4e2;
+  font-family: var(--f-caps); font-weight: 700; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; padding: 5px 0; }
+.pcard.small .cant-rib { font-size: 9.5px; letter-spacing: .12em; padding: 4px 0; }
+.pcard .spent-rib { background: rgba(142,34,25,.85); }
+.pcard.spent .band { text-decoration: line-through; text-decoration-color: rgba(251,244,226,.7); }
 .pcard .toks { position: absolute; bottom: -14px; left: 0; right: 0; display: flex; justify-content: center; }
 .ttok { display: inline-flex; align-items: center; gap: 4px; background: #fbf4e2; border: 1.5px solid var(--azure); border-radius: 999px; padding: 2px 9px 2px 4px;
   font-family: var(--f-caps); font-size: 12px; font-weight: 700; color: var(--azure); }
 .ttok .kshield { width: 14px; height: 16px; }
 .ttok.crit { border-color: var(--or); color: var(--or); }
 @keyframes card-in { from { transform: rotateY(80deg) translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
-.deck { display: grid; gap: 6px; justify-items: center; }
+.deck { display: grid; gap: 8px; justify-items: center; }
 .deck .dl { font-family: var(--f-caps); font-size: 12px; letter-spacing: .3em; color: var(--ink-soft); text-transform: uppercase; }
-.drow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.dcard { font-family: var(--f-caps); font-size: 13px; font-weight: 600; padding: 5px 10px; border: 1px solid var(--ink-2); border-radius: 5px; background: #fbf4e2; color: var(--ink); }
-.dcard.opp { border-color: var(--or); color: #7a5a14; }
-.dcard.opp::before { content: "★ "; }
-.dcard.spent { opacity: .38; text-decoration: line-through; }
-.dcard.on { box-shadow: 0 0 0 2px var(--azure); }
+.drow { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; padding: 4px 6px 10px; }
 .kcard.compact .kc-name { font-size: 17px; }
 .kcard.compact .glory-counter .gl-value { font-size: 24px; }
 @media (prefers-reduced-motion: reduce) { .pcard { animation: none; } }

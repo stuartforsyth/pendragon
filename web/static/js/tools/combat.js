@@ -7,7 +7,7 @@ import { h, clear, api, post, icon, menu, modal, toast, useCss, confirmBox, skil
   CHAR_FULL, CHAR_ORDER, debounce } from "../lib.js";
 import { moraleStrip } from "../components.js";
 import { knightShield } from "../board.js";
-import { foeFace as sharedFoeFace, layoutField, linkLines, horseBadge } from "../field.js";
+import { foeFace as sharedFoeFace, layoutField, linkLines, horseBadge, proneBadge, stanceBadge } from "../field.js";
 
 export default {
   async mount(el, ctx) {
@@ -191,8 +191,9 @@ export default {
       const knights = cs.combatants.filter((c) => c.side === "party");
       const foes = cs.combatants.filter((c) => c.side !== "party");
       const up = foes.filter((c) => !c.down).length;
-      const note = h("input", { class: "input", placeholder: "Round note — e.g. the bridge collapses", style: { flex: 1 },
-        onkeydown: async (e) => { if (e.key === "Enter" && e.target.value.trim()) { await post("/api/combat/note", { text: e.target.value }); e.target.value = ""; } } });
+      const note = h("input", { class: "input", placeholder: "Round note — e.g. the bridge collapses · Shift+Enter for a divider", style: { flex: 1 },
+        title: "Enter: a note in the log and the Fray. Shift+Enter: a thin divider — the start of something new",
+        onkeydown: async (e) => { if (e.key === "Enter" && e.target.value.trim()) { await post(e.shiftKey ? "/api/combat/divider" : "/api/combat/note", { text: e.target.value }); e.target.value = ""; } } });
       const availableKnights = party.filter((m) => !cs.combatants.some((c) => c.party_id === m.id));
       const pool = foes.filter((c) => cs.pool.includes(c.id));
       return [
@@ -209,6 +210,7 @@ export default {
             h("button", { class: "btn", onclick: awardGlory, title: "Award Glory by hand (an Opportunity's reward, a deed)" }, icon("star"), "Award Glory"),
             h("button", { class: "btn danger", onclick: endCombat }, icon("flag"), "End fight"),
             bt ? h("button", { class: "btn ghost", onclick: () => ctx.navigate("battle") }, "◂ Back to battle") : null),
+          barrageBar(foes),
           h("div", { class: "row", style: { marginTop: "10px" } },
             h("span", { class: "tag gules" }, `${up} of ${foes.length} foes standing`),
             up ? h("span", { class: `tag ${cs.to_act.length ? "or" : "vert"}`, title: "A foe's roll marks it as having acted; click the circle on a foe to tick it by hand. Next round clears the ticks." },
@@ -260,6 +262,14 @@ export default {
               a.weapon, " ", h("b", {}, skillDisplay(a.value)), h("span", { class: "faint" }, ` · ${a.damage}`));
           }))
           : h("span", { class: "grp" }, t.attacks.map((a) => h("span", { class: "pair" }, h("span", { class: "nm" }, a.weapon), " ", h("b", {}, skillDisplay(a.value)), h("span", { class: "faint" }, ` · ${a.damage}`)))),
+        active.some((c) => c.missile != null) ? h("button", { class: "cbt-wpick loose-all", title: `Every ${t.type} facing a knight looses — one volley per knight, so the players see one card each`,
+          onclick: () => looseAll(t.type) }, "🏹 All loose") : null,
+        h("span", { class: "grp" }, h("span", { class: "faint small" }, "All"),
+          Object.entries(STANCE).map(([k, st]) => {
+            const all = active.length && active.every((c) => (c.stance || "attack") === k);
+            return h("button", { class: `cbt-wpick ${all ? "on" : ""}`, title: `Every ${t.type} still fighting: ${st.hint}`,
+              onclick: () => post("/api/combat/stance", { type: t.type, stance: k }) }, st.label);
+          })),
         h("span", { class: "faint" }, t.armour_text),
         t.description || t.notes ? h("button", { class: "btn ghost sm icon", title: "Card text and rules",
           onclick: () => modal(t.type, (close) => [
@@ -275,20 +285,24 @@ export default {
     // open its controls. One foe fights one knight (for now).
     function foeFace(c) {
       const pct = c.cur_hp / Math.max(1, c.max_hp);
-      return sharedFoeFace(c.category, pct, pct > .5 ? "#79b585" : pct > .25 ? "#d4a84b" : "#d0574b");
+      return sharedFoeFace(c.category, pct, pct > .5 ? "#79b585" : pct > .25 ? "#d4a84b" : "#d0574b", { struck: c.down, lost: c.down ? "rgba(0,0,0,.35)" : "#7a2a22" });
     }
     let dragging = null;             // { id, side } while a token is dragged
     function ftok(c, x, y) {
       const knight = c.side === "party";
-      const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${!knight && c.engaged_with ? "engaged" : ""} ${c.down ? "down" : ""} ${c.elite ? "elite" : ""} ${picked === c.id ? "picked" : ""} ${!knight && c.acted && !c.down ? "acted" : ""}`,
+      const stance = !knight && !c.down ? (c.stance || "attack") : "attack";
+      const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${!knight && c.engaged_with ? "engaged" : ""} ${c.down ? "down" : ""} ${c.elite ? "elite" : ""} ${picked === c.id ? "picked" : ""} ${!knight && c.acted && !c.down ? "acted" : ""} ${stance !== "attack" ? "st-" + stance + (stance === "trample" ? "" : " defensive") : ""}`,
         "data-id": c.id, style: { left: `${x}px`, top: `${y}px` }, title: knight ? "Click for controls · drag onto a foe to engage" : "Click for controls · drag onto a knight to engage",
         onclick: () => { picked = picked === c.id ? null : c.id; render(); } },
         knight ? h("span", { class: "ftok-face" }, knightShield(c.down)) : foeFace(c),
         c.mounted && !c.down ? horseBadge() : null,
+        c.prone && !c.down ? proneBadge() : null,
+        stanceBadge(stance),
         !knight && c.acted && !c.down ? h("span", { class: "ftok-acted", title: "Has acted this round" }, "✓") : null,
         h("span", { class: "ftok-name" }, c.display_name),
-        h("span", { class: "ftok-sub" }, knight ? (c.down ? (c.status === "fled" ? "Out of the fight" : "Down") : c.mounted ? "Mounted" : "On foot")
-          : `${c.cur_hp}/${c.max_hp}${c.wound_state && c.wound_state !== "Unhurt" ? " · " + c.wound_state : ""}${c.wielding === "brawl" ? " · Disarmed" : ""}`));
+        h("span", { class: "ftok-sub" }, knight ? (c.down ? (c.status === "fled" ? "Out of the fight" : "Down") : c.prone ? "Prone" : c.mounted ? "Mounted" : "On foot")
+          : c.down ? `${c.wound_state}${c.credit ? " · ✦" + c.credit.glory : ""}`
+          : `${c.cur_hp}/${c.max_hp}${c.wound_state && c.wound_state !== "Unhurt" ? " · " + c.wound_state : ""}${c.prone ? " · Prone" : ""}${c.wielding === "brawl" ? " · Disarmed" : ""}`));
       if (c.down) return node;
       node.draggable = true;
       node.addEventListener("dragstart", (e) => {
@@ -322,8 +336,10 @@ export default {
     }
 
     function field(knights, foes, pool) {
-      const W = Math.max(640, (el.querySelector(".cbt-field")?.clientWidth) || el.clientWidth || 960);
-      const item = (c) => ({ id: c.id, side: c.side === "party" ? "party" : "foe", name: c.display_name, linked: c.linked || [], down: c.down, ref: c });
+      const measured = el.querySelector(".cbt-field")?.clientWidth || el.clientWidth || 960;
+      const W = Math.max(picked ? 360 : 640, measured);
+      const item = (c) => ({ id: c.id, side: c.side === "party" ? "party" : "foe", name: c.display_name, linked: c.linked || [], down: c.down,
+        credit: c.down ? c.credit?.name : null, ref: c });
       const { placed, lines, height } = layoutField(knights.map(item), foes.map(item), W, { tokW: 130, tokH: 94 });
       const tokens = placed.map(([t, x, y]) => ftok(t.ref, x, y));
 
@@ -341,6 +357,12 @@ export default {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("class", "cbt-links");
       const stage = h("div", { class: "cbt-field", style: { height: `${height}px` } }, svg, tokens);
+      // the Field shares its row with the drawer: when its width changes, lay the clusters out again
+      const widthWatch = new ResizeObserver(() => {
+        if (!stage.isConnected) return widthWatch.disconnect();
+        if (Math.abs(stage.clientWidth - measured) > 40) { widthWatch.disconnect(); render(); }
+      });
+      widthWatch.observe(stage);
       stage.addEventListener("dragover", (e) => { if (dragging?.side === "knight") e.preventDefault(); });
       stage.addEventListener("drop", (e) => {                     // a knight dropped on open ground breaks off
         if (dragging?.side !== "knight" || e.target.closest(".ftok")) return;     // a knight on a knight does nothing
@@ -350,7 +372,7 @@ export default {
       });
       linkLines(stage, svg, lines, { glowId: "cbt-glow" });
       const pick = picked && byId(picked);
-      return [h("div", { class: "cbt-field-wrap" }, stage, pick ? drawer(pick, foes) : null), wait];
+      return [h("div", { class: `cbt-field-wrap ${pick ? "has-drawer" : ""}` }, stage, pick ? drawer(pick, foes) : null), wait];
     }
 
     // The picked token's controls: a foe's row (weapon, Attack, Hit, ±HP…) and
@@ -396,6 +418,16 @@ export default {
           k.player ? h("span", { class: "faint small" }, k.player) : null,
           tag ? h("span", { class: `tag ${tag[1]}` }, tag[0]) : null,
           mountedPill(k),
+          k.mounted && !k.down ? h("button", { class: `pill-lance ${k.lance ? "on" : ""}`, title: k.lance ? "Charging with a couched lance this round: a partial success or tie breaks it, a fumble breaks it and calls for Table 7.2. Click to lower it." : "Couch a lance for a charge this round",
+            onclick: () => post(`/api/combat/${k.id}/lance`, { on: !k.lance }) }, k.lance ? "⚔ Lance couched" : "Lance") : null,
+          foes.some((c) => c.missile != null) ? shieldChip(k) : null,
+          (() => { const n = foes.filter((c) => c.missile != null && !c.down && c.engaged_with === k.display_name).length;
+            return n && !k.down ? h("button", { class: "btn sm atk-btn loose", title: `The ${n} archer${n === 1 ? "" : "s"} facing ${k.display_name} loose together — the players get one card for the volley`,
+              onclick: () => volley(k, n) }, `🏹 Volley · ${n}`) : null; })(),
+          h("button", { class: `pill-prone ${k.prone ? "on" : ""}`, "aria-label": k.prone ? "Prone — back on their feet" : "Mark prone",
+            title: k.prone ? "Prone — click when back on their feet (standing takes the action)" : "Mark knocked prone (a failed Knockdown roll, a fall)",
+            onclick: () => post(`/api/combat/${k.id}/prone`, { on: !k.prone }) }, k.prone ? "Prone" : "⤓"),
+          k.prone_foes?.length ? h("span", { class: "tag gules", title: `${k.prone_foes.join(", ")} prone: from the saddle only a spear or lance reaches — or Trample (Horsemanship vs their action −5, the horse's damage)` }, "Prone foe: spear or Trample") : null,
           h("span", { class: "cbt-lane-slots" },
             k.mo?.n > 1 ? h("span", { class: `chip-mo ${k.mo.over ? "warn" : ""}`,
               title: k.mo.over ? `More than ${k.mo.limit} ${k.mo.limit === 2 ? "mounted foes" : "foes on foot"} can't all attack one knight` : "Multiple Opponents: the knight applies this to each opponent" },
@@ -441,7 +473,7 @@ export default {
           h("button", { class: `cbt-target ${c.engaged_with ? "set" : ""}`, title: "Who is this foe fighting?",
             onclick: (e) => targetMenu(e.currentTarget, c) }, `→ ${c.engaged_with || "nobody"} ▾`),
           weaponCell(c),
-          h("button", { class: "btn sm hit-btn", title: `A knight hit ${c.display_name}: enter the damage rolled`, onclick: () => hitDialog(c) }, icon("shield"), "Hit"),
+          h("button", { class: "btn sm hit-btn", disabled: cs.barrage?.active || null, title: cs.barrage?.active ? "The knights can't reach the archers until the barrage ends" : `A knight hit ${c.display_name}: enter the damage rolled`, onclick: () => hitDialog(c) }, icon("shield"), "Hit"),
           hpIn,
           h("button", { class: "btn sm icon", title: "Actions", onclick: (e) => actions(e.currentTarget, c) }, icon("dots"))),
         open ? h("div", { class: "cbt-foe-more" }, statLine(c, false),
@@ -456,12 +488,33 @@ export default {
       const i = Number(c.wielding) || 0;
       return [i, c.attacks[i] || c.attacks[0]];
     }
+    // What the foe does when the knight comes at it: attack, or one of the
+    // defensive actions (core.combat.defensive-actions).
+    const STANCE = {
+      attack: { label: "Attack", verb: "attacks", icon: "swords", hint: "Weapon skill vs the knight's action" },
+      defend: { label: "Defend", verb: "defends", icon: "shield", hint: "Weapon skill +10; a win or tie means no damage either way" },
+      evade: { label: "Evade", verb: "evades", icon: "flag", hint: "Movement Rate vs the knight's action; a win breaks the engagement" },
+      dodge: { label: "Dodge", verb: "dodges", icon: "drop", hint: "Movement Rate, one roll against every attacker; a win avoids damage but ends on the ground" },
+      trample: { label: "Trample", verb: "tramples", icon: "hourglass", hint: "A rider over a prone knight: Horsemanship vs the knight's action −5, no Height for the rider; a win is the horse's 3D6" },
+    };
+    function stanceMenu(anchor, c) {
+      const cur = c.stance || "attack";
+      menu(anchor, Object.entries(STANCE).filter(([k]) => k !== "trample" || c.mounted).map(([k, st]) => [
+        `${k === cur ? "• " : ""}${st.label}${k === "defend" ? " +10" : k === "evade" ? ` (Movement ${c.mounted ? c.horse_move + ", horse" : c.movement_rate})` : k === "dodge" ? (c.mounted ? " — on foot only" : ` (Movement ${c.movement_rate})`) : k === "trample" ? ` (Horsemanship ${c.skills?.Horsemanship ?? "10"})${c.knight_prone ? "" : " — needs a prone knight"}` : ""}`,
+        () => { if (k === "dodge" && c.mounted) return toast("Dodge is for foes on their feet — a rider evades instead", "err"); if (k !== cur) post("/api/combat/stance", { cid: c.id, stance: k }); },
+        { icon: st.icon }]));
+    }
+
     function weaponCell(c) {
       const [key, a] = wieldedOf(c);
       const disarmed = key === "brawl";
       const noSkill = a?.value == null;
       const knightsIn = cs.combatants.some((o) => o.side === "party");
+      const st = STANCE[c.stance || "attack"];
+      const defensive = (c.stance || "attack") !== "attack";
       return h("span", { class: "cbt-wield" },
+        h("button", { class: `stance-btn ${defensive ? "on" : ""}`, "aria-label": "Stance", title: `Stance — ${defensive ? st.label + ": " + st.hint : "attacking as usual"}. Click to change what this foe does this round`,
+          onclick: (e) => stanceMenu(e.currentTarget, c) }, icon(st.icon), defensive ? st.label : null),
         h("button", { class: `cbt-weapon ${disarmed ? "disarmed" : ""}`, title: disarmed ? "Disarmed — click to pick a weapon back up" : "The weapon in hand — click to switch, or mark Disarmed",
           onclick: (e) => weaponMenu(e.currentTarget, c, key) },
           disarmed ? "✋ " : "⚔ ", h("span", { class: "wn" }, a?.weapon || "Brawling"), " ",
@@ -471,21 +524,29 @@ export default {
           `${c.outnumbered}`.replace("-", "−") + " outnumbered") : null,
         h("input", { class: "input num adj-in", placeholder: "±", value: adjust.get(c.id) ?? "", title: "Any other modifier for this foe's next attack roll only",
           oninput: (e) => { const v = e.target.value.trim(); /^[+-]?\d+$/.test(v) ? adjust.set(c.id, Number(v)) : adjust.delete(c.id); } }),
-        h("button", { class: "btn sm atk-btn", disabled: c.down || noSkill || null,
-          title: noSkill ? "No Brawling skill — set one in the Adversaries editor" : `${c.display_name} attacks ${c.engaged_with || "a knight"} with ${a.weapon}`,
+        c.missile != null && !c.down ? h("button", { class: `btn sm atk-btn loose ${cs.barrage?.active ? "primary-ish" : ""}`, title: `${c.display_name} looses ${c.attacks[c.missile].weapon} at ${c.engaged_with || "a knight"} — unopposed, less the knight's shield penalty and the ± box`,
+          onclick: () => { render(); looseOne(c); } }, "🏹 Loose") : null,
+        h("button", { class: `btn sm atk-btn ${defensive ? "defensive" : ""} ${c.charging && !defensive ? "charge" : ""}`, disabled: c.down || (noSkill && !defensive) || c.cant_strike_prone || (cs.barrage?.active && !defensive) || null,
+          "data-barrage": cs.barrage?.active ? "1" : null,
+          title: cs.barrage?.active && !defensive ? "Under the barrage the lines haven't met: the archers Loose instead" : c.cant_strike_prone ? `${c.engaged_with} is prone: from the saddle only a spear or lance reaches — set the stance to Trample, or dismount`
+            : noSkill && !defensive ? "No Brawling skill — set one in the Adversaries editor"
+            : defensive ? `${c.display_name} ${st.verb} against ${c.engaged_with || "a knight"}: ${st.hint}`
+            : `${c.display_name} attacks ${c.engaged_with || "a knight"} with ${a.weapon}`,
           onclick: () => {
             const adj = adjust.get(c.id) || 0;                   // one roll, then the box clears
             adjust.delete(c.id); render();
             return knightsIn ? attackDialog(c, key, adj)
               : post(`/api/combat/${c.id}/roll`, { what: "attack", key, adjust: adj }).then((r) => { ctx.showLastRoll(r.event); render(); });
           } },
-          icon("swords"), "Attack"));
+          icon("swords"), c.charging && !defensive ? "Charge" : st.label));
     }
     function weaponMenu(anchor, c, current) {
       const wield = (w) => w !== current && post("/api/combat/wield", { cid: c.id, wield: w });
       const b = c.brawl || {};
+      const broken = new Set(c.broken || []);
       menu(anchor, [
-        ...c.attacks.map((a, i) => [`${i === current ? "• " : ""}${a.weapon} ${skillDisplay(a.value)} · ${a.damage}`, () => wield(i)]),
+        ...c.attacks.map((a, i) => [`${i === current ? "• " : ""}${a.weapon} ${skillDisplay(a.value)} · ${a.damage}${a.skill === "Charge" ? " — charge" : ""}${broken.has(i) ? " — broken" : ""}`,
+          () => broken.has(i) ? toast(`${a.weapon} is broken`, "err") : wield(i)]),
         c.attacks.length ? null : undefined,
         [`${current === "brawl" ? "• " : ""}Disarmed — Brawling ${b.value ?? "—"} · ${b.damage || "—"}`, () => wield("brawl"), { icon: "x" }],
       ].filter((x) => x !== undefined));
@@ -516,6 +577,8 @@ export default {
         onclick: (e) => menu(e.currentTarget, [
           ["Automatic (from who is mounted)", () => post(`/api/combat/${c.id}/height`, { override: null })],
           ["Negated (two-handed spear or halberd)", () => post(`/api/combat/${c.id}/height`, { override: "none" })]]) }, word));
+      if (c.prone) chips.push(h("button", { class: "chip-prone", title: "Prone: standing foes get +5 against them, they −5; click when back on their feet",
+        onclick: () => post(`/api/combat/${c.id}/prone`, { on: false }) }, "⤓ prone"));
       if (c.knight_mounted && !c.mounted) chips.push(h("button", { class: `chip-horse ${c.attacks_horse ? "on" : ""}`,
         title: c.attacks_horse ? "Attacking the horse: no −5 for this foe; the rider keeps +5" : "Click if this foe goes for the horse",
         onclick: () => post(`/api/combat/${c.id}/horse`, { on: !c.attacks_horse }) }, "⇣ horse"));
@@ -591,6 +654,47 @@ export default {
       }
     }
 
+    // The barrage: rounds of missile fire before the lines meet. In a battle the
+    // turn's barrage roll sets it; in free play the GM sets it here. While it
+    // lasts the archers Loose and the knights can't reach them.
+    const SHIELD_SIZES = [["none", "No shield", 0], ["small", "Small shield", 0], ["medium", "Medium shield", -5], ["large", "Large shield (kite)", -10]];
+    function barrageBar(foes) {
+      const archers = foes.some((c) => c.missile != null && !c.down);
+      const b = cs.barrage;
+      if (!archers && !b) return null;
+      const setRounds = (e) => menu(e.currentTarget, [0, 1, 2, 3].map((n) => [n ? `${n} round${n === 1 ? "" : "s"} of fire before contact` : "No barrage — straight to contact",
+        () => post("/api/combat/barrage", { rounds: n })]));
+      if (!b) return h("div", { class: "row", style: { marginTop: "8px" } },
+        h("button", { class: "btn ghost sm", title: "Missile foes: how many rounds do they shoot before the knights reach them?", onclick: setRounds }, icon("d6"), "Set a barrage…"));
+      return h("div", { class: `banner cc ${b.active ? "barrage-on" : ""}` },
+        b.active ? h("span", {}, `🏹 Barrage — round ${cs.round} of ${b.rounds} before contact. The knights can't reach the archers yet; each archer looses at the knight it faces, and a hit on a rider lands on the horse on 1–4.`)
+          : h("span", {}, `Contact — the barrage (${b.rounds} round${b.rounds === 1 ? "" : "s"}) is over.`),
+        bt ? null : h("button", { class: "linkish", onclick: setRounds }, "change"));
+    }
+    function shieldChip(k) {
+      const cur = SHIELD_SIZES.find((x) => x[0] === (k.shield_size || "large")) || SHIELD_SIZES[3];
+      return h("button", { class: "chip-shield", title: "The shield this knight raises against missiles: its size sets the archers' penalty (Table 9.4). Click to change.",
+        onclick: (e) => menu(e.currentTarget, SHIELD_SIZES.map(([size, label, pen]) => [`${size === cur[0] ? "• " : ""}${label}${pen ? ` · archers ${pen}`.replace("-", "−") : ""}`,
+          () => size !== cur[0] && post(`/api/combat/${k.id}/shield`, { size })])) },
+        icon("shield"), cur[2] ? `${cur[2]}`.replace("-", "−") + " to archers" : cur[1]);
+    }
+    async function looseOne(c) {
+      const adj = adjust.get(c.id) || 0;
+      adjust.delete(c.id);
+      const r = await post(`/api/combat/${c.id}/loose`, { adjust: adj });
+      ctx.showLastRoll(r.blow || r.event);
+      toast(r.hit ? `${c.display_name} hits${r.where === "mount" ? " the horse" : ""}` : `${c.display_name} misses`, r.hit ? "err" : "ok");
+    }
+    async function volley(k, n) {
+      const r = await post(`/api/combat/${k.id}/volley`, {});
+      ctx.showLastRoll(r.event);
+      toast(`${k.display_name}: ${r.shots} shot${r.shots === 1 ? "" : "s"}, ${r.hits} hit${r.hits === 1 ? "" : "s"}${r.mounts ? ` (${r.mounts} on the horse)` : ""}${r.rider_damage ? ` · ${r.rider_damage} damage` : ""}`, r.hits ? "err" : "ok");
+    }
+    async function looseAll(type) {
+      const r = await post("/api/combat/loose-all", { type });
+      toast(`${type}: ${r.shots} shot${r.shots === 1 ? "" : "s"}, ${r.hits} hit${r.hits === 1 ? "" : "s"}${r.mounts ? ` (${r.mounts} on horses)` : ""}`, r.hits ? "err" : "ok");
+    }
+
     // Banners for a battle fight: barrage, countercharge.
     function battleBanners() {
       const t = bt.t || {};
@@ -607,40 +711,84 @@ export default {
     // knight's result; the app decides whether the enemy's blow lands.
     const OUT = { critical: "Critical", success: "Success", failure: "Failure", fumble: "Fumble" };
 
+    // One pane for the whole exchange: weapon → knight → roll → the knight's
+    // result → verdict (and the Hit dialog if the knight won). The knight is
+    // chosen BEFORE the roll, so Height and the Fray name the right one.
     async function attackDialog(c, i, adj = 0) {
       const knights = cs.combatants.filter((o) => o.side === "party" && !o.down);
       if (!knights.length) return toast("No knights in the fight", "err");
-      let target = (byName(c.engaged_with)?.side === "party" ? byName(c.engaged_with) : knights[0]).id;
-      const roll = (await post(`/api/combat/${c.id}/roll`, { what: "attack", key: i, adjust: adj })).event;
-      ctx.showLastRoll(roll);
-      const d = roll.data, ok = d.outcome === "critical" || d.outcome === "success";
-      const go = async (knight, close) => {
-        const r = await post("/api/combat/attack", { event: roll.id, target, knight });
-        if (r.blow) ctx.showLastRoll(r.blow);
-        toast(r.event.data.verdict, "ok");
-        close();
-        if (r.result === "knight" || r.result === "tie") hitDialog(c, r.knight_shield);
-      };
-      const chips = h("div", { class: "chips" });
-      const againstChips = () => clear(chips, knights.map((k) => h("button", { class: `chip ${k.id === target ? "on" : ""}`,
-        onclick: () => { target = k.id; againstChips(); } }, k.display_name)));
-      await modal(`${c.display_name} attacks`, (close) => [
-        h("div", { class: "attack-roll" }, `${d.label} ${d.shown}: rolled `, h("b", {}, d.roll), " — ",
-          h("b", { class: `o-${d.outcome}` }, OUT[d.outcome])),
-        h("div", { class: "field", style: { margin: "12px 0" } }, h("span", {}, "Against"), againstChips()),
-        h("div", { class: "label" }, "The knight's result"),
-        h("div", { class: "knight-results" },
-          h("button", { class: "btn", onclick: () => go("critical", close) }, "Critical"),
-          ...(d.outcome === "success"
-            ? [h("button", { class: "btn", onclick: () => go("higher", close) }, `Success — beat ${d.roll}`),
-               h("button", { class: "btn", onclick: () => go("equal", close) }, `Success — equal ${d.roll}`),
-               h("button", { class: "btn", onclick: () => go("lower", close) }, `Success — under ${d.roll}`)]
-            : [h("button", { class: "btn", onclick: () => go("higher", close) }, "Success")]),
-          h("button", { class: "btn", onclick: () => go("failure", close) }, "Fail"),
-          h("button", { class: "btn danger", onclick: () => go("fumble", close) }, "Fumble")),
-        !ok ? h("div", { class: "faint small", style: { marginTop: "8px" } }, "The enemy missed — the knight can still win the exchange.") : null,
-        h("div", { class: "foot" }, h("button", { class: "btn ghost", onclick: () => close() }, "Cancel")),
-      ]);
+      const stance = c.stance || "attack", st = STANCE[stance];
+      const defensive = stance !== "attack" && stance !== "trample";
+      const broken = new Set(c.broken || []);
+      const S = { weapon: i ?? wieldedOf(c)[0], target: (byName(c.engaged_with)?.side === "party" ? byName(c.engaged_with) : knights[0]).id,
+        adjust: adj, roll: null, result: null, done: new Set() };
+      const dodging = stance === "dodge" && (c.linked || []).length > 1;
+      await modal(`${c.display_name} ${st.verb}`, (close) => {
+        const box = h("div", { class: "atk-pane" });
+        const draw = () => {
+          const rolled = !!S.roll, resolved = !!S.result;
+          const weaponChips = h("div", { class: "chips" },
+            c.attacks.map((a, k) => h("button", { class: `chip ${S.weapon === k ? "on" : ""} ${broken.has(k) ? "dis" : ""}`, disabled: rolled || broken.has(k) || null,
+              title: broken.has(k) ? `${a.weapon} is broken` : a.skill === "Charge" ? "The charge weapon: breaks on a partial success or tie, Table 7.2 on a fumble" : "",
+              onclick: () => { S.weapon = k; draw(); } }, `${a.weapon} ${skillDisplay(a.value)}`, h("span", { class: "faint" }, ` · ${a.damage}`), a.skill === "Charge" ? " ⚡" : "", broken.has(k) ? " ✗" : "")),
+            h("button", { class: `chip ${S.weapon === "brawl" ? "on" : ""}`, disabled: rolled || null, onclick: () => { S.weapon = "brawl"; draw(); } }, `Brawling ${c.brawl?.value ?? "—"}`, h("span", { class: "faint" }, ` · ${c.brawl?.damage || "—"}`)));
+          const knightChips = h("div", { class: "chips" }, knights.map((k) => h("button", { class: `chip ${k.id === S.target ? "on" : ""} ${S.done.has(k.id) ? "done" : ""}`, disabled: (rolled && !dodging) || S.done.has(k.id) || null,
+            onclick: () => { S.target = k.id; draw(); } }, k.display_name, c.engaged_with === k.display_name ? h("span", { class: "faint" }, " · engaged") : null, S.done.has(k.id) ? " ✓" : "")));
+          const adjIn = h("input", { class: "input num adj-in", placeholder: "±", value: S.adjust || "", disabled: rolled || null, title: "Any other modifier for this roll only",
+            oninput: (e) => { const v = e.target.value.trim(); S.adjust = /^[+-]?\d+$/.test(v) ? Number(v) : 0; } });
+          const d = S.roll?.data;
+          const rollLine = d ? h("div", { class: "attack-roll" }, `${d.label} ${d.shown}: rolled `, h("b", {}, d.roll), " — ", h("b", { class: `o-${d.outcome}` }, OUT[d.outcome])) : null;
+          const ok = d && (d.outcome === "critical" || d.outcome === "success");
+          const go = async (knight) => {
+            const r = await post("/api/combat/attack", { event: S.roll.id, target: S.target, knight });
+            if (r.blow) ctx.showLastRoll(r.blow);
+            if (r.prompt?.kind === "table72") toast(`${r.prompt.name} fumbled the lance: roll Horsemanship on Table 7.2 — critical: no harm · success: 1D6 splinters · failure: thrown, 2D6 · fumble: horse down too, 3D6 (armour does not protect)`, "err");
+            S.result = { verdict: r.event.data.verdict, knightHits: r.result === "knight" || (r.result === "tie" && stance === "attack"), shield: r.knight_shield, target: S.target };
+            S.done.add(S.target);
+            if (dodging) {
+              const left = knights.filter((k) => !S.done.has(k.id) && (c.linked || []).includes(k.display_name));
+              if (left.length) S.target = left[0].id;
+            }
+            draw();
+          };
+          const results = d && !resolved ? h("div", {},
+            h("div", { class: "label" }, `${byId(S.target)?.display_name || "The knight"}'s result`),
+            h("div", { class: "knight-results" },
+              h("button", { class: "btn", onclick: () => go("critical") }, "Critical"),
+              ...(d.outcome === "success"
+                ? [h("button", { class: "btn", onclick: () => go("higher") }, `Success — beat ${d.roll}`),
+                   h("button", { class: "btn", onclick: () => go("equal") }, `Success — equal ${d.roll}`),
+                   h("button", { class: "btn", onclick: () => go("lower") }, `Success — under ${d.roll}`)]
+                : [h("button", { class: "btn", onclick: () => go("higher") }, "Success")]),
+              h("button", { class: "btn", onclick: () => go("failure") }, "Fail"),
+              h("button", { class: "btn danger", onclick: () => go("fumble") }, "Fumble")),
+            !ok ? h("div", { class: "faint small", style: { marginTop: "8px" } }, `${c.display_name} missed — the knight can still win the exchange.`) : null) : null;
+          const verdict = resolved ? h("div", { class: "verdict-box" },
+            h("div", { class: "label" }, "Verdict"), h("div", { class: "verdict-text" }, S.result.verdict),
+            S.result.knightHits ? h("div", { class: "faint small" }, `${byId(S.result.target)?.display_name} struck ${c.display_name}: enter the damage.`) : null) : null;
+          const more = resolved && dodging && knights.some((k) => !S.done.has(k.id) && (c.linked || []).includes(k.display_name));
+          clear(box,
+            defensive ? h("div", { class: "hint" }, st.hint, dodging ? " — the same roll is set against each knight in turn." : "") : null,
+            h("div", { class: "label" }, "Weapon"), weaponChips,
+            h("div", { class: "label", style: { marginTop: "8px" } }, "Against"), knightChips,
+            !rolled ? h("div", { class: "row", style: { marginTop: "10px" } },
+              h("button", { class: "btn primary", onclick: async () => {
+                adjust.delete(c.id);
+                S.roll = (await post(`/api/combat/${c.id}/roll`, { what: "attack", key: S.weapon, adjust: S.adjust, target: S.target })).event;
+                ctx.showLastRoll(S.roll); draw();
+              } }, icon("d20"), defensive ? st.label : c.attacks[S.weapon]?.skill === "Charge" ? "Charge!" : "Roll the attack"),
+              h("span", { class: "faint small" }, "modifier"), adjIn,
+              h("span", { class: "faint small" }, "Height, outnumbered and the stance are worked out at the roll.")) : null,
+            rollLine, results, verdict,
+            more ? h("div", { class: "hint" }, `Now ${byId(S.target)?.display_name}'s result against the same roll.`) : null,
+            more && S.roll ? (() => { S.result = null; return null; })() : null,
+            h("div", { class: "foot" },
+              resolved && S.result.knightHits ? h("button", { class: "btn primary", onclick: () => { close(); hitDialog(c, S.result.shield); } }, icon("shield"), "Enter the knight's hit") : null,
+              h("button", { class: resolved ? "btn" : "btn ghost", onclick: () => close() }, resolved ? "Done" : "Cancel")));
+        };
+        draw();
+        return box;
+      }, { wide: true });
     }
 
     // ------------------------------------------------------------ a knight hits an enemy
@@ -736,6 +884,7 @@ export default {
       if (!isKnight) {
         items.push(null);
         items.push([c.mounted ? "Dismount (on foot)" : "Mount (mounted)", () => post(`/api/combat/${c.id}/mounted`, { mounted: !c.mounted }), { icon: "shield" }]);
+        items.push([c.prone ? "Back on their feet" : "Knocked prone", () => post(`/api/combat/${c.id}/prone`, { on: !c.prone })]);
         items.push([c.attacks_horse ? "Stop attacking the horse" : "Attacking the horse", () => post(`/api/combat/${c.id}/horse`, { on: !c.attacks_horse })]);
         items.push([c.height_override ? "Height: automatic" : "Height: negated (spear/halberd)", () => post(`/api/combat/${c.id}/height`, { override: c.height_override ? null : "none" })]);
         if (["unconscious", "surrendered"].includes(c.status)) items.push(...captiveMenu(c));

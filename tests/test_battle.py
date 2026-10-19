@@ -179,3 +179,13 @@ def test_leader_default():
     assert B.leader_default(["a", "b", "b"]) == "b"
     assert B.leader_default(["a", "b"]) == "a"
     assert B.leader_default(["gm", None]) is None
+
+
+def test_height_with_prone():
+    from core.battle import height
+    assert height(False, False, foe_prone=True) == (-5, 5)            # standing knight over a prone foe
+    assert height(False, False, knight_prone=True) == (5, -5)          # standing foe over a prone knight
+    assert height(True, False, knight_prone=True) == (5, -5)           # rider over a prone knight: still +5 (spear only)
+    assert height(False, True, foe_prone=True) == (-5, 5)              # mounted knight over a prone foe
+    assert height(False, False, foe_prone=True, knight_prone=True) == (0, 0)
+    assert height(False, True, attacks_horse=True, foe_prone=True) == (-5, 5)   # a prone foe can't go for the horse

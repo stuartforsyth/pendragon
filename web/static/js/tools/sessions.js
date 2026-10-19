@@ -1,7 +1,7 @@
 // Sessions archive: every saved session file — resume one, read its chronicle,
 // or download it.
 
-import { h, clear, api, post, icon, modal, confirmBox, toast, useCss, download, enc } from "../lib.js";
+import { h, clear, api, post, del, icon, modal, confirmBox, toast, useCss, download, enc } from "../lib.js";
 
 const fmtDate = (iso) => {
   if (!iso) return "";
@@ -78,7 +78,15 @@ export default {
           h("div", { class: "faint small" }, fmtDate(s.created), " · ", `${s.count} events`,
             s.ended ? null : h("span", { class: "tag gules", style: { marginLeft: "8px" } }, "not ended"))),
         h("div", { class: "row" }, exportsFor(s.id),
-          h("button", { class: "btn sm primary", onclick: () => resume(s) }, icon("play"), "Resume")))));
+          h("button", { class: "btn sm primary", onclick: () => resume(s) }, icon("play"), "Resume"),
+          h("button", { class: "btn sm ghost icon", title: "Bin this session (it goes to sessions/.trash, not oblivion)", onclick: () => remove(s) }, icon("x"))))));
+    }
+
+    async function remove(s) {
+      if (!await confirmBox("Bin this session?", `“${s.title}” (${s.count} events) goes to the bin folder, sessions/.trash. A battle paused in it can no longer be resumed from the Battle tool.`, "Bin it", true)) return;
+      await del(`/api/sessions/${enc(s.id)}`);
+      toast(`Binned “${s.title}”`, "ok");
+      load();
     }
 
     async function start() {

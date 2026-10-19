@@ -6,10 +6,13 @@ import random
 
 from fastapi import APIRouter, Request
 
+from core.rules import roll_expr
+
 from core import battle as B
-from core.combat import (blow_narrative, CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_breakdown,
+from core.combat import (blow_narrative, CHAR_FULL, CHAR_ORDER, Combatant, Encounter, blow_breakdown, STANCES, DEFEND_BONUS, DEFENSIVE, HORSE_DAMAGE, is_spear,
+                         missile_attack, SHIELD_MISSILE_PENALTY, SHIELD_WORD, weapon_fate, is_charge, is_couched,
                          resolve_attack, resolve_blow, roll_ransom, surrender_check)
-from core.dice import NotationError, roll_notation, skill_display
+from core.dice import NotationError, resolve_skill, roll_notation, skill_display
 from core.encounter_def import to_editable
 from web.routes.cast import cast_combatant, has_stats
 from web.routes.common import bad, st, to_int
@@ -48,12 +51,13 @@ def _engaged_knight(cs, c):
                  and k.display_name == c.engaged_with), None) if c.engaged_with else None
 
 
-def _height(cs, c):
-    """Height Advantage on this foe's rolls against its engaged knight."""
-    k = _engaged_knight(cs, c)
+def _height(cs, c, knight=None):
+    """Height Advantage on this foe's rolls against its engaged knight (or the one given)."""
+    k = knight if knight is not None else _engaged_knight(cs, c)
     if k is None or not _is_foe(c):
         return 0
-    return B.height(c.mounted, k.mounted, c.height_override, c.attacks_horse)[0]
+    return B.height(c.mounted, k.mounted, c.height_override, c.attacks_horse,
+                    getattr(c, "prone", False), getattr(k, "prone", False))[0]
 
 
 # -- Glory for defeated foes (derived on replay; see web.combat_state) --------
@@ -168,6 +172,16 @@ async def start(request: Request, body: dict):
             setattr(k, key, v)
         k.id = f"p-{m['id']}"
         knights.append(k)
+    # A foe's charge weapon is only in hand when it charges (a countercharge);
+    # otherwise it starts with its first melee weapon.
+    charging = bool(body.get("_countercharge"))
+    for f in foes:
+        if any(is_charge(a) for a in f.attacks or []):
+            nxt = f.next_weapon(charge_ok=charging) if charging else f.next_weapon()
+            if charging:
+                nxt = next((i for i, a in enumerate(f.attacks) if is_charge(a)), nxt)
+            if nxt is not None:
+                f.wielding = nxt
     if not foes and not knights:
         bad("That encounter has no combatants")
 
@@ -435,6 +449,244 @@ async def mounted(request: Request, cid: str, body: dict):
     return {"event": ev}
 
 
+@router.post("/api/combat/divider")
+async def divider(request: Request, body: dict):
+    """A divider the GM drops by hand — "The gate falls", "Nightfall"."""
+    state = st(request)
+    text = (body.get("text") or "").strip()
+    if not text:
+        bad("Say what the divider marks")
+    return {"event": _divider(state, text, kind="gm")}
+
+
+@router.post("/api/combat/{cid}/lance")
+async def lance(request: Request, cid: str, body: dict):
+    """A knight couches a lance for a charge this round (or lowers it). With it
+    set, the charge's weapon rules apply to them: a partial success or tie
+    breaks the lance, a fumble breaks it and calls for Table 7.2."""
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    if _is_foe(c):
+        bad("Foes charge by taking up their charge weapon")
+    on = bool(body.get("on"))
+    if on == bool(getattr(c, "lance", False)):
+        return {"event": None}
+    line = f"{c.display_name} couches a lance and charges" if on else f"{c.display_name} lowers the lance"
+    ev = state.record("combat.lance", line, title=c.display_name, data={"cid": cid, "on": on, "table_text": line, "touches": [c.party_id]})
+    return {"event": ev}
+
+
+def _table_72(state, c, roll_fn):
+    """Table 7.2 for a foe who fumbled a couched lance: Horsemanship decides
+    splinters, a fall or a horse brought down. Armour does not protect."""
+    horsemanship = int((c.skills or {}).get("Horsemanship") or 10)
+    die, outcome = resolve_skill(horsemanship)
+    fn = c.display_name
+    text = {"critical": f"{fn} keeps the saddle — the broken lance does no further harm",
+            "success": f"{fn} is struck by flying splinters",
+            "failure": f"the tip buries itself and launches {fn} from the saddle",
+            "fumble": f"the tip buries itself and brings down {fn} and horse together"}[outcome]
+    dmg = {"critical": 0, "success": roll_fn("1D6"), "failure": roll_fn("2D6"), "fumble": roll_fn("3D6")}[outcome]
+    state.record("combat.check", f"{fn} — Table 7.2 (Horsemanship {horsemanship}): {die} — {outcome.upper()}: {text}" + (f", {dmg} damage (armour does not protect)" if dmg else ""),
+                 title=f"{fn} — Lance fumble", data={"cid": c.id, "roll": die, "outcome": outcome, "label": "Table 7.2", "table_text": f"{fn}: {text}"})
+    if dmg:
+        state.record("combat.hp", f"{fn} takes {dmg} from the lance fumble", title=fn, data={"cid": c.id, "delta": -dmg, "table_text": f"{fn} is hurt by the broken lance"})
+    if outcome in ("failure", "fumble"):
+        state.record("combat.prone", f"{fn} is thrown — prone", title=fn, data={"cid": c.id, "on": True, "table_text": f"{fn} is thrown from the saddle"})
+    return outcome
+
+
+@router.post("/api/combat/barrage")
+async def barrage(request: Request, body: dict):
+    """Rounds of missile fire before the lines meet (a battle's barrage sets
+    this itself; in free play the GM sets it). 0 clears it."""
+    state, cs = _active(request)
+    n = to_int(body.get("rounds") or 0, "rounds")
+    if not 0 <= n <= 6:
+        bad("0 to 6 rounds")
+    line = f"Barrage: {n} round{'s' if n != 1 else ''} of missile fire before contact" if n else "No barrage — straight into contact"
+    ev = state.record("combat.barrage", line, title="Barrage", data={"rounds": n, "table_text": line})
+    return {"event": ev}
+
+
+@router.post("/api/combat/{cid}/shield")
+async def shield_size(request: Request, cid: str, body: dict):
+    """The shield a knight raises against missiles: its size sets the Missile
+    Attack Penalty on the archer (none / small 0, medium −5, large −10)."""
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    size = body.get("size")
+    if size not in SHIELD_MISSILE_PENALTY:
+        bad("Shield is none, small, medium or large")
+    pen = SHIELD_MISSILE_PENALTY[size]
+    line = f"{c.display_name} carries a {SHIELD_WORD[size]}" + (f" — archers at {pen:+d}".replace("-", "−") if pen else "") if size != "none" else f"{c.display_name} has no shield"
+    ev = state.record("combat.shield", line, title=c.display_name, data={"cid": cid, "size": size, "table_text": line, **({"touches": [c.party_id]} if not _is_foe(c) else {})})
+    return {"event": ev}
+
+
+def _loose(state, cs, c, body, gm_only=False):
+    """One missile shot at the knight this foe faces (core.combat.missile-weapons):
+    an unopposed roll at the archer's skill less the knight's shield penalty and
+    any range or wind modifier the GM adds; on a hit, a mounted knight's horse
+    takes it on 1–4 of 1D6; damage goes against armour alone."""
+    ma = missile_attack(c)
+    if not ma:
+        bad(f"{c.display_name} has no missile weapon")
+    key, atk = ma
+    knight = _engaged_knight(cs, c)
+    if knight is None:
+        bad(f"{c.display_name} isn't facing a knight — engage one first")
+    pen = SHIELD_MISSILE_PENALTY.get(getattr(knight, "shield_size", "large"), 0)
+    adjust = to_int(body.get("adjust") or 0, "modifier")
+    bits = ([f"shield {pen}".replace("-", "−")] if pen else []) + ([f"{adjust:+d}".replace("-", "−")] if adjust else [])
+    label = atk["weapon"] + (f" ({', '.join(bits)})" if bits else "")
+    roll = record_check(state, label=label, value=atk["value"], modifier=c.modifier + pen + adjust, actor=c.log_name,
+                        extra={"cid": c.id, "attack": key, "missile": True, "shield_penalty": pen, "adjust": adjust, "target": knight.id},
+                        visibility="gm" if gm_only else "public")
+    out = {"event": roll, "blow": None, "hit": False, "where": None, "archer": c.display_name, "weapon": atk["weapon"],
+           "outcome": roll["data"]["outcome"], "damage": 0}
+    oc = roll["data"]["outcome"]
+    if oc in ("critical", "success"):
+        where = "rider"
+        if knight.mounted:
+            d6 = roll_expr("1D6")
+            where = "mount" if d6 <= 4 else "rider"
+        out.update(hit=True, where=where)
+        out["blow"] = record_blow(state, cs, {"attacker": c.id, "attack": key, "target": knight.id,
+                                               "critical": oc == "critical", "shield": False, "at_horse": where == "mount",
+                                               "_gm_only": gm_only})
+        out["damage"] = (out["blow"]["data"].get("blow") or {}).get("damage", 0)
+    elif not gm_only:
+        miss = f"{c.log_name}'s {atk['weapon'].lower()} misses {knight.display_name}" + (" — a fumble" if oc == "fumble" else "")
+        out["miss"] = state.record("combat.note", miss, title=c.display_name, data={"text": miss, "table_text": miss, "touches": [knight.party_id]})
+    return out
+
+
+def _divider(state, text, **extra):
+    """A thin rule in the log and the Fray: the start of something new."""
+    return state.record("divider", text, title="", data={"text": text, "table_text": text, **extra})
+
+
+def _volley(state, knight, archers, body):
+    """Every archer facing one knight looses together. The shots are rolled
+    one by one for the GM's log, but the players get a single card: how many
+    came, what hit the rider, what hit the horse, what missed."""
+    _divider(state, f"Volley at {knight.display_name}", kind="volley", touches=[knight.party_id])
+    shots = []
+    for c in archers:
+        shots.append(_loose(state, state.combat_state(), c, body, gm_only=True))
+    rider = [s_ for s_ in shots if s_["hit"] and s_["where"] == "rider"]
+    mount = [s_ for s_ in shots if s_["hit"] and s_["where"] == "mount"]
+    missed = [s_ for s_ in shots if not s_["hit"]]
+    kn = knight.display_name
+    n = len(shots)
+    what = shots[0]["weapon"].lower() if shots else "missile"
+    plural = what if what.endswith("s") else what + "s"
+    parts = []
+    if rider:
+        parts.append(f"{len(rider)} strike{'s' if len(rider) == 1 else ''} {kn} for {' + '.join(str(s_['damage']) for s_ in rider)} damage")
+    if mount:
+        parts.append(f"{len(mount)} hit{'s' if len(mount) == 1 else ''} the horse for {' + '.join(str(s_['damage']) for s_ in mount)}")
+    if missed:
+        parts.append(f"{len(missed)} miss{'es' if len(missed) == 1 else ''}")
+    head = f"{n} {plural if n != 1 else what} fl{'y' if n != 1 else 'ies'} at {kn}: " if n else f"No shots at {kn}"
+    text = head + "; ".join(parts) + ("." if parts else "")
+    if rider or mount:
+        text += " Armour only — no shield."
+    total = sum(s_["damage"] for s_ in rider)
+    ev = state.record("combat.volley", text, title=f"Volley at {kn}",
+                      data={"cid": knight.id, "knight": kn, "count": n, "weapon": shots[0]["weapon"] if shots else "",
+                            "shots": [{"archer": s_["archer"], "outcome": s_["outcome"], "where": s_["where"] if s_["hit"] else None,
+                                       "damage": s_["damage"], "critical": s_["outcome"] == "critical"} for s_ in shots],
+                            "rider_damage": total, "mount_damage": sum(s_["damage"] for s_ in mount),
+                            "table_text": text, "touches": [knight.party_id]})
+    return {"event": ev, "shots": n, "hits": len(rider) + len(mount), "mounts": len(mount), "rider_damage": total}
+
+
+@router.post("/api/combat/{cid}/volley")
+async def volley(request: Request, cid: str, body: dict):
+    """The archers facing one knight loose at them together — one card for the players."""
+    state, cs = _active(request)
+    knight = _combatant(cs, cid)
+    if _is_foe(knight):
+        bad("A volley is aimed at a knight")
+    archers = [c for c in cs["combatants"] if _is_foe(c) and not c.down and missile_attack(c) and _engaged_knight(cs, c) is knight]
+    if not archers:
+        bad(f"No archer is facing {knight.display_name}")
+    return _volley(state, knight, archers, body)
+
+
+@router.post("/api/combat/{cid}/loose")
+async def loose(request: Request, cid: str, body: dict):
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    if not _is_foe(c):
+        bad("Knights' shots are the players' business")
+    return _loose(state, cs, c, body)
+
+
+@router.post("/api/combat/loose-all")
+async def loose_all(request: Request, body: dict):
+    """The whole line looses: every foe of the type still fighting and facing a knight."""
+    state, cs = _active(request)
+    foes = [c for c in cs["combatants"] if _is_foe(c) and not c.down and c.type == body.get("type")
+            and missile_attack(c) and _engaged_knight(cs, c) is not None]
+    if not foes:
+        bad(f"No {body.get('type')} with a missile weapon is facing a knight")
+    by_knight = {}
+    for c in foes:
+        by_knight.setdefault(_engaged_knight(cs, c).id, []).append(c)
+    results = [_volley(state, _combatant(cs, kid), archers, body) for kid, archers in by_knight.items()]
+    return {"shots": sum(r["shots"] for r in results), "hits": sum(r["hits"] for r in results),
+            "mounts": sum(r["mounts"] for r in results), "events": [r["event"] for r in results]}
+
+
+@router.post("/api/combat/{cid}/prone")
+async def prone(request: Request, cid: str, body: dict):
+    """Knocked prone, or back on their feet. Prone and mounted are exclusive:
+    a rider knocked prone has left the saddle (standing up takes their action
+    — the GM's call when to clear it)."""
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    on = bool(body.get("on"))
+    if on == getattr(c, "prone", False):
+        return {"event": None}
+    line = f"{c.display_name} is knocked prone" if on else f"{c.display_name} is back on their feet"
+    if on and c.mounted:
+        line = f"{c.display_name} is down from the saddle, prone"
+    data = {"cid": cid, "on": on, "table_text": line}
+    if not _is_foe(c):
+        data["touches"] = [c.party_id]
+    ev = state.record("combat.prone", line, title=c.display_name, data=data)
+    return {"event": ev}
+
+
+def _after_knockdown(state, cs, blow_ev):
+    """An automatic knockdown lays a foe prone (core.combat.knockdown); from the
+    saddle it also means a fall — 1D6 and the weapon dropped. The DEX-check
+    case is the GM's: mark prone by hand if the roll fails."""
+    d = (blow_ev or {}).get("data") or {}
+    if (d.get("blow") or {}).get("knockdown") != "automatic" or not d.get("cid"):
+        return []
+    c = next((x for x in cs["combatants"] if x.id == d["cid"]), None)
+    if c is None or not _is_foe(c) or getattr(c, "prone", False) or c.down:
+        return []
+    out = []
+    if c.mounted:
+        dmg = roll_expr("1D6")
+        out.append(state.record("combat.prone", f"{c.display_name} is thrown from the saddle — prone", title=c.display_name,
+                                data={"cid": c.id, "on": True, "table_text": f"{c.display_name} is thrown from the saddle"}))
+        out.append(state.record("combat.hp", f"{c.display_name} takes {dmg} from the fall", title=c.display_name,
+                                data={"cid": c.id, "delta": -dmg, "table_text": f"{c.display_name} is hurt in the fall"}))
+        if c.wielding != "brawl":
+            out.append(state.record("combat.wield", f"{c.display_name} drops their weapon in the fall — fights on with Brawling", title=c.display_name,
+                                    data={"cids": [c.id], "wield": "brawl", "table_text": f"{c.display_name} drops their weapon"}))
+    else:
+        out.append(state.record("combat.prone", f"{c.display_name} is knocked prone", title=c.display_name,
+                                data={"cid": c.id, "on": True, "table_text": f"{c.display_name} is knocked prone"}))
+    return out
+
+
 @router.post("/api/combat/{cid}/horse")
 async def horse(request: Request, cid: str, body: dict):
     state, cs = _active(request)
@@ -582,6 +834,8 @@ async def wield(request: Request, body: dict):
     except LookupError:
         bad("Unknown weapon")
     w = w if w == "brawl" else int(w)
+    if w != "brawl" and any(w in (getattr(c, "broken", []) or []) for c in targets):
+        bad(f"That {atk['weapon'].lower()} is broken")
     targets = [c for c in targets if c.wielding != w]
     if not targets:
         return {"event": None}
@@ -595,6 +849,52 @@ async def wield(request: Request, body: dict):
         title = names
     ev = state.record("combat.wield", text, title=title,
                       data={"cids": [c.id for c in targets], "wield": w, "table_text": text})
+    return {"event": ev}
+
+
+_STANCE_TEXT = {"attack": "{n} {v} to attack", "defend": "{n} {v} on the defensive (+10, no damage either way)",
+                "evade": "{n} {v} to evade — breaking away", "dodge": "{n} {v} to dodge",
+                "trample": "{n} {v} to ride down the fallen — Trample"}
+_STANCE_TABLE = {"attack": "{n} attack", "defend": "{n} defend", "evade": "{n} try to evade", "dodge": "{n} dodge",
+                 "trample": "{n} ride down the fallen"}
+
+
+@router.post("/api/combat/stance")
+async def stance(request: Request, body: dict):
+    """What a foe does when the knight comes at it this round: attack (the
+    default), defend, evade or dodge — one foe (``cid``) or every foe of a
+    type still fighting (``type``). Dodge is for foes on their feet."""
+    state, cs = _active(request)
+    st_ = body.get("stance")
+    if st_ not in STANCES:
+        bad("Stance is attack, defend, evade or dodge")
+    if body.get("type"):
+        targets = [c for c in cs["combatants"] if _is_foe(c) and c.type == body["type"] and not c.down]
+        if st_ == "dodge":
+            targets = [c for c in targets if not c.mounted]
+        if st_ == "trample":
+            targets = [c for c in targets if c.mounted]
+        if not targets:
+            bad(f"No {body['type']} still fighting" + (" on foot" if st_ == "dodge" else ""))
+    else:
+        c = _combatant(cs, body.get("cid"))
+        if not _is_foe(c):
+            bad("Knights' actions are the players' business")
+        if st_ == "dodge" and c.mounted:
+            bad("Dodge is for foes on their feet — a rider evades instead")
+        if st_ == "trample" and not c.mounted:
+            bad("Only a rider can trample")
+        targets = [c]
+    targets = [c for c in targets if getattr(c, "stance", "attack") != st_]
+    if not targets:
+        return {"event": None}
+    one = len(targets) == 1
+    names = targets[0].display_name if one else f"{len(targets)} {targets[0].type}"
+    verb = {"attack": "turns" if one else "turn", "defend": "goes" if one else "go",
+            "evade": "turns" if one else "turn", "dodge": "sets" if one else "set", "trample": "wheels" if one else "wheel"}[st_]
+    text = _STANCE_TEXT[st_].format(n=names, v=verb) if st_ != "dodge" else f"{names} {'braces' if one else 'brace'} to dodge"
+    ev = state.record("combat.stance", text, title=names,
+                      data={"cids": [c.id for c in targets], "stance": st_, "table_text": _STANCE_TABLE[st_].format(n=names)})
     return {"event": ev}
 
 
@@ -661,7 +961,12 @@ async def roll(request: Request, cid: str, body: dict):
     c = _combatant(cs, cid)
     what, key = body.get("what"), body.get("key")
     masked = False      # combat rolls are always public — players see every roll
-    common = dict(actor=c.log_name, masked=masked, extra={"cid": cid})
+    # the knight this roll is against: chosen in the attack pane, else the one engaged
+    target = _combatant(cs, body["target"]) if body.get("target") else None
+    if target is not None and _is_foe(target):
+        bad("The target must be a knight")
+    actor = f"{c.display_name} ({target.display_name})" if target is not None else c.log_name
+    common = dict(actor=actor, masked=masked, extra={"cid": cid, **({"target": target.id} if target is not None else {})})
     if what == "char":
         if key not in CHAR_ORDER:
             bad("Unknown characteristic")
@@ -678,18 +983,40 @@ async def roll(request: Request, cid: str, body: dict):
             bad(f"{c.display_name} has no Brawling skill — set one in the Adversaries editor")
         key = key if key == "brawl" else int(key)
         if what == "attack":
-            height = _height(cs, c)
+            stance_ = getattr(c, "stance", "attack") if _is_foe(c) else "attack"
+            height = _height(cs, c, target)
             # Outnumbered by knights: −5 per knight after the first (core p.148), counted
-            # from the links; plus the GM's one-roll ± for anything else.
+            # from the links; plus the GM's one-roll ± for anything else. A Dodge is one
+            # roll against every attacker and skips the outnumbered penalty.
             on_it = [k for k in cs["combatants"] if not _is_foe(k) and k.status == "active" and k.display_name in c.linked()]
-            outnumbered = -5 * (len(on_it) - 1) if len(on_it) > 1 else 0
+            outnumbered = -5 * (len(on_it) - 1) if len(on_it) > 1 and stance_ != "dodge" else 0
             adjust = to_int(body.get("adjust") or 0, "modifier")
-            common["extra"].update(attack=key, height=height, outnumbered=outnumbered, adjust=adjust)
-            bits = ([f"Height {height:+d}"] if height else []) + ([f"−{-outnumbered} outnumbered"] if outnumbered else []) \
-                + ([f"{adjust:+d}".replace("-", "−")] if adjust else [])
-            label = atk["weapon"] + (f" ({', '.join(bits)})" if bits else "")
-            ev = record_check(state, label=label, value=atk["value"],
-                              modifier=c.modifier + height + outnumbered + adjust, **common)
+            defend = DEFEND_BONUS if stance_ == "defend" else 0
+            common["extra"].update(attack=key, height=height, outnumbered=outnumbered, adjust=adjust, stance=stance_)
+            bits = ([f"Defend +{defend}"] if defend else []) + ([f"Height {height:+d}"] if height else []) \
+                + ([f"−{-outnumbered} outnumbered"] if outnumbered else []) + ([f"{adjust:+d}".replace("-", "−")] if adjust else [])
+            knight_ = target if target is not None else _engaged_knight(cs, c)
+            knight_prone = bool(knight_ is not None and getattr(knight_, "prone", False))
+            if stance_ == "attack" and c.mounted and knight_prone and not is_spear(atk["weapon"]):
+                bad(f"A rider can't strike a prone foe with a {atk['weapon'].lower()} — only a spear or lance reaches; set the stance to Trample instead")
+            if stance_ in ("evade", "dodge"):                 # Movement Rate vs the knight's action
+                value = c.movement_rate(mounted_horse=stance_ == "evade" and c.mounted)
+                base_label = f"{stance_.capitalize()} (Movement{' — horse' if stance_ == 'evade' and c.mounted else ''})"
+            elif stance_ == "trample":                        # Horsemanship; the horse won't tread on things: no Height for the rider
+                if not c.mounted:
+                    bad("Only a rider can trample")
+                if not knight_prone:
+                    bad(f"{knight_.display_name if knight_ else 'The knight'} isn't prone — Trample is for the fallen")
+                value = int(c.skills.get("Horsemanship") or 10)
+                height = min(height, 0)
+                common["extra"]["height"] = height
+                bits = [b_ for b_ in bits if not b_.startswith("Height")] + ["the knight's action −5"]
+                base_label = "Trample (Horsemanship)" + ("" if c.skills.get("Horsemanship") else " — no skill listed, 10 assumed")
+            else:
+                value, base_label = atk["value"], atk["weapon"]
+            label = base_label + (f" ({', '.join(bits)})" if bits else "")
+            ev = record_check(state, label=label, value=value,
+                              modifier=c.modifier + height + outnumbered + adjust + defend, **common)
         else:
             ev = record_damage(state, label=atk["weapon"], expr=atk["damage"],
                                critical=bool(body.get("critical")),
@@ -745,13 +1072,14 @@ async def blow(request: Request, body: dict):
     target = _combatant(cs, body["target"]) if body.get("target") else None
     was = bool(target and B.is_defeated(target.status))
     ev = record_blow(state, cs, body)
+    _after_knockdown(state, state.combat_state(), ev)
     return {"event": ev, "prompt": _who_defeated(state, target.id, was) if target else None}
 
 
 def record_blow(state, cs, body):
     attacker = _combatant(cs, body["attacker"]) if body.get("attacker") else None
     target = _combatant(cs, body["target"]) if body.get("target") else None
-    weapon, expr = (body.get("weapon") or "").strip(), None
+    weapon, expr = (body.get("weapon") or "").strip(), (body.get("expr") or None)
     unarmed = False
     if attacker is not None and body.get("attack") not in (None, ""):
         try:
@@ -852,14 +1180,15 @@ def _report_blow_on_knight(state, attacker, knight, weapon, expr, rolled, extra,
     head = f"{who}’s {weapon or 'blow'}" if who else (weapon or "A blow")
     crit = "CRITICAL " if b["critical"] else ""
     protect = "armour + shield/parry apply" if shield else "armour only, no shield/parry"
-    at_horse = bool(attacker is not None and attacker.attacks_horse and knight.mounted)   # the players' surprise
+    at_horse = bool(body.get("at_horse")) or bool(attacker is not None and attacker.attacks_horse and knight.mounted)   # the players' surprise
     text = f"{head} {crit}hits {knight.display_name}{chr(8217) + 's horse' if at_horse else ''} for {b['damage']} damage ({blow_breakdown(b).rsplit(' → ', 1)[0]}) — {protect}"
     story = blow_narrative(attacker=who, weapon=weapon, target=f"{knight.display_name}’s horse" if at_horse else knight.display_name,
                            amount=b["damage"],
                            to_knight=True, critical=b["critical"], unarmed=unarmed)
     return state.record("combat.blow", text, title=f"{who + ' → ' if who else ''}{knight.display_name}",
+                        visibility="gm" if body.get("_gm_only") else "public",
                         data={"cid": knight.id, "delta": 0, "attacker": who, "weapon": weapon or "",
-                              "target": knight.display_name, "blow": b, "to_knight": True,
+                              "target": knight.display_name, "blow": b, "to_knight": True, "at_horse": at_horse,
                               "knight_shield": shield, "breakdown": blow_breakdown(b),
                               "table_text": story, "narrative": story, "touches": [knight.party_id]})
 
@@ -879,8 +1208,9 @@ async def attack(request: Request, body: dict):
     knight = _combatant(cs, body.get("target"))
     if _is_foe(knight):
         bad("Choose a player knight")
+    stance_ = roll["data"].get("stance", "attack")
     try:
-        r = resolve_attack(roll["data"]["outcome"], body.get("knight"))
+        r = resolve_attack(roll["data"]["outcome"], body.get("knight"), stance_)
     except ValueError as exc:
         bad(str(exc))
     both = roll["data"]["outcome"] == "success"
@@ -888,21 +1218,99 @@ async def attack(request: Request, body: dict):
               "equal": "success (equal roll)" if both else "success",
               "lower": "success (lower roll)" if both else "success",
               "failure": "failure", "fumble": "fumble"}[body["knight"]]
-    verdict = {"foe": f"{foe.display_name} wins", "knight": f"{knight.display_name} wins",
-               "tie": "tie — both strike", "none": "both miss"}[r["result"]]
-    if r["result"] in ("knight", "tie"):
-        verdict += f"; {foe.display_name} gets {'armour + shield' if r['knight_shield'] else 'armour only'}"
+    fn, kn = foe.display_name, knight.display_name
+    after = []                                   # follow-on events a defensive action causes
+    if stance_ in ("attack", "trample"):
+        verdict = {"foe": f"{fn} wins", "knight": f"{kn} wins", "tie": "tie — both strike", "none": "both miss"}[r["result"]]
+        if stance_ == "trample" and r["result"] in ("foe", "tie"):
+            verdict += f" — the horse tramples {kn}"
+        if r["result"] in ("knight", "tie"):
+            verdict += f"; {fn} gets {'armour + shield' if r['knight_shield'] else 'armour only'}"
+    elif r.get("held"):                          # the defensive action worked: no damage either way
+        verdict = {"defend": f"{fn} holds — no damage either way",
+                   "evade": f"{fn} evades — no damage, and breaks away",
+                   "dodge": f"{fn} dodges — no damage" + (", ready next round" if roll["data"]["outcome"] == "critical"
+                                                              else ", but starts next round on the ground")}[stance_]
+        if stance_ == "evade":
+            after.append(("combat.engage", f"{fn} breaks away from {kn}", {"cid": foe.id, "with": "", "table_text": f"{fn} breaks away"}))
+        if stance_ == "dodge" and roll["data"]["outcome"] != "critical":
+            after.append(("combat.prone", f"{fn} is on the ground", {"cid": foe.id, "on": True, "table_text": f"{fn} is on the ground"}))
+    elif r["result"] == "knight":
+        verdict = f"{kn} wins — {fn} {'defends' if stance_ == 'defend' else stance_ + 's'} and fails"
+        verdict += f"; {fn} gets {'armour + shield' if r['knight_shield'] else 'armour only'}"
+        if stance_ == "dodge":
+            verdict += "; starts next round on the ground"
+            after.append(("combat.prone", f"{fn} is on the ground", {"cid": foe.id, "on": True, "table_text": f"{fn} is on the ground"}))
+    else:
+        verdict = "both miss"
+    # what befalls the weapons (core.combat.action-mounted-charge, core.weapons.weapon-skills)
+    prompt = None
+    if stance_ in ("attack", "trample") and roll["data"].get("attack") is not None:
+        atk = foe.attack_for(roll["data"]["attack"])
+        fate = weapon_fate(atk, roll["data"]["outcome"], r["result"]) if stance_ == "attack" else None
+        if fate in ("breaks", "breaks+t72"):
+            how = "shatters on the charge" if is_charge(atk) else "breaks" + (" against the knight's sword" if r["result"] == "tie" and roll["data"]["outcome"] != "fumble" else "")
+            verdict += f"; {fn}'s {atk['weapon'].lower()} {how}"
+            after.append(("combat.break", f"{fn}'s {atk['weapon']} {how}", {"cid": foe.id, "key": roll["data"]["attack"], "table_text": f"{fn}'s {atk['weapon'].lower()} {how}!", "touches": [knight.party_id]}))
+            if fate == "breaks+t72":
+                after.append(("__t72__", "", {}))
+        elif fate == "dropped":
+            verdict += f"; {fn} drops their {atk['weapon'].lower()}"
+            if foe.wielding != "brawl":
+                after.append(("combat.wield", f"{fn} drops their {atk['weapon']} — fights on with Brawling", {"cids": [foe.id], "wield": "brawl", "table_text": f"{fn} drops their weapon"}))
+    if getattr(knight, "lance", False) and stance_ == "attack":
+        k_fate = None
+        if body["knight"] == "fumble":
+            k_fate = "breaks+t72"
+        elif body["knight"] == "equal" or (body["knight"] == "lower" and roll["data"]["outcome"] in ("critical", "success")):
+            k_fate = "breaks"
+        if k_fate:
+            verdict += f"; {kn}'s lance shatters" + (" — roll Horsemanship on Table 7.2" if k_fate == "breaks+t72" else "")
+            after.append(("combat.lance", f"{kn}'s lance shatters on the charge!" + (" Roll Horsemanship (Table 7.2)." if k_fate == "breaks+t72" else ""),
+                          {"cid": knight.id, "on": False, "broken": True, "table_text": f"{kn}'s lance shatters!", "touches": [knight.party_id]}))
+            if k_fate == "breaks+t72":
+                prompt = {"kind": "table72", "name": kn}
+        if roll["data"]["outcome"] == "critical" and body["knight"] == "critical" and is_charge(foe.attack_for(roll["data"]["attack"])):
+            verdict += "; both critical — the horses crash, each takes the other's Charge Damage"
     for who in r["fumbled"]:
-        verdict += f"; {(foe if who == 'foe' else knight).display_name} drops or breaks their weapon"
+        if who == "knight":
+            if not getattr(knight, "lance", False):
+                verdict += f"; {kn} drops or breaks their weapon"
+        elif stance_ == "attack":
+            pass                                   # said above, weapon by weapon
+        elif stance_ == "dodge":                 # falls, weapon dropped
+            verdict += f"; {fn} falls and drops their weapon"
+            if not any(e[0] == "combat.prone" for e in after):
+                after.append(("combat.prone", f"{fn} falls", {"cid": foe.id, "on": True, "table_text": f"{fn} falls"}))
+            if foe.wielding != "brawl":
+                after.append(("combat.wield", f"{fn} drops their weapon — fights on with Brawling",
+                              {"cids": [foe.id], "wield": "brawl", "table_text": f"{fn} drops their weapon"}))
+        elif stance_ == "evade":                 # falls; from the saddle, 1D6
+            if foe.mounted:
+                dmg = roll_expr("1D6")
+                verdict += f"; {fn} falls from the horse ({dmg} damage)"
+                after.append(("combat.prone", f"{fn} is thrown from the saddle — prone", {"cid": foe.id, "on": True, "table_text": f"{fn} is thrown from the saddle"}))
+                after.append(("combat.hp", f"{fn} takes {dmg} from the fall", {"cid": foe.id, "delta": -dmg, "table_text": f"{fn} is hurt in the fall"}))
+            else:
+                verdict += f"; {fn} falls"
+                after.append(("combat.prone", f"{fn} falls", {"cid": foe.id, "on": True, "table_text": f"{fn} falls"}))
     ev = state.record("combat.attack",
-                      f"{foe.display_name} {roll['data']['outcome']} vs {knight.display_name} {k_text} → {verdict}",
-                      title=f"{foe.display_name} vs {knight.display_name}",
-                      data={"verdict": verdict, "result": r["result"], "knight_shield": r["knight_shield"],
+                      f"{fn} {roll['data']['outcome']} vs {kn} {k_text} → {verdict}",
+                      title=f"{fn} vs {kn}",
+                      data={"verdict": verdict, "result": r["result"], "knight_shield": r["knight_shield"], "stance": stance_,
                             "touches": [knight.party_id]})
+    for etype, text, data in after:
+        if etype == "__t72__":
+            _table_72(state, foe, roll_expr)
+            continue
+        state.record(etype, text, title=kn if etype == "combat.lance" else fn, data=data)
     blow_ev = None
     if r["foe_strike"]:
-        blow_ev = record_blow(state, state.combat_state(), {
-            "attacker": foe.id, "attack": roll["data"]["attack"], "target": knight.id,
-            **r["foe_strike"]})
-    return {"event": ev, "blow": blow_ev, "result": r["result"], "knight_shield": r["knight_shield"]}
+        strike = {"attacker": foe.id, "target": knight.id, **r["foe_strike"]}
+        if stance_ == "trample":
+            strike.update(weapon="Trample — the horse", expr=HORSE_DAMAGE)
+        else:
+            strike["attack"] = roll["data"]["attack"]
+        blow_ev = record_blow(state, state.combat_state(), strike)
+    return {"event": ev, "blow": blow_ev, "result": r["result"], "knight_shield": r["knight_shield"], "held": bool(r.get("held")), "prompt": prompt}
 

@@ -347,12 +347,36 @@ class Combatant:
             raise LookupError(key)
         return self.attacks[i]
 
+    def movement_rate(self, mounted_horse=False):
+        """Movement Rate as a roll target (core.game-system.movement):
+        (STR + DEX) ÷ 2 + 5, half up — or the card's own figure. A mounted
+        Evade uses the horse's Move: 16 for a normal charger (Table 10.2)."""
+        if mounted_horse:
+            return HORSE_MOVE
+        if self.movement:
+            return int(self.movement)
+        ch = self.characteristics
+        return _rhu((int(ch.get("STR", 10)) + int(ch.get("DEX", 10))) / 2) + 5
+
     def wielded(self):
-        """(key, attack) for the weapon in hand; falls back to the first."""
+        """(key, attack) for the weapon in hand; falls back to the first that
+        isn't broken and isn't a charge weapon (a charge is a deliberate choice)."""
         try:
             return self.wielding, self.attack_for(self.wielding)
         except LookupError:
-            return (0, self.attacks[0]) if self.attacks else ("brawl", self.brawl())
+            pass
+        k = self.next_weapon()
+        return (k, self.attack_for(k)) if k is not None else ("brawl", self.brawl())
+
+    def next_weapon(self, charge_ok=False):
+        """The first unbroken attack to fall back on — not a charge weapon
+        unless ``charge_ok`` — or None (nothing left but fists)."""
+        broken = set(getattr(self, "broken", []) or [])
+        for i, a in enumerate(self.attacks or []):
+            if i in broken or (is_charge(a) and not charge_ok) or is_missile(a):
+                continue
+            return i
+        return None
 
     # -- promotion ---------------------------------------------------------
 
@@ -671,9 +695,92 @@ def blow_breakdown(b):
 # ---------------------------------------------------------------------------
 
 KNIGHT_RESULTS = ("critical", "higher", "equal", "lower", "failure", "fumble")
+# What a foe does this round when a knight comes at it (core.combat.defensive-actions):
+# Attack as usual; Defend = Weapon Skill +10, a win or tie means no damage either
+# way; Evade = Movement Rate, a win breaks the engagement; Dodge = Movement Rate
+# (on foot only), one roll against every attacker, a win puts them on the ground.
+# Trample (core.combat.action-trample): a rider over a prone opponent rolls
+# Horsemanship, the opponent's action is −5 (no Height bonus for the rider,
+# the prone one still suffers theirs); a win is the horse's normal damage.
+STANCES = ("attack", "defend", "evade", "dodge", "trample")
+DEFENSIVE = ("defend", "evade", "dodge")
+DEFEND_BONUS = 10
+HORSE_MOVE = 16
+HORSE_DAMAGE = "3D6"            # a charger's normal (non-charging) damage, Table 10.2
 
 
-def resolve_attack(foe_outcome, knight):
+MISSILE_SKILLS = ("thrown weapon", "bow", "crossbow", "sling")
+# Table 9.4 / shield sizes: the Missile Attack Penalty an aware shield-bearer
+# imposes on the archer (core.armor.shields, core.combat.missile-weapons).
+SHIELD_MISSILE_PENALTY = {"none": 0, "small": 0, "medium": -5, "large": -10}
+SHIELD_WORD = {"none": "no shield", "small": "small shield", "medium": "medium shield", "large": "large shield"}
+
+
+def is_missile(attack):
+    """Does this attack loose or hurl rather than strike? By its skill, else its name."""
+    skill = (attack.get("skill") or "").lower()
+    if skill in MISSILE_SKILLS:
+        return True
+    w = (attack.get("weapon") or "").lower()
+    return "melee" not in w and any(x in w for x in ("bow", "sling", "javelin", "dart"))
+
+
+def missile_attack(c):
+    """(key, attack) of a foe's missile weapon, or None."""
+    for i, a in enumerate(c.attacks or []):
+        if is_missile(a):
+            return i, a
+    return None
+
+
+def is_charge(attack):
+    """A Charge-skill attack: the weapon as used in a mounted charge."""
+    return (attack.get("skill") or "").lower() == "charge"
+
+
+def is_couched(attack):
+    """A spear or lance in a charge — the weapon that breaks and that Table 7.2 is about."""
+    return is_charge(attack) and is_spear(attack.get("weapon"))
+
+
+def is_fragile(attack):
+    """Spears and hafted weapons break on a fumble, or on a tie against a sword
+    (core.weapons.weapon-skills). Swords and daggers do not break."""
+    skill = (attack.get("skill") or "").lower()
+    w = (attack.get("weapon") or "").lower()
+    return skill in ("spear", "hafted", "two-handed hafted", "flail") or any(x in w for x in ("spear", "lance", "axe", "mace", "hammer", "flail"))
+
+
+def weapon_fate(attack, foe_outcome, result, charging=None):
+    """What befalls the attacker's weapon after a Table 7.1 exchange
+    (core.combat.action-mounted-charge, core.weapons.weapon-skills):
+    "breaks", "breaks+t72" (a couched spear or lance fumbled: Table 7.2),
+    "dropped", or None. ``result`` is who won: foe / knight / tie / none."""
+    charging = is_charge(attack) if charging is None else charging
+    ok_ = foe_outcome in ("critical", "success")
+    if charging:
+        couched = is_couched(attack)
+        if foe_outcome == "fumble":
+            return "breaks+t72" if couched else ("breaks" if is_fragile(attack) else "dropped")
+        if couched or is_fragile(attack):
+            if result == "tie" or (result == "knight" and ok_):      # tie, or a partial success
+                return "breaks"
+        return None
+    if foe_outcome == "fumble":
+        return "breaks" if is_fragile(attack) else "dropped"
+    if result == "tie" and is_fragile(attack):
+        return "breaks"                                              # against a knight's sword
+    return None
+
+
+def is_spear(weapon):
+    """Spears and lances reach a prone opponent from the saddle; nothing else does
+    (core.combat.combat-modifiers)."""
+    w = (weapon or "").lower()
+    return "spear" in w or "lance" in w
+
+
+def resolve_attack(foe_outcome, knight, stance="attack"):
     """Read Table 7.1 (Core p.133) for an enemy's attack on a player knight.
 
     ``foe_outcome`` is the enemy's rolled result (critical / success /
@@ -689,6 +796,14 @@ def resolve_attack(foe_outcome, knight):
     """
     if knight not in KNIGHT_RESULTS:
         raise ValueError(f"unknown knight result {knight!r}")
+    if stance not in STANCES:
+        raise ValueError(f"unknown stance {stance!r}")
+    if stance in DEFENSIVE:
+        # a defensive action never strikes: winning or tying just turns the blow
+        r = resolve_attack(foe_outcome, knight)
+        r["foe_strike"] = None
+        r["held"] = r["result"] in ("foe", "tie")
+        return r
     foe_ok = foe_outcome in ("critical", "success")
     k_ok = knight in ("critical", "higher", "equal", "lower")
     fumbled = [who for who, fum in (("foe", foe_outcome == "fumble"),

@@ -8,7 +8,7 @@ correct state — that is how "undo" works.
 """
 
 from core import battle as B
-from core.combat import Combatant
+from core.combat import Combatant, is_spear as B_is_spear, missile_attack, SHIELD_MISSILE_PENALTY, is_charge
 
 DEFEATED = B.DEFEATED
 
@@ -18,7 +18,7 @@ COMBAT_STATE_TYPES = {
     "combat.round", "combat.ended", "combat.blow",
     "combat.mounted", "combat.horse", "combat.height", "combat.captured",
     "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round", "combat.distribute", "combat.wield", "combat.link",
-    "roll.check", "combat.acted",
+    "roll.check", "combat.acted", "combat.stance", "combat.prone", "combat.barrage", "combat.shield", "combat.break", "combat.lance",
 }
 
 
@@ -32,7 +32,7 @@ def apply(state, ev, promotion_cfg=None):
                 "round": 1, "players": d.get("players", 0),
                 "descriptions": d.get("descriptions", []),
                 "started_event": ev["id"], "credits": {}, "manual": {}, "battle": d.get("battle"),
-                "acted": set(),
+                "acted": set(), "barrage": (d.get("battle") or {}).get("barrage") or 0,
                 "combatants": [Combatant.from_dict(c) for c in d.get("combatants", [])]}
     if t == "battle.resumed":            # a fight carried over from a paused battle
         snap = (d.get("snapshot") or {}).get("combat")
@@ -42,7 +42,7 @@ def apply(state, ev, promotion_cfg=None):
                 "players": snap.get("players", 0), "descriptions": snap.get("descriptions", []),
                 "started_event": ev["id"], "credits": dict(snap.get("credits", {})),
                 "manual": dict(snap.get("manual", {})), "battle": snap.get("battle"),
-                "acted": set(snap.get("acted") or []),
+                "acted": set(snap.get("acted") or []), "barrage": snap.get("barrage") or 0,
                 "combatants": [Combatant.from_dict(c) for c in snap.get("combatants", [])]}
     if state is None or not state["active"]:
         return state
@@ -62,6 +62,26 @@ def apply(state, ev, promotion_cfg=None):
     if t == "combat.round":
         state["round"] = d.get("round", state["round"] + 1)
         acted.clear()
+        for c in state["combatants"]:                 # a charge is one round: lances are lowered, foes take up melee weapons
+            if getattr(c, "side", "foe") == "party":
+                c.lance = False
+            elif c.attacks and is_charge(c.attack_for(c.wielded()[0])) if c.wielded()[0] != "brawl" else False:
+                nxt = c.next_weapon()
+                c.wielding = nxt if nxt is not None else "brawl"
+        return state
+    if t == "combat.break":                       # a weapon breaks: struck from the list, the next one comes up
+        for c in state["combatants"]:
+            if c.id == d.get("cid"):
+                if d.get("key") not in (None, "brawl"):
+                    c.broken = sorted(set(getattr(c, "broken", []) or []) | {int(d["key"])})
+                    if c.wielded()[0] == int(d["key"]):
+                        nxt = c.next_weapon()
+                        c.wielding = nxt if nxt is not None else "brawl"
+        return state
+    if t == "combat.lance":                       # a knight couches (or lowers) a lance for a charge
+        for c in state["combatants"]:
+            if c.id == d.get("cid"):
+                c.lance = bool(d.get("on"))
         return state
     if t == "combat.added":
         state["combatants"].append(Combatant.from_dict(d["combatant"]))
@@ -77,6 +97,19 @@ def apply(state, ev, promotion_cfg=None):
             if c.id in (d.get("remove") or []) and k in c.linked():
                 rest = [n for n in c.linked() if n != k]
                 c.engaged_with, c.engaged_also = (rest[0], rest[1:]) if rest else ("", [])
+        return state
+    if t == "combat.barrage":                 # rounds of missile fire before the lines meet
+        state["barrage"] = int(d.get("rounds") or 0)
+        return state
+    if t == "combat.shield":                  # the shield a knight raises against missiles
+        for c in state["combatants"]:
+            if c.id == d.get("cid"):
+                c.shield_size = d.get("size") or "none"
+        return state
+    if t == "combat.stance":                  # attack / defend / evade / dodge this round
+        for c in state["combatants"]:
+            if c.id in (d.get("cids") or []):
+                c.stance = d["stance"]
         return state
     if t == "combat.wield":
         for c in state["combatants"]:
@@ -103,6 +136,10 @@ def apply(state, ev, promotion_cfg=None):
     was_defeated = c.status in DEFEATED
     if getattr(c, "side", "foe") == "party" and t in ("combat.hp", "combat.blow"):
         return state                    # knights' health is the players' business
+    if t in ("combat.mounted", "combat.prone") and getattr(c, "side", "foe") == "party":
+        c.mounted = bool(d.get("mounted")) if t == "combat.mounted" else (False if d.get("on") else c.mounted)
+        c.prone = bool(d.get("on")) if t == "combat.prone" else (False if c.mounted else getattr(c, "prone", False))
+        return state
     if t == "combat.hp":
         c.apply_hp(int(d.get("delta", 0)))
     elif t == "combat.blow":
@@ -126,6 +163,12 @@ def apply(state, ev, promotion_cfg=None):
         state["combatants"].remove(c)
     elif t == "combat.mounted":
         c.mounted = bool(d.get("mounted"))
+        if c.mounted:
+            c.prone = False                      # nobody is prone in the saddle
+    elif t == "combat.prone":
+        c.prone = bool(d.get("on"))
+        if c.prone:
+            c.mounted = False                    # a rider knocked prone has left the saddle
     elif t == "combat.horse":
         c.attacks_horse = bool(d.get("on"))
     elif t == "combat.height":
@@ -160,13 +203,17 @@ def gm_view(c):
     """Everything the GM console needs for one combatant row."""
     d = c.to_dict()
     d.pop("_base", None)
-    d.update(status=c.status, down=c.down, display_name=c.display_name,
+    d.update(status=c.status, down=c.down, display_name=c.display_name, prone=getattr(c, "prone", False), lance=bool(getattr(c, "lance", False)),
+             shield_size=getattr(c, "shield_size", "large" if getattr(c, "side", "foe") == "party" else "none"),
              log_name=c.log_name, armor_total=c.armor_total(),
              armour_text=c.describe_armour(), looks=c.describe_looks(),
              wound_state=c.wound_state(), side=getattr(c, "side", "foe"), linked=c.linked())
     if d["side"] != "party":
         key, _ = c.wielded()
-        d.update(wielding=key, brawl=c.brawl())
+        ma = missile_attack(c)
+        d.update(wielding=key, brawl=c.brawl(), stance=getattr(c, "stance", "attack"), missile=ma[0] if ma else None,
+                 broken=list(getattr(c, "broken", []) or []), charging=bool(key != "brawl" and is_charge(c.attack_for(key))),
+                 movement_rate=c.movement_rate(), horse_move=c.movement_rate(mounted_horse=True))
     return d
 
 
@@ -178,7 +225,9 @@ def table_view(c):
            "named": getattr(c, "named", False), "npc": getattr(c, "npc", False),
            "category": getattr(c, "category", "human"),
            "engaged_with": c.engaged_with, "linked": c.linked(),
-           "mounted": bool(getattr(c, "mounted", True))}          # a rider is plain to see
+           "mounted": bool(getattr(c, "mounted", True)),          # a rider is plain to see
+           "prone": bool(getattr(c, "prone", False)), "lance": bool(getattr(c, "lance", False)) if side == "party" else None,
+           "stance": getattr(c, "stance", "attack") if side != "party" else None}
     if side == "party":
         out.update(player=getattr(c, "player", ""), party_id=getattr(c, "party_id", None))
     else:
@@ -279,10 +328,15 @@ def _derive(state, rows, view):
             limit = B.mo_limit(any(f.mounted for f in mine))
             chips = []
             for f in mine:
-                _, k = B.height(f.mounted, c.mounted, f.height_override, f.attacks_horse)
+                _, k = B.height(f.mounted, c.mounted, f.height_override, f.attacks_horse, getattr(f, "prone", False), getattr(c, "prone", False))
                 if k:
                     chips.append({"foe": f.display_name, "mod": k})
             r["mounted"] = c.mounted
+            r["prone"] = getattr(c, "prone", False)
+            if view == "gm":
+                r["missile_penalty"] = SHIELD_MISSILE_PENALTY.get(getattr(c, "shield_size", "large"), 0)
+            # a rider can only reach a prone foe with a spear or lance — or Trample
+            r["prone_foes"] = [f.display_name for f in mine if getattr(f, "prone", False)] if c.mounted else []
             if c.rounds is not None:
                 limit = c.rounds + (c.extra_rounds or 0)
                 r.update(posture=c.posture, rounds=c.rounds, extra_rounds=c.extra_rounds or 0, position=c.position,
@@ -298,7 +352,8 @@ def _derive(state, rows, view):
         r["outnumbered"] = -5 * (len(on_me) - 1) if len(on_me) > 1 else 0     # core p.148
         knight = knights.get(c.engaged_with)
         if knight is not None:
-            fm, km = B.height(c.mounted, knight.mounted, c.height_override, c.attacks_horse)
+            fm, km = B.height(c.mounted, knight.mounted, c.height_override, c.attacks_horse,
+                              getattr(c, "prone", False), getattr(knight, "prone", False))
         else:
             fm = km = 0
         cr = credit_of(state, c)
@@ -312,6 +367,10 @@ def _derive(state, rows, view):
         if view == "gm":
             r["height"] = {"foe": fm, "knight": km}
             r["knight_mounted"] = knight.mounted if knight is not None else None
+            r["knight_prone"] = getattr(knight, "prone", False) if knight is not None else False
+            _, wpn = c.wielded()
+            r["cant_strike_prone"] = bool(knight is not None and c.mounted and r["knight_prone"]
+                                          and getattr(c, "stance", "attack") != "trample" and not B_is_spear(wpn.get("weapon")))
 
 
 def serialise(state, view):
@@ -324,8 +383,10 @@ def serialise(state, view):
         me = r["display_name"] if view == "gm" else r["name"]
         r["engaged_by"] = [o["display_name"] if view == "gm" else o["name"] for o in rows
                            if o is not r and me in (o.get("linked") or []) and o["status"] == "active"]
+    rounds = int(state.get("barrage") or 0)
     out = {"active": state["active"], "name": state["name"], "round": state["round"],
            "started_event": state.get("started_event"), "battle": state.get("battle"),
+           "barrage": {"rounds": rounds, "active": state["round"] <= rounds, "left": max(0, rounds - state["round"] + 1)} if rounds else None,
            "players": state.get("players", 0),
            "descriptions": state.get("descriptions", []) if view == "gm" else [],
            "combatants": rows}

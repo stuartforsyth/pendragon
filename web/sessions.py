@@ -213,6 +213,22 @@ class SessionStore:
         self.active = self._scratch(fresh=True)
         return s
 
+    def delete(self, sid):
+        """Put a saved session in the bin (``sessions/.trash/``) — never the
+        active one. Nothing is destroyed: the file can be moved back by hand."""
+        if self.active is not None and not self.active.scratch and self.active.id == sid:
+            raise ValueError("That session is in progress — end it first")
+        path = self._path(self.load(sid).id)          # load() validates the id and that it exists
+        trash = os.path.join(self.dir, ".trash")
+        os.makedirs(trash, exist_ok=True)
+        dest = os.path.join(trash, os.path.basename(path))
+        n = 2
+        while os.path.exists(dest):
+            dest = os.path.join(trash, f"{sid}-{n}.json")
+            n += 1
+        os.replace(path, dest)
+        return dest
+
     def resume(self, sid):
         if not self.active.scratch and self.active.id != sid:
             self.end()

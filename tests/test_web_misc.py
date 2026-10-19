@@ -100,3 +100,19 @@ def test_feedback_queue_records_where_it_came_from(client):
 
 def test_healthz_reports_a_boot_id(client):
     assert len(client.get("/healthz").json()["boot"]) == 8
+
+
+def test_delete_session_bins_it_but_not_the_active_one(client):
+    from tests.conftest import ok
+    import os
+    ok(client.post("/api/session/start", json={"title": "Test run"}))
+    sid = ok(client.get("/api/session"))["session"]["id"]
+    assert client.delete(f"/api/sessions/{sid}").status_code == 409        # in progress
+    ok(client.post("/api/session/end"))
+    ok(client.post("/api/session/start", json={"title": "Real one"}))
+    assert sid in [s["id"] for s in ok(client.get("/api/sessions"))["sessions"]]
+    ok(client.delete(f"/api/sessions/{sid}"))
+    assert sid not in [s["id"] for s in ok(client.get("/api/sessions"))["sessions"]]
+    assert os.path.exists(client.tmp / "sessions" / ".trash" / f"{sid}.json")   # binned, not destroyed
+    assert client.delete(f"/api/sessions/{sid}").status_code == 404
+    assert client.delete("/api/sessions/../etc").status_code == 404

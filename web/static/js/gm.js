@@ -129,6 +129,7 @@ const KIND = (t) => t.startsWith("roll.") ? ["roll", "d20"]
   : t === "narrate" ? ["narrate", "feather"]
   : t === "note" ? ["note", "note"]
   : t === "rule.shown" || t === "rule.hidden" ? ["rule", "book"]
+  : t === "divider" ? ["combat", "scroll"]
   : t.startsWith("session.") ? ["session", "flag"]
   : t === "table.cleared" ? ["meta", "present"]
   : t.startsWith("meta.") ? ["meta", "undo"] : ["other", "scroll"];
@@ -197,6 +198,14 @@ function resultBits(ev) {
 }
 
 function entryEl(ev) {
+  // a divider — or a new round — is a thin rule, not a card
+  if (ev.type === "divider" || ev.type === "combat.round") {
+    return h("div", { class: `log-divider ${ev.struck ? "struck" : ""} ${ev.type === "combat.round" ? "round" : ""}`, "data-id": ev.id },
+      h("span", { class: "ld-line" }), h("span", { class: "ld-text" }, ev.type === "combat.round" ? `Round ${ev.data?.round ?? ""}` : ev.text),
+      h("span", { class: "ld-line" }), h("span", { class: "time" }, time(ev.ts)),
+      h("button", { class: "btn ghost sm icon ld-x", title: ev.struck ? "Restore" : "Strike (undo)",
+        onclick: () => post(`/api/events/${ev.id}/${ev.struck ? "unstrike" : "strike"}`) }, icon(ev.struck ? "undo" : "strike")));
+  }
   const [kind, ic] = KIND(ev.type);
   const cls = ["entry", `k-${kind}`, ev.struck && "struck", ev.visibility === "gm" && "gm",
     ev.masked && "masked", ev.revealed && "revealed"].filter(Boolean).join(" ");

@@ -14,7 +14,7 @@ def test_foe_row_weapon_switch_disarm_and_attack(page, app_url):
     row = page.locator(".cbt-foe").first
     name = row.locator(".cbt-foe-name").inner_text()
     row = page.locator(".cbt-foe", has_text=name)
-    expect(row.locator(".cbt-weapon")).to_contain_text("Spear or Sword")          # card's first weapon
+    expect(row.locator(".cbt-weapon")).to_contain_text("Spear 15")               # the first melee weapon; the charge weapon only when charging
     # the type header switches every Knight of Gorre at once
     page.locator(".cbt-type .cbt-wpick", has_text="Sword").last.click()
     for w in page.locator(".cbt-foe .cbt-weapon").all():
@@ -24,12 +24,16 @@ def test_foe_row_weapon_switch_disarm_and_attack(page, app_url):
     page.locator(".menu").get_by_role("button", name="Disarmed — Brawling 10 · 5").click()
     expect(row.locator(".cbt-weapon")).to_contain_text("Brawling")
     expect(row.locator(".cbt-weapon")).to_contain_text("Disarmed")
-    # attack: rolls Brawling against the engaged knight, knight chosen with chips
+    # attack: the pane opens on Brawling with the engaged knight chosen; roll, then the knight's result
     row.get_by_role("button", name="Attack").click()
     modal = page.locator(".modal")
+    expect(modal.locator(".chip.on")).to_have_count(2)                           # the weapon and the knight
+    expect(modal.locator(".chip.on").first).to_contain_text("Brawling")
+    modal.get_by_role("button", name="Roll the attack").click()
     expect(modal.locator(".attack-roll")).to_contain_text("Brawling")
-    expect(modal.locator(".chip.on")).to_have_count(1)
     modal.get_by_role("button", name="Fail").click()
+    expect(modal.locator(".verdict-text")).not_to_be_empty()
+    modal.get_by_role("button", name="Done").click()
     expect(page.locator(".log")).to_contain_text("is disarmed")
     # players see it
     t = page.request.get(app_url + "/api/table").json()
@@ -57,6 +61,8 @@ def test_one_roll_adjust_box(page, app_url):
     _start(page, app_url, "Knights of Gorre")
     page.locator(".cbt-foe").first.locator(".adj-in").fill("-3")
     page.locator(".cbt-foe").first.get_by_role("button", name="Attack").click()
+    expect(page.locator(".modal .adj-in")).to_have_value("-3")                       # carried into the pane
+    page.locator(".modal").get_by_role("button", name="Roll the attack").click()
     expect(page.locator(".modal .attack-roll")).to_contain_text("(−3)")
     page.locator(".modal").get_by_role("button", name="Cancel").click()
     expect(page.locator(".cbt-foe").first.locator(".adj-in")).to_have_value("")     # one roll only

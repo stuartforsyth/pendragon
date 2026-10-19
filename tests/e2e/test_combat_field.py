@@ -69,6 +69,8 @@ def test_three_knights_on_one_foe(page, app_url):
     target().click()
     expect(page.locator(".cbt-drawer .out-tag")).to_have_text("−10 outnumbered")
     page.locator(".cbt-drawer").get_by_title("Close").click()
+    expect(page.locator(".cbt-drawer")).to_have_count(0)
+    page.wait_for_timeout(300)                                      # the Field re-lays itself out once the drawer is gone
     # a knight dragged onto open ground breaks off
     field = page.locator(".cbt-field").bounding_box()
     page.locator(".ftok.is-knight", has_text="Sir Bors").drag_to(page.locator(".cbt-field"), target_position={"x": 8, "y": field["height"] - 8})

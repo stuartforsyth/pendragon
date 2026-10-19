@@ -274,44 +274,53 @@ body {
 .fightview { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(300px, 340px); gap: 24px; min-height: 0; }
 .fightview.no-knights { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); }
 .fv-knights { display: grid; gap: 10px; align-content: start; min-height: 0; overflow: hidden; }
-.fv-centre { display: grid; gap: 10px; align-content: start; min-height: 0; min-width: 0; overflow: hidden; }
+/* the centre is a column: header, banners, then the Field taking every pixel left, then the tally */
+.fv-centre { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; overflow: hidden; }
+.fv-centre > .tfield { flex: 1 1 auto; min-height: 240px; }
+.fv-centre > .tally-strip, .fv-centre > .fv-foot { flex: none; }
 .fightview .lanes { display: grid; gap: 10px; align-content: start; min-height: 0; overflow: hidden; }
-/* the Field on parchment: same geometry as the GM's, inked in heraldic tinctures */
-.tfield { position: relative; border: 1px solid var(--parch-dark); border-radius: 12px; overflow: hidden;
+/* the Field on parchment: the GM's geometry in heraldic tinctures, scaled by --s to the room it has */
+.tfield { --s: 1; position: relative; border: 1px solid var(--parch-dark); border-radius: 12px; overflow: hidden;
   background: radial-gradient(ellipse at 50% 35%, rgba(251,244,226,.9), rgba(230,213,176,.75) 70%, rgba(205,182,138,.6));
   box-shadow: inset 0 0 40px rgba(78,58,40,.12); }
 .tfield .cbt-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.tfield .cbt-link { stroke: var(--gules-bright); stroke-width: 3; stroke-linecap: round; animation: tlink 2.4s ease-in-out infinite; }
+.tfield .cbt-link { stroke: var(--gules-bright); stroke-width: calc(3px * var(--s)); stroke-linecap: round; animation: tlink 2.4s ease-in-out infinite; }
 @keyframes tlink { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
-.tfield .ftok { position: absolute; transform: translate(-50%, -27px); display: grid; justify-items: center; gap: 2px; width: 130px; text-align: center; user-select: none; }
-.tfield .ftok-face { display: grid; place-items: center; width: 54px; height: 54px; position: relative; }
+.tfield .ftok { position: absolute; transform: translate(-50%, calc(-27px * var(--s))); display: grid; justify-items: center; gap: calc(2px * var(--s));
+  width: calc(130px * var(--s)); text-align: center; user-select: none; }
+.tfield .ftok-face { display: grid; place-items: center; width: calc(54px * var(--s)); height: calc(54px * var(--s)); position: relative; }
 .tfield .ftok-face svg { width: 100%; height: 100%; display: block; }
-.tfield .ftok.is-knight .ftok-face svg { width: 48px; height: 55px; }
+.tfield .ftok.is-knight .ftok-face svg { width: calc(48px * var(--s)); height: calc(55px * var(--s)); }
 .tfield .ftok .medal { fill: #f6ecd2; stroke: #4e3a28; stroke-width: 3; }
 .tfield .ftok .glyph { color: var(--gules); }
 .tfield .ftok.elite .medal { stroke: var(--or); }
-.tfield .ftok-name { font-family: var(--f-caps); font-weight: 700; font-size: 13.5px; line-height: 1.1; color: var(--ink); max-width: 100%; text-wrap: balance; }
-.tfield.roomy .ftok { width: 156px; }
-.tfield.roomy .ftok-face { width: 60px; height: 60px; }
-.tfield.roomy .ftok.is-knight .ftok-face svg { width: 53px; height: 60px; }
-.tfield.roomy .ftok-name { font-size: 14.5px; }
-.tfield.tight .ftok { width: 104px; transform: translate(-50%, -22px); }
-.tfield.tight .ftok-face { width: 44px; height: 44px; }
-.tfield.tight .ftok.is-knight .ftok-face svg { width: 39px; height: 44px; }
-.tfield.tight .ftok-name { font-size: 12px; }
-.tfield.tight .ftok-sub { font-size: 11.5px; }
-.tfield .ftok.is-knight .ftok-name { color: var(--azure); font-size: 15px; }
+.tfield .ftok-name { font-family: var(--f-caps); font-weight: 700; font-size: calc(13.5px * var(--s)); line-height: 1.1; color: var(--ink); max-width: 100%; text-wrap: balance; }
+.tfield .ftok.is-knight .ftok-name { color: var(--azure); font-size: calc(14.5px * var(--s)); }
 .tfield .ftok.elite .ftok-name { color: #7a5a14; }
-.tfield .ftok-sub { font-style: italic; font-size: 13px; line-height: 1.1; color: var(--ink-soft); white-space: nowrap; }
-.tfield .ftok.down { opacity: .45; filter: grayscale(.7); }
-.tfield .ftok-horse { position: absolute; top: -4px; left: calc(50% - 40px); width: 25px; height: 25px; border-radius: 50%; background: var(--azure); color: #f6ecd2;
-  display: grid; place-items: center; box-shadow: 0 0 0 2px var(--parch); pointer-events: none; }
-.tfield .ftok-horse svg { width: 20px; height: 20px; display: block; }
-.tfield .ftok.is-foe .ftok-horse { background: var(--gules); }
-.tfield.roomy .ftok-horse { left: calc(50% - 44px); width: 27px; height: 27px; }
-.tfield.tight .ftok-horse { left: calc(50% - 32px); width: 18px; height: 18px; }
-.tfield.tight .ftok-horse svg { width: 14px; height: 14px; }
+.tfield .ftok-sub { font-style: italic; font-size: calc(13px * var(--s)); line-height: 1.1; color: var(--ink-soft); white-space: nowrap; }
+.tfield .ftok.down { opacity: .6; filter: grayscale(1); }
+.tfield .ftok .strike { stroke: var(--gules); }
+.tfield .ftok.down .strike { stroke: #5c554b; }
+.tfield .cbt-link.won { stroke: #8a8378; stroke-width: calc(2px * var(--s)); stroke-dasharray: 3 6; animation: none; opacity: .85; }
 .tfield .ftok.hit .ftok-face { animation: hit .7s; }
+.tfield .ftok-horse { position: absolute; top: calc(-4px * var(--s)); left: calc(50% - 40px * var(--s)); width: calc(25px * var(--s)); height: calc(25px * var(--s)); border-radius: 50%; background: var(--azure); color: #f6ecd2;
+  display: grid; place-items: center; box-shadow: 0 0 0 2px var(--parch); pointer-events: none; }
+.tfield .ftok-horse svg { width: 80%; height: 80%; display: block; }
+.tfield .ftok.is-foe .ftok-horse { background: var(--gules); }
+.tfield .ftok.defensive .medal { fill: #dcebd6; stroke: var(--vert); }
+.tfield .ftok.defensive .glyph { color: var(--vert); }
+.tfield .ftok.st-trample .medal { fill: #f1d9d4; }
+.tfield .ftok-stance { position: absolute; top: calc(17px * var(--s)); left: calc(50% - 45px * var(--s)); width: calc(23px * var(--s)); height: calc(23px * var(--s)); border-radius: 50%;
+  background: var(--vert); color: #f6ecd2; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--parch); pointer-events: none; }
+.tfield .ftok-stance.st-trample { background: var(--gules); }
+.tfield .ftok-stance svg { width: 70%; height: 70%; display: block; }
+.tfield .ftok-sub.s-wounded { color: #8a5a12; font-style: normal; font-family: var(--f-caps); font-weight: 700; font-size: calc(11.5px * var(--s)); letter-spacing: .06em; }
+.tfield .ftok-sub.s-badly-wounded { color: var(--gules); font-style: normal; font-family: var(--f-caps); font-weight: 700; font-size: calc(11.5px * var(--s)); letter-spacing: .06em; }
+.tfield .ftok-wound { position: absolute; top: calc(38px * var(--s)); right: calc(50% - 44px * var(--s)); display: flex; gap: 1px; color: var(--gules); filter: drop-shadow(0 0 1.5px var(--parch)); pointer-events: none; }
+.tfield .ftok-wound svg { width: calc(12px * var(--s)); height: calc(15px * var(--s)); display: block; }
+.tfield .ftok-prone { position: absolute; top: calc(50% - 14px * var(--s)); right: calc(50% - 40px * var(--s)); width: calc(24px * var(--s)); height: calc(24px * var(--s)); border-radius: 50%;
+  background: var(--ink-2); color: #f6ecd2; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--parch); pointer-events: none; }
+.tfield .ftok-prone svg { width: 78%; height: 78%; display: block; }
 @media (max-width: 1100px) { .fightview, .fightview.no-knights { grid-template-columns: 1fr; } .fv-knights { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); } }
 .fv-banner { justify-self: start; font-family: var(--f-caps); font-weight: 700; font-size: 16px; letter-spacing: .14em; text-transform: uppercase;
   color: var(--gules); border: 1.5px solid var(--gules); background: rgba(142, 34, 25, .06); padding: 4px 14px; border-radius: 4px; }
@@ -453,3 +462,19 @@ body {
 @media (prefers-reduced-motion: reduce) { .fray .latest.crit, .fray .latest.crit-new, .badge .burst { animation: none; } }
 .fray .latest .story { font-family: var(--f-prose); font-size: 21px; line-height: 1.3; color: var(--ink); margin-bottom: 4px; }
 .fray .latest .lx.sum { font-size: 16px; color: var(--ink-soft); }
+
+/* a volley: one card per knight */
+.fray .latest.volley.clean { border-left-color: var(--vert); background: rgba(251,244,226,.9); }
+.vshots { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.vshot { font-family: var(--f-caps); font-weight: 700; font-size: 15px; padding: 2px 10px; border-radius: 4px; border: 1.5px solid; }
+.vshot.rider { color: #fbf4e2; background: var(--gules); border-color: var(--gules); }
+.vshot.mount { color: var(--gules); background: rgba(142,34,25,.08); border-color: var(--gules); }
+.vshot.miss { color: var(--ink-soft); border-color: var(--parch-dark); background: transparent; }
+.vshot.crit { box-shadow: 0 0 0 2px var(--or); }
+
+/* dividers in the Fray */
+.fray-divider { display: flex; align-items: center; gap: 10px; padding: 2px 4px; font-family: var(--f-caps); font-weight: 700; font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--gules); }
+.fray-divider .fd-line { flex: 1; height: 1.5px; background: linear-gradient(90deg, transparent, var(--or) 25%, var(--or) 75%, transparent); }
+.fray-divider .fd-text { white-space: nowrap; }
+.fray-divider.round { color: var(--ink-soft); }
+.fray-divider.round .fd-line { background: linear-gradient(90deg, transparent, var(--parch-dark) 25%, var(--parch-dark) 75%, transparent); }

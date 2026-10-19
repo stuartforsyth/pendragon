@@ -90,6 +90,59 @@ engaged pair's pills and added to foe attack rolls automatically; a foe going fo
 the horse (`combat.horse`) loses its −5, and the GM can negate Height for a
 two-handed spear (`combat.height`). Knight lanes show their own Height and
 Multiple Opponents reminders; captives are flagged with `combat.captured`.
+**Barrage.** A battle fight's barrage rounds come with it (`combat.started.data.battle.barrage`;
+in free play `combat.barrage` sets them). While `round <= rounds` the lines haven't met: Attack
+and Hit are gated, and each missile foe (an attack whose skill is Thrown Weapon, Bow, Crossbow or
+Sling — `core.combat.missile_attack`) gets **Loose** (`/api/combat/{cid}/loose`, or **All loose**
+per type): an unopposed roll at the archer's skill less the knight's shield penalty (Table 9.4:
+large −10, medium −5, small/none 0; `combat.shield` sets a knight's shield, large by default) and
+the GM's ±; a hit on a mounted knight lands on the horse on 1–4 of 1D6; damage is reported
+against armour alone (`core.combat.missile-weapons`, `gm.battle.fighting-the-battle`). Both
+boards show "Barrage — round n of N before contact". A knight's lane has **Volley · n**: the
+archers facing that knight loose together (`combat.volley`); the individual shots are GM-only
+and the players get one card per knight listing each shot's fate (rider, horse, miss) and the
+damage total. **All loose** is one volley per knight. A `divider` event (recorded before each
+volley; by hand with Shift+Enter in the round-note box, `/api/combat/divider`) and every
+`combat.round` render as a thin labelled rule in the GM log and the Fray, never as a card.
+**The attack pane.** Attack (or a weapon's skill number) opens one pane for the
+exchange: weapon (broken ones struck out, the charge weapon marked ⚡) → the
+knight it is against (chosen before the roll, so Height and the Fray name the
+right one; `/api/combat/{cid}/roll` takes `target`) → Roll → the knight's
+result → the verdict, then Enter the knight's hit if the knight won.
+**Lances and breakage.** A couched spear or lance (a foe's Charge-skill attack,
+in hand only when countercharging; a knight's `combat.lance` flag, set at a
+battle fight when the knights may charge) breaks on a partial success or a tie
+and on a fumble, which also rolls Table 7.2 for a foe (Horsemanship:
+splinters 1D6, thrown 2D6, horse down 3D6, armour does not protect) and prompts
+the GM for a knight. In melee a spear or hafted weapon breaks on a fumble or on
+a tie against the knight's sword; swords are dropped, never broken
+(`core.combat.action-mounted-charge`, `core.weapons.weapon-skills`). A broken
+weapon (`combat.break`) leaves the foe's list and the next one comes up; Next
+round lowers lances and puts charge weapons away. Every break is in the log
+and the Fray.
+**Stances.** Beside Attack each foe has a stance (`combat.stance`, per foe or
+per type): Attack, **Defend** (Weapon Skill +10; a win or tie turns the blow,
+no damage either way), **Evade** (Movement Rate, the horse's when mounted; a
+win breaks the engagement) or **Dodge** (Movement Rate, on foot only, one roll
+against every attacker without the outnumbered penalty; a win avoids damage
+but ends on the ground, a fumble drops the weapon). Movement Rate is
+(STR + DEX) ÷ 2 + 5 (`core.game-system.movement`, `core.combat.defensive-actions`).
+`resolve_attack` takes the stance; a defensive action never strikes. A foe's
+stance is set from the shield button beside its Attack button (or the type
+header's **All** row); on both boards a defensive foe's medallion turns green
+with a glyph badge (shield, arrow, zigzag; a trampling rider's turns red).
+**Prone.** Knights and foes can be prone (`combat.prone`; exclusive with
+mounted — marking prone dismounts, mounting stands up). Standing over prone is
+Height ±5 (`core.combat.combat-modifiers`); a rider reaches a prone opponent
+only with a spear or lance (the Attack button is blocked and says so), or
+**Tramples** — a stance for riders over a prone knight: Horsemanship vs the
+knight's action −5, no Height for the rider, the horse's 3D6 on a win
+(`core.combat.action-trample`). An automatic knockdown (damage over twice
+Knockdown) lays a foe prone; from the saddle it is a fall, 1D6 and the weapon
+dropped (`core.combat.knockdown`); the DEX-check case is marked by hand. Dodge
+and Evade falls mark prone too. Knights' knockdown is on paper, so their prone
+is the GM's toggle. Both boards show a fallen-figure badge; the Table's knight
+card gets a Prone chip.
 **Weapons in hand.** Every foe row shows the weapon it is wielding (starts as the
 card's first) with skill and damage, and an **Attack** button that rolls it against
 the knight it fights (then Table 7.1 as before). Click the weapon to switch, or mark
@@ -142,6 +195,11 @@ armour, wounds or death. It only tracks the enemies.
 - All combat rolls are public; the dice tray's Secret toggle is the only way
   to hide a roll.
 
+Saved sessions can be **binned** from the Sessions tool (`DELETE /api/sessions/{id}`):
+the file moves to `sessions/.trash/`, never deleted outright, and the session in
+progress cannot be binned. A battle paused in a binned session drops off the
+Battle tool's paused list.
+
 ## Battles
 
 A **battle** is a container of fights with its own state (docs/design/battles/).
@@ -180,8 +238,11 @@ The Table's **fight view** is knight cards · the Field · the Fray: the knights
 cards down the left (Glory, posture and rounds, mounted, Height and Multiple
 Opponents chips, the LAST line — glanceable state only), the same engagement clusters the GM sees in
 the middle on parchment (`web/static/js/field.js` lays out both boards and
-pushes tokens apart so no two labels overlap; foe tokens carry wound words,
-never numbers; a horse-head badge marks anyone mounted), beneath it the
+pushes tokens apart so no two labels overlap; a defeated foe stays on the
+field at the feet of the knight credited with it — greyed, struck through,
+joined by a dotted grey line — wherever that knight moves later; foe tokens show a foe's state and never a gauge — a tinted medallion, a
+coloured rim, one blood drop for Wounded and two for Badly wounded, and the
+word under the name; the GM's board alone has the health ring; a horse-head badge marks anyone mounted), beneath it the
 **tally strip** — a column per knight listing the foes they are credited
 with ("Knifemen 7 slain") grouped by Day · Turn across every fight of the
 battle, from the same credit that pays the Glory (`table.defeat_tally`; it also
@@ -198,7 +259,15 @@ flavour only, Opportunities gold), today's battlefield as names (in play
 outlined, spent struck through), revealed turn scripts, the Morale gauge, the
 Fray, and a knights row (battle Glory, chips such as Commander / May charge /
 posture / Passion / At the rear, and the LAST line). `battle_state.table_view`
-sends only these fields — never Minimum, Loss, KV, card mechanics, dice or tokens.
+sends only these fields — never Loss, KV, card rules, dice or tokens. The
+battlefield is shown as cards drawn after the printed ones (green band for a
+Foe, gold for an Opportunity, the Morale Minimum in a roundel at the foot;
+`board.cardFrame`), narrowed to what the step allows (`table_view.options`):
+the whole deck before the Intensity roll and at Mustering, the card in play
+alone after a success, the set card or an unplayed Opportunity after a fumble,
+everything after a failure, mounted foes after an enemy charge. A card the
+conroi lacks the Morale for is greyed with "Not enough Morale"; a spent
+Opportunity is struck through.
 
 After the last turn of the last day (or Leave the field) the battle enters its
 **aftermath**: Outcome (enemy KV from dead + captured foes, friendly losses with

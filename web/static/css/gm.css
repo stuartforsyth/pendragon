@@ -435,3 +435,14 @@ textarea.input { height: auto; padding: 8px 10px; resize: vertical; line-height:
 #fb-panel .fb-chip.fb-done { background: #1f3a26; color: var(--vert); }
 #fb-panel .fb-kind { color: var(--ink-dim); font-size: 12px; }
 #fb-panel .fb-note { color: var(--ink-dim); font-style: italic; margin-top: 3px; }
+
+/* dividers in the log: a thin rule with a label */
+.log-divider { display: flex; align-items: center; gap: 8px; padding: 6px 10px 2px; color: var(--or-bright); font-family: var(--f-display); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+.log-divider .ld-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--or) 30%, var(--or) 70%, transparent); opacity: .7; }
+.log-divider .ld-text { white-space: nowrap; }
+.log-divider.round { color: var(--ink-dim); }
+.log-divider.round .ld-line { background: linear-gradient(90deg, transparent, var(--line-2) 30%, var(--line-2) 70%, transparent); }
+.log-divider .time { font-size: 10px; letter-spacing: 0; text-transform: none; color: var(--ink-dim); font-family: var(--f-ui); }
+.log-divider .ld-x { opacity: 0; }
+.log-divider:hover .ld-x { opacity: 1; }
+.log-divider.struck .ld-text { text-decoration: line-through; opacity: .5; }

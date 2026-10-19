@@ -660,8 +660,9 @@ _BANNER = {"critical": ("The foe comes on in strength — doubled!", "harm"), "s
 
 
 def table_view(b, party, library=None):
-    """What players may see (the battle view). Never: Minimum, Loss, KV, the
-    cards' mechanics, the definition, unrevealed scripts, dice or tokens."""
+    """What players may see (the battle view). Never: Loss, KV, the cards'
+    rules, the definition, unrevealed scripts, dice or tokens. A card's
+    Minimum Morale is shown — the players need it to choose."""
     if b is None:
         return None
     names = _names(party)
@@ -698,11 +699,12 @@ def table_view(b, party, library=None):
     out["banner"] = banner
     card_flav = lambda c: (c or {}).get("description", "")
     is_opp = lambda c: (c or {}).get("role") == "opportunity"
+    mn = lambda c: (c or {}).get("morale_minimum")
     out["this_turn"] = {
         "set": {"name": t["set"]["encounter"], "flavour": t["set"].get("flavour") or card_flav(t["set"].get("card")),
-                "opportunity": False} if t.get("set") else None,
+                "opportunity": False, "minimum": mn(t["set"].get("card"))} if t.get("set") else None,
         "picks": [{"name": p["encounter"], "flavour": card_flav(p.get("card")), "opportunity": is_opp(p.get("card")),
-                   "knight_name": nm(pid), "crit": bool(p.get("crit"))} for pid, p in (t.get("picks") or {}).items()],
+                   "minimum": mn(p.get("card")), "knight_name": nm(pid), "crit": bool(p.get("crit"))} for pid, p in (t.get("picks") or {}).items()],
         "selected": (t.get("select") or {}).get("encounter")}
     dd = _day_def(b)
     deck_eff = effective_deck(b, library, with_script=False)
@@ -711,6 +713,7 @@ def table_view(b, party, library=None):
     out["deck"] = {"foes": [{"name": k, "in_play": k in in_play} for k in deck_eff["foes"]],
                    "opportunities": [{"name": k, "in_play": k in in_play, "spent": k in b.get("spent_opportunities", [])}
                                      for k in deck_eff["opportunities"]]}
+    out["options"] = _table_options(b, t, deck_eff, library, in_play, m)
     results = []
     if (t.get("intensity") or {}).get("outcome") in ("success", "critical"):
         for sc in dd.get("scripts", []):
@@ -729,6 +732,58 @@ def table_view(b, party, library=None):
                            "posture_now": (t.get("postures") or {}).get(pid, {}).get("posture"),
                            "prev_posture": b.get("prev_postures", {}).get(pid)}
                           for pid in b["conroi"]]
+    return out
+
+
+def _card_info(b, library, key):
+    """What the players may read off a card: its flavour and the Morale it
+    needs. Loss, KV and rules stay with the GM."""
+    snap = (b.get("cards") or {}).get(key) or {}
+    lib = (library or {}).get(key) or {}
+    return {"flavour": lib.get("description") or snap.get("description", ""),
+            "minimum": lib.get("morale_minimum") if lib.get("morale_minimum") is not None else snap.get("morale_minimum"),
+            "role": lib.get("battle_role") or snap.get("role", "foe"),
+            "mounted_charge": bool(snap.get("mounted_charge"))}
+
+
+def _table_options(b, t, deck_eff, library, in_play, m):
+    """The battlefield as the players may choose from it this step — only the
+    cards the rules allow, each saying the Morale it needs and whether the
+    conroi has it. Before the Intensity roll: the whole deck. Fumble: the set
+    card or an Opportunity. Failure: anything (the knights pick). Success or
+    an enemy charge: the card in play alone. After the choice: that card."""
+    if b["status"] == "mustering":                     # the day's battlefield, laid out for all to see
+        t = new_turn()
+    elif b["status"] != "turn":
+        return None
+    spent = set(b.get("spent_opportunities", []))
+    set_key = (t.get("set") or {}).get("encounter")
+    io = (t.get("intensity") or {}).get("outcome")
+    chosen_key = (t.get("select") or {}).get("encounter")
+    locked = _enemy_charge_locked(b)
+    foes, opps = deck_eff["foes"], [k for k in deck_eff["opportunities"] if k not in spent or k in in_play]
+    if chosen_key:
+        keys = [chosen_key]
+    elif locked:
+        keys = [k for k in foes if _card_info(b, library, k)["mounted_charge"]] or ([set_key] if set_key else [])
+    elif io in ("success", "critical"):
+        keys = [set_key] if set_key else []
+    elif io == "fumble":
+        keys = ([set_key] if set_key else []) + [k for k in opps if k != set_key]
+    elif io == "failure":
+        keys = foes + opps
+    else:
+        keys = foes + opps
+    if t.get("morale") or not set_key and io is None and t.get("retired"):
+        keys = [chosen_key or set_key] if (chosen_key or set_key) else []
+    cur = m["current"] if m else 0
+    out = []
+    for k in dict.fromkeys(keys):
+        info = _card_info(b, library, k)
+        need = info["minimum"]
+        out.append({"name": k, "flavour": info["flavour"], "opportunity": info["role"] == "opportunity",
+                    "minimum": need, "playable": (need is None or cur >= need) and (k not in spent or k in in_play),
+                    "spent": k in spent and k not in in_play, "in_play": k in in_play})
     return out
 
 

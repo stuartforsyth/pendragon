@@ -467,7 +467,7 @@ def test_table_never_sees_min_loss_or_intensity_die(client):
     _step(client, "set", encounter="Knights of Gorre")
     _step(client, "intensity", roll_for_me=True)
     raw = client.get("/api/table").text
-    assert "morale_minimum" not in raw and "Minimum" not in raw and "1D6+3" not in raw
+    assert "morale_minimum" not in raw and "morale_loss" not in raw and "1D6+3" not in raw
     feed = ok(client.get("/api/table"))["feed"]
     inten = next(c for c in feed if c["type"] == "battle.intensity")
     assert "roll" not in inten["data"] and "rolled" not in inten["text"]
@@ -657,12 +657,40 @@ def test_table_battle_view_cards_and_deck_names_only(client):
     pids = _running(client)
     _step(client, "set", encounter="Knights of Gorre", flavour="stern northerners on chargers")
     t = _tb(client)
-    assert t["battle"]["this_turn"]["set"] == {"name": "Knights of Gorre", "flavour": "stern northerners on chargers", "opportunity": False}
+    assert t["battle"]["this_turn"]["set"] == {"name": "Knights of Gorre", "flavour": "stern northerners on chargers", "opportunity": False, "minimum": 13}
     for c in t["battle"]["deck"]["foes"] + t["battle"]["deck"]["opportunities"]:
         assert set(c) <= {"name", "in_play", "spent"}
+    # the battlefield the players choose from: name, flavour, the Morale needed, playable
+    for c in t["battle"]["options"]:
+        assert set(c) == {"name", "flavour", "opportunity", "minimum", "playable", "spent", "in_play"}
     raw = client.get("/api/table").text
-    for secret in ("morale_minimum", "morale_loss", '"kv', "has_roster", "definition"):
+    for secret in ("morale_minimum", "morale_loss", '"kv', "has_roster", "definition", "mounted_charge"):
         assert secret not in raw, secret
+
+
+def test_table_options_follow_the_route(client):
+    """Before Intensity: the whole deck. Success: the set card alone. Fumble:
+    the set card or an unplayed Opportunity. Failure: everything. Each card
+    says the Morale it needs; below it, the card is not playable."""
+    pids = _running(client, start=12)                     # Morale 12: Gorre (13) out of reach, Knifemen (5) fine
+    opts = lambda: {c["name"]: c for c in _tb(client)["battle"]["options"]}
+    o = opts()
+    assert "Knights of Gorre" in o and "Pictish Knifemen" in o and "Clash of Champions" in o
+    assert o["Knights of Gorre"]["minimum"] == 13 and not o["Knights of Gorre"]["playable"]
+    assert o["Pictish Knifemen"]["playable"] and o["Clash of Champions"]["opportunity"]
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="success")
+    assert list(opts()) == ["Pictish Knifemen"]
+    _step(client, "morale", kind="loss", amount=1)
+    _postures(client, pids)
+    _step(client, "end_turn")
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "charge", outcome="failure")
+    _step(client, "intensity", outcome="fumble")
+    names = list(opts())
+    assert names[0] == "Pictish Knifemen" and all(opts()[n]["opportunity"] for n in names[1:]) and "Knights of Gorre" not in names
+    _step(client, "select", via="fumble")                # keeps the Knifemen
+    assert list(opts()) == ["Pictish Knifemen"]
 
 
 def test_spent_opportunity_flag_on_table(client):
@@ -1018,3 +1046,28 @@ def test_players_tally_per_knight_across_the_battle(client):
     ok(client.post(f"/api/combat/{g['id']}/status", json={"out": "fled"}))
     bors = next(k for k in ok(client.get("/api/table"))["knights"] if k["name"] == "Sir Bors")
     assert len(bors["tally"]) == 3 and bors["tally"][0]["turn"] == 2 and bors["tally"][0]["fate"] == "fled"
+
+
+def test_battle_fight_carries_the_barrage(client):
+    pids = _three(client)
+    _to_fight(client, pids, "Cambrian Archers")
+    _step(client, "barrage", outcome="failure")                   # 2 rounds
+    ok(client.post("/api/battle/fight"))
+    cs = ok(client.get("/api/combat"))["combat"]
+    assert cs["barrage"] == {"rounds": 2, "active": True, "left": 2}
+
+
+def test_battle_fight_couches_lances_and_countercharges(client):
+    pids = _three(client)
+    ok(client.post("/api/battle/settings", json={"day": 1, "patch": {"first_charge": True}}))
+    _to_fight(client, pids, "Knights of Lothian")                   # turn 1: first charge, and they always countercharge
+    ok(client.post("/api/battle/fight"))
+    cs = ok(client.get("/api/combat"))["combat"]
+    knights = [c for c in cs["combatants"] if c["side"] == "party"]
+    foes = [c for c in cs["combatants"] if c["side"] != "party"]
+    assert all(k["lance"] for k in knights)
+    assert all(f["charging"] and f["attacks"][f["wielding"]]["skill"] == "Charge" for f in foes)
+    ok(client.post("/api/combat/round"))
+    cs = ok(client.get("/api/combat"))["combat"]
+    assert not any(c["lance"] for c in cs["combatants"] if c["side"] == "party")
+    assert not any(c["charging"] for c in cs["combatants"] if c["side"] != "party")

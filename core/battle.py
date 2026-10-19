@@ -156,18 +156,20 @@ def countercharge(first_turn_of_day, roll=None):
 
 # ------------------------------------------------------------- the melee
 
-def height(foe_mounted, knight_mounted, override=None, attacks_horse=False):
+def height(foe_mounted, knight_mounted, override=None, attacks_horse=False, foe_prone=False, knight_prone=False):
     """Height Advantage as ``(foe_mod, knight_mod)``: +5/−5 reflexive in the
-    taller combatant's favour (core.combat.combat-modifiers). A footman
-    attacking a rider's horse loses the −5 but the rider keeps +5
-    (core.combat.action-attack). ``override="none"`` cancels it, e.g. a
-    two-handed spear against a rider."""
+    taller combatant's favour — horseman over foot, standing over prone
+    (core.combat.combat-modifiers). A footman attacking a rider's horse loses
+    the −5 but the rider keeps +5 (core.combat.action-attack).
+    ``override="none"`` cancels it, e.g. a two-handed spear against a rider."""
     if override == "none":
         return (0, 0)
-    if foe_mounted and not knight_mounted:
+    level = lambda mounted, prone: 2 if mounted and not prone else 0 if prone else 1
+    lf, lk = level(foe_mounted, foe_prone), level(knight_mounted, knight_prone)
+    if lf > lk:
         return (5, -5)
-    if knight_mounted and not foe_mounted:
-        return (0, 5) if attacks_horse else (-5, 5)
+    if lk > lf:
+        return (0, 5) if attacks_horse and knight_mounted and not foe_prone else (-5, 5)
     return (0, 0)
 
 

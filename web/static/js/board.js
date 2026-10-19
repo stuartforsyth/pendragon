@@ -106,23 +106,39 @@ export function moraleGauge(m, { compact = false } = {}) {
       m.last ? h("span", { class: "mg-why" }, `${m.last.delta > 0 ? "+" : m.last.delta < 0 ? "−" : ""}${Math.abs(m.last.delta)} · ${m.last.reason}`) : null));
 }
 
-/** A battle card as players see it: kind, a device, the name and the GM's
- * flavour line — never the card's mechanics. Opportunities get a gold frame. */
-export function cardFrame(c, { kind, small = false, token = null, crit = false } = {}) {
-  const device = c.opportunity
-    ? '<circle cx="30" cy="30" r="26" fill="none" stroke="#b08a36" stroke-width="2"/><path d="M14 40 17 20l8 9 5-12 5 12 8-9 3 20Z" fill="#b08a36"/>'
-    : '<circle cx="30" cy="30" r="26" fill="none" stroke="#4e3a28" stroke-width="2"/><path d="M18 42 42 18M42 42 18 18" stroke="#8e2219" stroke-width="3"/><path d="M16 44l4-1-3-3zM44 44l-4-1 3-3z" fill="#8e2219"/>';
-  return h("div", { class: `pcard ${c.opportunity ? "opp" : ""} ${small ? "small" : ""}` },
-    h("span", { class: "kind" }, kind || (c.opportunity ? "★ Opportunity" : "")),
-    h("span", { class: "dev" }, svg(device, `viewBox="0 0 60 60" width="${small ? 56 : 76}" height="${small ? 56 : 76}" aria-hidden="true"`)),
-    h("div", {}, h("div", { class: "cname" }, c.name), c.flavour ? h("div", { class: "flav" }, c.flavour) : null),
+/**
+ * A battle card as players see it, after the printed cards: a coloured title
+ * band (green for a Foe, gold for an Opportunity) carrying the name and the
+ * flavour in italic, a braided rule, then the foot with the twin dragons and
+ * the Morale Minimum in its roundel. A card the conroi lacks the Morale for is
+ * greyed and says so; a spent Opportunity is struck through.
+ */
+const DRAGONS = '<path d="M4 26c6-10 14-14 22-12 4 1 6 4 6 8M118 26c-6-10-14-14-22-12-4 1-6 4-6 8" fill="none" stroke="#2f6b3e" stroke-width="2.4" stroke-linecap="round"/>' +
+  '<path d="M8 24c5-6 11-9 17-8M114 24c-5-6-11-9-17-8" fill="none" stroke="#2f6b3e" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>' +
+  '<path d="M26 14l5-6 1 7M96 14l-5-6-1 7" fill="#2f6b3e"/>';
+export function cardFrame(c, { kind, small = false, token = null, crit = false, disabled = false } = {}) {
+  const need = c.minimum;
+  return h("div", { class: `pcard ${c.opportunity ? "opp" : ""} ${small ? "small" : ""} ${disabled ? "cant" : ""} ${c.spent ? "spent" : ""}`,
+      title: c.spent ? `${c.name} — already played this battle` : disabled ? `${c.name} needs Morale ${need}` : c.name },
+    kind ? h("span", { class: "kind" }, kind) : null,
+    h("div", { class: "band" }, h("div", { class: "cname" }, c.name), c.flavour ? h("div", { class: "flav" }, c.flavour) : null),
+    h("div", { class: "braid" }),
+    h("div", { class: "body" }),
+    h("div", { class: "foot" },
+      svg(DRAGONS, 'viewBox="0 0 122 30" class="dragons" aria-hidden="true"'),
+      need != null ? h("div", { class: "mm" }, h("span", { class: "mm-l" }, "Morale", h("br"), "Minimum"), h("span", { class: "mm-n" }, need)) : null),
+    disabled && !c.spent ? h("div", { class: "cant-rib" }, "Not enough Morale") : null,
+    c.spent ? h("div", { class: "cant-rib spent-rib" }, "Already played") : null,
     token ? h("div", { class: "toks" }, h("span", { class: `ttok ${crit ? "crit" : ""}` }, knightShield(), token, crit ? " · critical" : "")) : null);
 }
 
-/** Today's battlefield: every card name; in play outlined, spent struck. */
-export function deckSpread(deck) {
-  return h("div", { class: "deck" }, h("span", { class: "dl" }, "Today's battlefield"),
-    h("div", { class: "drow" },
-      (deck.foes || []).map((c) => h("span", { class: `dcard ${c.in_play ? "on" : ""}` }, c.name)),
-      (deck.opportunities || []).map((c) => h("span", { class: `dcard opp ${c.in_play ? "on" : ""} ${c.spent ? "spent" : ""}` }, c.name))));
+/** The battlefield as the players may choose from it: the playable cards,
+ * each with its Minimum Morale; the ones out of reach greyed. */
+export function deckSpread(options, { label = "The battlefield" } = {}) {
+  return h("div", { class: "deck" }, h("span", { class: "dl" }, label),
+    h("div", { class: "drow" }, options.map((c) => {
+      const el = cardFrame(c, { small: true, disabled: !c.playable });
+      if (c.in_play) el.classList.add("on");
+      return el;
+    })));
 }

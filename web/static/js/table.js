@@ -4,7 +4,7 @@
 import { h, clear, icon, debounce } from "./lib.js";
 import { liveStream } from "./stream.js";
 import { knightCard, moraleGauge, cardFrame, deckSpread, tallyStrip, knightShield as knightShieldEl } from "./board.js";
-import { foeFace, layoutField, linkLines, horseBadge } from "./field.js";
+import { foeFace, layoutArea, linkLines, horseBadge, proneBadge, stanceBadge } from "./field.js";
 
 const $ = (id) => document.getElementById(id);
 let last = { heroId: null, states: {}, titleCard: null };
@@ -162,6 +162,10 @@ const MINI_ICON = (t) => t === "combat.blow" || t === "roll.damage" ? "drop" : t
 
 function mini(c) {
   const d = c.data || {};
+  if (c.type === "divider" || c.type === "combat.round") {
+    return h("div", { class: `fray-divider ${c.type === "combat.round" ? "round" : ""}` },
+      h("span", { class: "fd-line" }), h("span", { class: "fd-text" }, c.type === "combat.round" ? `Round ${d.round ?? ""}` : c.text), h("span", { class: "fd-line" }));
+  }
   let res = null;
   if (c.type === "roll.check" && d.outcome) res = h("span", { class: "res", style: { color: { critical: "#b08a36", success: "#2f6b3e", failure: "#8e2219", fumble: "#1b1612" }[d.outcome] } }, `${d.roll} ${OUT[d.outcome]}`);
   if (c.type === "roll.dice") res = h("span", { class: "res" }, d.total);
@@ -183,7 +187,8 @@ function mini(c) {
 
 // ---------------------------------------------------------------- views
 function chronicle(p) {
-  const [top, ...rest] = p.feed;
+  const feed = p.feed, first = feed.findIndex((c) => c.type !== "divider" && c.type !== "combat.round");
+  const top = first >= 0 ? feed[first] : null, rest = feed.filter((_, i) => i !== first);
   if (top && top.type === "battle.finale" && top.data?.summary) return h("div", { class: "chronicle" },
     h("div", { class: "spot" }, finaleScene(top.data.summary)), h("div", { class: "feed" }, h("h2", {}, "Earlier"), rest.slice(0, 10).map(mini)));
   if (!top) {
@@ -228,10 +233,31 @@ function blowFx(d) {
 }
 
 // The latest roll, big, for the Fray column.
+// A volley: every archer facing one knight, resolved as one card — the
+// arrows that struck the rider, the ones that found the horse, the misses.
+function volleyCard(c) {
+  const d = c.data || {};
+  const fresh = c.id !== last.heroId;
+  last.heroId = c.id;
+  const num = h("div", { class: "bign" }, d.rider_damage || 0);
+  if (fresh && d.rider_damage) tumble(num, d.rider_damage);
+  const shot = (s) => h("span", { class: `vshot ${s.where ? (s.where === "mount" ? "mount" : "rider") : "miss"} ${s.critical ? "crit" : ""}` },
+    s.where ? `${s.damage}${s.where === "mount" ? " · horse" : ""}${s.critical ? " ★" : ""}` : "miss");
+  return h("div", { class: `card latest k-dmg volley ${d.rider_damage ? "" : "clean"}` },
+    h("div", { class: "rollline" },
+      h("div", { class: "badge seal" }, badgeSvg(SEAL), num, h("span", { class: "kw" }, "Damage")),
+      h("div", { style: { minWidth: 0 } },
+        h("div", { class: "lt" }, `${d.count} ${(d.weapon || "missile").toLowerCase()}${d.count === 1 ? "" : "s"} at ${d.knight}`),
+        h("div", { class: "vshots" }, (d.shots || []).map(shot)),
+        h("div", { class: "lx sum" }, d.rider_damage ? `${d.rider_damage} to ${d.knight} — subtract armour, no shield` : `${d.knight} is untouched`,
+          d.mount_damage ? ` · ${d.mount_damage} to the horse` : ""))));
+}
+
 function latestRollCard(p) {
-  const latestRoll = p.feed.find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow");
+  const latestRoll = p.feed.find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow" || c.type === "combat.volley");
   if (!latestRoll) return [null, p.feed.slice(0, 7)];
   const d = latestRoll.data || {};
+  if (latestRoll.type === "combat.volley") return [volleyCard(latestRoll), p.feed.filter((c) => c !== latestRoll).slice(0, 7)];
   const dmg = isDamage(latestRoll);
   const n = latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? (d.to_knight ? d.blow?.damage : d.blow?.wound)
     : d.total ?? (latestRoll.type === "sealed" ? "?" : d.roll ?? "");
@@ -282,38 +308,74 @@ function foeTile(f, p) {
 // and the penalty, Glory, LAST), the Field in the middle — the same clusters
 // the GM sees, on parchment — and the Fray on the right. Players see wound
 // words on the foes, never numbers.
-const WOUND_RING = { "Unhurt": [1, "#4f7a34"], "Wounded": [.62, "#9a6e22"], "Badly wounded": [.3, "#8e2219"] };
+// ring left, ring colour, medallion tint — the lost part of the ring is always gules
+// what is left of the fight in them is always green, what they have lost is
+// always gules — red against green reads from the back of the room
+// The players see a foe's state, never a gauge: rim colour, medallion tint,
+// and a drop badge — one for Wounded, two for Badly wounded. No exact damage.
+const WOUND_LOOK = { "Unhurt": ["#4e3a28", null, 0], "Wounded": ["#b0632b", "#f3dcc4", 1], "Badly wounded": ["#8e2219", "#e8b7a8", 2] };
+function woundBadge(n) {
+  if (!n) return null;
+  const sp = document.createElement("span");
+  sp.className = `ftok-wound w${n}`;
+  sp.title = n === 2 ? "Badly wounded" : "Wounded";
+  sp.innerHTML = Array.from({ length: n }, () => '<svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1c3 5 6 8 6 12a6 6 0 0 1-12 0c0-4 3-7 6-12Z" fill="currentColor"/></svg>').join("");
+  return sp;
+}
 function fieldToken(c, x, y) {
   const knight = c.side === "party";
   const down = c.status !== "active";
   const prev = last.states[c.id];
   const hit = !knight && prev && prev !== c.wound_state;
   last.states[c.id] = c.wound_state;
-  const [pct, col] = WOUND_RING[c.wound_state] || [.12, "#8e2219"];
-  const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${down ? "down" : ""} ${c.elite ? "elite" : ""} ${hit ? "hit" : ""}`,
+  const [rim, tint, drops] = WOUND_LOOK[c.wound_state] || ["#8e2219", "#e8b7a8", 2];
+  const stance = !knight && !down ? (c.stance || "attack") : "attack";
+  const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${down ? "down" : ""} ${c.elite ? "elite" : ""} ${hit ? "hit" : ""} ${stance !== "attack" ? "st-" + stance + (stance === "trample" ? "" : " defensive") : ""}`,
     "data-id": c.id, style: { left: `${x}px`, top: `${y}px` } },
-    knight ? h("span", { class: "ftok-face" }, knightShieldEl(down)) : foeFace(c.category, pct, col),
+    knight ? h("span", { class: "ftok-face" }, knightShieldEl(down)) : foeFace(c.category, 1, rim, { struck: down, ring: false, rim: down ? "#8a8378" : rim, tint: down ? null : tint }),
+    !knight && !down ? woundBadge(drops) : null,
     c.mounted && !down ? horseBadge() : null,
+    c.prone && !down ? proneBadge() : null,
+    stanceBadge(stance),
     h("span", { class: "ftok-name" }, c.name),
-    h("span", { class: "ftok-sub" }, knight ? (down ? c.wound_state : c.mounted === false ? "On foot" : "Mounted")
-      : [c.wound_state && c.wound_state !== "Unhurt" ? c.wound_state : "", c.disarmed ? "Disarmed" : ""].filter(Boolean).join(" · ")));
+    h("span", { class: `ftok-sub ${!knight && !down ? "s-" + (c.wound_state || "").toLowerCase().replace(/\s+/g, "-") : ""}` }, knight ? (down ? c.wound_state : c.prone ? "Prone" : c.mounted === false ? "On foot" : "Mounted")
+      : down ? [FATE_WORD[c.status] || c.wound_state, c.credit ? `✦${c.credit.glory}` : ""].filter(Boolean).join(" · ")
+      : [c.wound_state && c.wound_state !== "Unhurt" ? c.wound_state : "", c.prone ? "Prone" : "", c.disarmed ? "Disarmed" : ""].filter(Boolean).join(" · ")));
   return node;
 }
 
+// The Field fills the centre column. Its clusters are laid out for the room
+// it actually has (and again whenever that changes): a few engagements grow
+// to fill a big screen, a large battle packs more rows at a smaller scale.
 function fieldStage(p, knights, foes) {
-  const view = $("view");
-  const W = Math.max(480, view.querySelector(".tfield")?.clientWidth || (view.clientWidth - 300 - 340 - 56) || 720);
   const kItems = knights.map((k) => ({ id: k.id, side: "party", name: k.name, linked: [], down: k.status !== "active", ref: k }));
-  const fItems = foes.map((f) => ({ id: f.id, side: "foe", name: f.name, linked: f.linked || [], down: f.status !== "active", ref: f }));
-  // Wider screens get roomier clusters (the parchment caps run wide); a
-  // narrow centre column packs them tighter so a two-knight cluster still fits.
-  const scale = W >= 1000 ? 1.2 : W >= 760 ? 1 : .8;
-  const tok = scale > 1 ? { tokW: 156, tokH: 112 } : scale < 1 ? { tokW: 104, tokH: 84 } : { tokW: 130, tokH: 100 };
-  const { placed, lines, height } = layoutField(kItems, fItems, W, { scale, ...tok });
+  const fItems = foes.map((f) => ({ id: f.id, side: "foe", name: f.name, linked: f.linked || [], down: f.status !== "active",
+    credit: f.status !== "active" ? f.credit?.name : null, ref: f }));
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "cbt-links");
-  const stage = h("div", { class: `tfield ${scale > 1 ? "roomy" : scale < 1 ? "tight" : ""}`, style: { height: `${height}px` } }, svg, placed.map(([t, x, y]) => fieldToken(t.ref, x, y)));
-  linkLines(stage, svg, lines, { glowId: "table-glow" });
+  const stage = h("div", { class: "tfield" }, svg);
+  const nodes = new Map();
+  let lastKey = "";
+  const relayout = () => {
+    const W = stage.clientWidth, H = stage.clientHeight;
+    if (!W || !H) return;
+    const key = `${W}x${H}`;
+    if (key === lastKey) return;
+    lastKey = key;
+    const { placed, scale } = layoutArea(kItems, fItems, W, H, { tokW: 130, tokH: 100 });
+    stage.style.setProperty("--s", scale.toFixed(3));
+    for (const [t, x, y] of placed) {
+      let node = nodes.get(t.id);
+      if (!node) { node = fieldToken(t.ref, x, y); nodes.set(t.id, node); stage.append(node); }
+      node.style.left = `${x}px`; node.style.top = `${y}px`;
+    }
+    draw?.();
+  };
+  const { lines } = layoutArea(kItems, fItems, 1000, 600);
+  const draw = linkLines(stage, svg, lines, { glowId: "table-glow" });
+  const ro = new ResizeObserver(() => { if (!stage.isConnected) return ro.disconnect(); relayout(); });
+  ro.observe(stage);
+  requestAnimationFrame(relayout);
   return stage;
 }
 
@@ -325,15 +387,17 @@ function fight(p) {
   const knightRows = rows.filter((c) => c.side === "party");
   const foes = rows.filter((c) => c.side !== "party");
   // the card carries mounted / posture; the token needs mounted too
-  for (const k of knightRows) k.mounted = cards.find((c) => c.name === k.name)?.mounted ?? true;
+  for (const k of knightRows) { const card = cards.find((c) => c.name === k.name); k.mounted = card?.mounted ?? true; k.prone = !!card?.prone; }
   const [latest, others] = latestRollCard(p);
   const defeated = foes.filter((f) => FATE_WORD[f.status]);
   const knightNames = new Set(knightRows.map((k) => k.name));
   const waiting = foes.filter((f) => f.status === "active" && !(f.linked || []).some((n) => knightNames.has(n)));
   const bt = cs.battle && p.battle && p.battle.id === cs.battle.id ? p.battle : null;
   // Which foes go for the horses is the GM's secret: the players find out when a horse is struck.
+  const br = cs.barrage;
   const banners = [bt?.countercharge ? "They countercharge!" : null,
-    bt?.barrage ? `${bt.barrage} round${bt.barrage === 1 ? "" : "s"} of arrows before contact` : null].filter(Boolean);
+    br ? (br.active ? `Under the barrage — round ${cs.round} of ${br.rounds} before contact` : `The barrage is over — contact!`)
+      : bt?.barrage ? `${bt.barrage} round${bt.barrage === 1 ? "" : "s"} of arrows before contact` : null].filter(Boolean);
   const head = bt ? h("div", { class: "fv-head" }, h("span", { class: "fv-battle" }, `${bt.name} · Day ${bt.day} · Turn ${bt.turn}`),
     bt.morale ? h("span", { class: `fv-morale band-${(bt.morale.band || "").toLowerCase()}` }, h("span", { class: "lbl" }, "Morale"),
       h("span", { class: "mb" }, h("i", { style: { width: `${Math.round(100 * bt.morale.current / Math.max(1, bt.morale.start))}%` } })),
@@ -388,10 +452,11 @@ function battleView(p) {
   if (b.banner) centre.push(h("div", { class: `resbanner ${b.banner.tone}` }, b.banner.text));
   else if (STATUS_LINE[b.status]) centre.push(h("div", { class: "bv-status" }, STATUS_LINE[b.status]));
   const cards = [];
-  if (tt.set) cards.push(cardFrame(tt.set, { kind: tt.picks?.length ? "The GM sets" : "This turn", small: tt.picks?.length > 0 }));
+  const withMin = (c) => ({ ...c, minimum: (b.options || []).find((o) => o.name === c.name)?.minimum ?? c.minimum });
+  if (tt.set) cards.push(cardFrame(withMin(tt.set), { kind: tt.picks?.length ? "The GM sets" : "This turn", small: tt.picks?.length > 0 }));
   for (const pk of tt.picks || []) {
     if (pk.name === tt.set?.name) continue;
-    cards.push(cardFrame(pk, { kind: pk.opportunity ? "★ Opportunity" : "Picked", token: pk.knight_name.split(" ").slice(-1)[0], crit: pk.crit }));
+    cards.push(cardFrame(withMin(pk), { kind: pk.opportunity ? "★ Opportunity" : "Picked", token: pk.knight_name.split(" ").slice(-1)[0], crit: pk.crit }));
   }
   if (cards.length) centre.push(h("div", { class: `slots ${tt.selected ? "chosen" : ""}` }, cards));
   else if (b.status === "mustering" || titleFresh || !tt.set) {
@@ -404,7 +469,10 @@ function battleView(p) {
       h("div", { class: "bv-day" }, `Day ${b.day}`, b.intensity ? ` · Intensity ${b.intensity}` : "")));
   }
   for (const r of b.results || []) centre.push(h("div", { class: `bv-script ${r.kind}` }, r.text));
-  if (b.deck && (b.deck.foes.length || b.deck.opportunities.length)) centre.push(deckSpread(b.deck));
+  // the battlefield: only the cards the rules allow at this step; hidden once
+  // it would just repeat the card already shown above
+  const opts = (b.options || []).filter((o) => !(cards.length && o.in_play && (b.options || []).length === 1));
+  if (opts.length) centre.push(deckSpread(opts, { label: tt.picks?.length || (b.banner?.text || "").startsWith("Intensity fails") ? "Choose your fate" : (b.banner?.text || "").startsWith("Fortune") ? "An Opportunity — or the foe before you" : "The battlefield" }));
   const strip = tallyStrip(p.battle_knights);
   if (strip) centre.push(strip);
   return h("div", { class: "battleview" },
