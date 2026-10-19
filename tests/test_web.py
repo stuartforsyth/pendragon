@@ -118,11 +118,26 @@ def test_adversary_and_encounter_crud(client):
     assert len(ok(client.get("/api/combat"))["combat"]["combatants"]) == 3
 
 
-def test_rules_search_and_show(client):
+def test_rules_search_show_overlay_and_hide(client):
+    """A shown rule is an overlay on the Table (never a Fray card) until the GM
+    takes it off, clears the Table or starts a session."""
     res = ok(client.get("/api/rules", params={"q": "major wound"}))["results"]
     assert res
+    assert client.post("/api/rules/hide").status_code == 409
     ok(client.post(f"/api/rules/{res[0]['id']}/show"))
-    assert ok(client.get("/api/table"))["feed"][0]["type"] == "rule.shown"
+    t = ok(client.get("/api/table"))
+    assert t["rule"]["rule_id"] == res[0]["id"] and t["rule"]["html"] and t["rule"]["title"]
+    assert all(c["type"] != "rule.shown" for c in t["feed"])
+    assert ok(client.get("/api/rules/shown"))["shown"]["rule_id"] == res[0]["id"]
+    ok(client.post("/api/rules/hide"))
+    assert ok(client.get("/api/table"))["rule"] is None
+    assert ok(client.get("/api/rules/shown"))["shown"] is None
+    ok(client.post(f"/api/rules/{res[0]['id']}/show"))
+    ok(client.post("/api/table/clear"))
+    assert ok(client.get("/api/table"))["rule"] is None
+    ok(client.post(f"/api/rules/{res[0]['id']}/show"))
+    ok(client.post("/api/session/start", json={"title": "Next"}))
+    assert ok(client.get("/api/table"))["rule"] is None
 
 
 def test_chronicle_export(client):

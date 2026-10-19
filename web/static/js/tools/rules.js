@@ -17,6 +17,7 @@ export default {
     let sel = -1;
     let current = null;
     let pins = [];
+    let shown = null;              // the rule on the Table right now (id, title)
 
     const q = h("input", { class: "input rules-q", placeholder: "Search the rules — e.g. major wound, knockdown, ransom…  (press / )",
       oninput: debounce(() => search(), 180),
@@ -30,6 +31,7 @@ export default {
     const reader = h("div", { class: "rules-reader" });
     const count = h("div", { class: "faint small", style: { margin: "8px 2px 6px" } });
     const pinBox = h("div", { class: "rule-pins" });
+    const onTable = h("div", { class: "rule-ontable", hidden: true });
 
     clear(el,
       h("div", { class: "tool-head" },
@@ -37,7 +39,7 @@ export default {
           h("p", { class: "lede" }, "The rules corpus — Core Rulebook and GM Handbook — at your fingertips. ",
             h("span", { class: "faint" }, "↑↓ to move, Enter to read, Ctrl+Enter to show on the Table.")))),
       h("div", { class: "split rules-split" },
-        h("div", { class: "panel rules-side" }, pinBox, h("div", { class: "rules-search" }, icon("search"), q), count, list),
+        h("div", { class: "panel rules-side" }, onTable, pinBox, h("div", { class: "rules-search" }, icon("search"), q), count, list),
         reader));
 
     document.addEventListener("keydown", (e) => {
@@ -100,6 +102,15 @@ export default {
       renderReader();
     }
 
+    // What the players are reading right now, with the way to take it off.
+    async function loadShown() {
+      shown = (await api("/api/rules/shown")).shown;
+      onTable.hidden = !shown;
+      clear(onTable, shown ? h("div", { class: "hint rule-ontable-row" },
+        h("span", {}, icon("present"), " On the Table: ", h("b", {}, shown.title)),
+        h("button", { class: "btn sm", onclick: removeFromTable }, "Remove from Table")) : null);
+    }
+
     // Pinned rules: the ones you expect to need this game, one click away.
     async function loadPins() {
       pins = (await api("/api/rules/pins")).pins;
@@ -107,9 +118,16 @@ export default {
         h("div", { class: "label" }, icon("pin"), " Pinned"),
         pins.map((p) => h("div", { class: `list-item pin-item ${current?.id === p.id ? "reading" : ""}`, onclick: () => open(p.id) },
           h("span", { class: "rule-title", style: { minWidth: 0, flex: 1 } }, p.title),
-          h("button", { class: "btn ghost sm icon", title: "Show on Table",
-            onclick: (e) => { e.stopPropagation(); showOnTable(p.id); } }, icon("present")))),
-      ] : null);
+          shown?.rule_id === p.id
+            ? h("button", { class: "btn sm", title: "Take it off the Table", onclick: (e) => { e.stopPropagation(); removeFromTable(); } }, "On Table ✓")
+            : h("button", { class: "btn ghost sm icon", title: "Show on Table",
+                onclick: (e) => { e.stopPropagation(); showOnTable(p.id); } }, icon("present")))),
+      ] : h("p", { class: "faint small", style: { margin: "0 0 8px" } }, "Pin the rules you expect to need: they stay here, one click from the Table."));
+    }
+
+    async function removeFromTable() {
+      await post("/api/rules/hide", {}, { quiet: [409] }).catch(() => {});
+      toast("Taken off the Table", "ok");
     }
 
     async function togglePin() {
@@ -145,7 +163,9 @@ export default {
               (r.tags || []).slice(0, 8).map((t) => h("button", { class: "tag rule-tag", title: `Search “${t}”`,
                 onclick: () => { q.value = t.replace(/-/g, " "); search(); } }, t)))),
           h("div", { class: "toolbar" },
-            h("button", { class: "btn primary", onclick: () => showOnTable() }, icon("present"), "Show on Table"),
+            shown?.rule_id === r.id
+              ? h("button", { class: "btn primary on", onclick: removeFromTable }, icon("present"), "Remove from Table")
+              : h("button", { class: "btn primary", onclick: () => showOnTable() }, icon("present"), "Show on Table"),
             h("button", { class: `btn ${pins.some((p) => p.id === r.id) ? "on" : ""}`, title: "Pin for quick access",
               onclick: togglePin }, icon("pin"), pins.some((p) => p.id === r.id) ? "Pinned" : "Pin"),
             h("button", { class: "btn icon", title: "Copy citation", onclick: () => copyText(cite, "Citation copied") }, icon("copy")))),
@@ -153,9 +173,15 @@ export default {
       el.closest(".main")?.scrollTo({ top: 0, behavior: "smooth" });
     }
 
+    // The Table's state changes under us: another tab, Clear Table, a new session.
+    ctx.onEvent((evs, { reset }) => {
+      if (reset || evs.some((e) => e.type.startsWith("rule.") || e.type === "table.cleared" || e.type.startsWith("session.") || e.type.startsWith("meta.")))
+        loadShown().then(() => { loadPins(); renderReader(); });
+    });
     renderReader();
+    await loadShown();
     await loadPins();
     await search();
-    return { show: () => q.focus() };
+    return { show: () => { loadShown().then(() => { loadPins(); renderReader(); }); q.focus(); } };
   },
 };

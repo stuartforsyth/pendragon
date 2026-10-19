@@ -4,7 +4,7 @@
 // Players roll and resolve at the table; the GM records outcomes here.
 
 import { h, clear, api, post, icon, modal, confirmBox, toast, useCss, debounce, menu } from "../lib.js";
-import { dayCard, deckPicker, outcomeChips, amountEntry, moraleStrip, knightChip, examplesBanner } from "../components.js";
+import { dayCard, deckPicker, outcomeChips, amountEntry, moraleStrip, knightChip, examplesBanner, POS_LABEL, launchBattle } from "../components.js";
 
 const SIZES = {
   fight: { label: "Fight", turns: 1, dice: "1D6+2", army: false },
@@ -88,11 +88,11 @@ export default {
                 h("input", { class: "input", placeholder: "Where — e.g. the ford at Bedegraine", value: quick.where, oninput: (e) => { quick.where = e.target.value; } }),
                 h("input", { class: "input", placeholder: "Against — e.g. King Lot and the northern kings", value: quick.against, oninput: (e) => { quick.against = e.target.value; } }),
                 h("textarea", { class: "input", rows: 2, placeholder: "Notes to read out", oninput: (e) => { quick.notes = e.target.value; } }, quick.notes))),
-            h("button", { class: "btn primary", style: { marginTop: "12px" }, onclick: () => post("/api/battle/start", { quick: { ...quick } }) }, icon("banner"), "Launch battle")),
+            h("button", { class: "btn primary", style: { marginTop: "12px" }, onclick: () => launchBattle({ quick: { ...quick } }) }, icon("banner"), "Launch battle")),
           h("div", { class: "panel" }, h("h3", {}, "Saved battles"),
             saved.length ? h("div", { class: "list" }, saved.map((s) => h("div", { class: "list-item bl-saved" },
               h("span", {}, h("b", {}, s.key), h("span", { class: "faint small" }, ` · ${SIZES[s.size]?.label || s.size} · ${s.days} day${s.days === 1 ? "" : "s"}`)),
-              h("button", { class: "btn sm", onclick: () => post("/api/battle/start", { key: s.key }) }, icon("play"), "Launch"))))
+              h("button", { class: "btn sm", onclick: () => launchBattle({ key: s.key }) }, icon("play"), "Launch"))))
               : h("p", { class: "faint" }, "Prepare battles in the Battles tool."))),
       ];
     }
@@ -176,7 +176,11 @@ export default {
         h("div", { class: "bhead" }, h("span", { class: "bl-title" }, b.definition.name || "Battle"),
           h("span", { class: "faint" }, `${day > 1 ? "Re-muster" : "Mustering"} · Day ${day} of ${days} · ${S.label} · ${b.turns_today} turns · first charge ${b.first_charge ? "on" : "off"}`),
           h("span", { class: "sp" }, h("button", { class: "btn ghost sm", onclick: settingsDrawer }, "Battle settings"),
-            h("button", { class: "btn ghost sm", onclick: pause }, "Pause"))),
+            h("button", { class: "btn ghost sm", onclick: pause }, "Pause"),
+            b.turn === 0 && b.day === 1 ? h("button", { class: "btn ghost sm", title: "Launched by mistake? Call it off — nothing has been played yet", onclick: async () => {
+              if (await confirmBox("Call off the battle?", "It hasn't begun, so nothing is lost. The Battle tool goes back to Launch.", "Call it off", true)) await post("/api/battle/abandon");
+            } }, "Call it off") : null)),
+        dd.notes ? h("div", { class: "hint bl-daynotes" }, h("b", {}, `Day ${day} (GM only): `), dd.notes) : null,
         h("div", { class: "grid2" }, conroi, h("div", { class: "stack" }, army, intensity)),
         h("div", { class: "row" }, beginBtn, beginWhy),
       ];
@@ -208,9 +212,9 @@ export default {
             h("button", { class: "btn ghost sm", onclick: settingsDrawer }, "Battle settings"),
             h("button", { class: "btn ghost sm", onclick: saveTemplate }, "Save as template"),
             h("button", { class: "btn ghost sm", onclick: pause }, "Pause"))),
-        moraleStrip(b, { onAdjust: adjustMorale, onCommander: changeCommander }),
+        moraleStrip(b, { onAdjust: adjustMorale, onCommander: changeCommander, onToken: tokenHint }),
         h("div", { class: "kchips" }, b.knight_list.filter((k) => b.conroi.includes(k.pid)).map((k) =>
-          knightChip(k, { onMounted: () => post(`/api/battle/knight/${k.pid}`, { mounted: !k.mounted }) }))),
+          knightChip(k, { onMounted: () => post(`/api/battle/knight/${k.pid}`, { mounted: !k.mounted }), onPosition: positionMenu }))),
         b.minus5 && b.turn === 1 ? h("div", { class: "bl-reminder" }, "−5 Battle this turn for the whole army (Army Commander fumbled).") : null,
         b.day_def.notes ? h("div", { class: "hint bl-daynotes" }, h("b", {}, `Day ${b.day} (GM only): `), b.day_def.notes) : null,
         b.status === "rear" ? rearPanel() : stepper(),
@@ -288,7 +292,8 @@ export default {
       const t = b.t;
       switch (key) {
         case "set": return t.set ? [h("b", {}, t.set.encounter), t.set.flavour ? h("em", {}, ` · “${t.set.flavour}”`) : null, t.set.forced ? h("span", { class: "tag gules" }, "forced") : null] : "";
-        case "charge": return t.charge ? { may_charge_plus5: "Charge! (+5, mounted)", may_charge: "may charge (mounted)", no_charge: "no charge", enemy_charge: "Enemy knights charge!" }[t.charge.result] : "";
+        case "charge": return !t.charge ? "" : t.charge.skipped ? "not rolled — no charge possible"
+          : { may_charge_plus5: "Charge! (+5, mounted)", may_charge: "may charge (mounted)", no_charge: "no charge", enemy_charge: "Enemy knights charge!" }[t.charge.result];
         case "intensity": return t.intensity ? [`Intensity: `, h("b", { class: `o-${t.intensity.outcome}` }, OUT_WORD[t.intensity.outcome]),
           { doubled: " — foes doubled", stands: " — the Encounter stands", choose: " — knights may choose", opportunity: " — an Opportunity" }[t.intensity.result]] : "";
         case "picks": return Object.entries(t.picks).map(([pid, p]) => `${knightName(pid)}${p.crit ? " (crit)" : ""}: ${p.encounter}`).join(" · ") || "no picks";
@@ -304,7 +309,9 @@ export default {
 
     function stepper() {
       const tk = `${b.day}.${b.turn}`;
-      if (ui.turnKey !== tk) Object.assign(ui, { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, turnKey: tk });
+      // A new turn (or day) resets the stepper's scratch state, including the
+      // "Undone … Restore" offer: restoring a past turn's steps would no longer fit.
+      if (ui.turnKey !== tk) Object.assign(ui, { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, lastUndo: null, turnKey: tk });
       const items = b.step.items;
       const rows = [];
       for (const it of items) {
@@ -398,6 +405,10 @@ export default {
 
     function setBody() {
       const keys = deckKeys("foe");
+      if (b.morale.current <= 0) {
+        return [h("div", { class: "bl-reminder" }, "Morale is 0 — the conroi must Retire to the Rear."),
+          h("div", { class: "hint" }, "Rest there to recover Morale (1D6 a turn), or leave the field.")];
+      }
       if (ui.flavour === null) ui.flavour = "";
       const missingBanner = banner();
       const fl = h("input", { class: "input", placeholder: "Flavour line for the Table (defaults to the card's description)", value: ui.flavour,
@@ -424,13 +435,23 @@ export default {
     }
 
     function chargeIntensityBody(ch, inten) {
-      const left = ch.state === "skipped" ? h("div", { class: "half skip" }, h("div", { class: "label" }, "Commander's charge roll"), h("em", {}, ch.reason))
-        : ch.state === "done" ? h("div", { class: "half" }, h("div", { class: "label" }, "Commander's charge roll"), summary("charge"))
+      // Table 6.3: OUR commander rolls Battle — may the knights make a mounted
+      // charge? Knights can charge foot troops; the foe's own charge only comes
+      // in on a fumble. The GM can skip the roll when no charge is possible.
+      const chargeLabel = h("div", { class: "label", title: "Table 6.3, Mounted Charge Opportunity: the conroi commander's Battle roll decides whether the knights may make a mounted charge this turn" },
+        "Our commander's charge roll — may the knights charge?");
+      const allFoot = b.conroi_now.length && b.conroi_now.every((pid) => !b.knights[pid]?.mounted);
+      const left = ch.state === "skipped" ? h("div", { class: "half skip" }, chargeLabel, h("em", {}, ch.reason))
+        : ch.state === "done" ? h("div", { class: "half" }, chargeLabel, summary("charge"))
         : (() => {
           let engaged = b.fought_last;
           const tog = h("label", { class: "check small" }, h("input", { type: "checkbox", checked: engaged, onchange: (e) => { engaged = e.target.checked; } }), "Engaged last round");
-          return h("div", { class: "half" }, h("div", { class: "label" }, "Commander's charge roll"),
+          return h("div", { class: "half" }, chargeLabel,
             outcomeChips({ keys: true, onPick: (o) => step("charge", { outcome: o, engaged_last: engaged }) }), tog,
+            h("div", { class: "row" },
+              h("button", { class: "btn ghost sm", title: "No charge is possible this turn (ground, everyone on foot, the GM's call): record it without a roll", onclick: () => step("charge", { skip: true }) }, "Don't roll — no charge possible"),
+              h("span", { class: "faint small" }, allFoot ? "Everyone is on foot: only a fumble (enemy knights charge) could matter — skip if the enemy has no knights."
+                : "Mounted knights may charge foes on foot too; a fumble means enemy knights charge.")),
             b.minus5 && b.turn === 1 ? h("div", { class: "bl-reminder" }, "−5 Battle this turn") : null);
         })();
       const right = inten.state === "skipped" ? h("div", { class: "half skip" }, h("div", { class: "label" }, "Intensity roll"), h("em", {}, inten.reason))
@@ -666,6 +687,19 @@ export default {
           h("label", { class: "field" }, h("span", {}, "Reason (logged)"), why),
           h("div", { class: "foot" }, h("button", { class: "btn ghost", onclick: () => close() }, "Cancel"), h("button", { class: "btn primary", onclick: go }, "Apply"))];
       });
+    }
+
+    // Where a knight is. Only knights with the conroi take postures and fight
+    // the Encounter; a Cowardly knight goes to the rear and comes back from here.
+    function positionMenu(k, anchor) {
+      const POS_HINT = { conroi: "", rear: "escorting captives, resting, remounting", alone: "fights alone: Battle −10, still drains Morale", left: "out of the battle" };
+      menu(anchor, Object.entries(POS_LABEL).map(([pos, label]) => [
+        `${label}${pos === (k.position || "conroi") ? " ✓" : ""}${POS_HINT[pos] ? ` — ${POS_HINT[pos]}` : ""}`,
+        () => pos !== (k.position || "conroi") && post(`/api/battle/knight/${k.pid}`, { position: pos })]));
+    }
+
+    function tokenHint(key) {
+      toast(key === "force" ? "Spend it at ② Set Encounter: tick “Force this Encounter”." : "Spend it at ⑦ Morale: “Negate this loss”.", "ok");
     }
 
     function changeCommander(anchor) {

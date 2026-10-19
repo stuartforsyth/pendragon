@@ -9,8 +9,7 @@
 .kc-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .kshield { width: 34px; height: 39px; flex: none; }
 .kc-id { min-width: 0; flex: 1; }
-.kc-name { font-family: var(--f-caps); font-weight: 700; font-size: 19px; line-height: 1.1; color: var(--azure);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kc-name { font-family: var(--f-caps); font-weight: 700; font-size: 19px; line-height: 1.1; color: var(--azure); text-wrap: balance; }
 .kc-player { font-style: italic; font-size: 15px; color: var(--ink-soft); }
 
 .glory-counter { position: relative; text-align: right; display: grid; justify-items: end; }
@@ -28,7 +27,27 @@
 .fx.boon { color: var(--vert); border-color: var(--vert); background: rgba(47, 107, 62, .08); }
 .fx.state { color: var(--ink-2); border-color: var(--parch-dark); background: #f6ecd2; }
 
-.happened { font-size: 16px; line-height: 1.3; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The whole line, wrapped — a card grows to fit what happened. */
+.happened { font-size: 16px; line-height: 1.3; color: var(--ink-2); overflow-wrap: anywhere; }
+/* the running tally beneath the Field: a column per knight, grouped by Day · Turn */
+.tally-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px 14px; align-items: start; width: 100%; }
+.tally-label { grid-column: 1 / -1; font-family: var(--f-caps); font-size: 12px; letter-spacing: .25em; text-transform: uppercase; color: var(--ink-soft); }
+.tally-col { background: rgba(251, 244, 226, .6); border: 1px solid var(--parch-dark); border-radius: 8px; padding: 6px 10px 7px; min-width: 0; }
+.tally-head { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+.tally-head .kshield { width: 18px; height: 20px; flex: none; }
+.tally-head .tally-name { font-family: var(--f-caps); font-weight: 700; font-size: 15px; color: var(--azure); min-width: 0; overflow-wrap: anywhere; }
+.tally-head b { margin-left: auto; font-family: var(--f-prose); font-size: 17px; color: var(--or); font-variant-numeric: lining-nums; }
+.tally-body { max-height: 7.6em; overflow: auto; font-size: 15px; line-height: 1.35; color: var(--ink-2);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent); scrollbar-width: none; }
+.tally-group { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
+.tally-group + .tally-group { margin-top: 2px; }
+.tally-when { flex: 0 0 100%; font-family: var(--f-caps); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.tally-item { white-space: nowrap; }
+.tally-item .tally-who { font-family: var(--f-caps); font-size: 13px; font-weight: 600; color: var(--ink); }
+.tally-item .tally-fate { font-style: italic; }
+.tally-item.f-slain .tally-fate { color: var(--gules); }
+.tally-item.f-surrendered .tally-fate, .tally-item.f-unconscious .tally-fate { color: #8a5a12; }
+.tally-none { font-style: italic; color: var(--ink-soft); }
 .happened i { font-style: normal; font-family: var(--f-caps); font-size: 11px; letter-spacing: .2em; color: var(--ink-soft); margin-right: 6px; text-transform: uppercase; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -81,7 +100,7 @@
 .pcard .kind { font-family: var(--f-caps); font-size: 11px; letter-spacing: .3em; color: var(--ink-soft); text-transform: uppercase; }
 .pcard .dev { display: grid; place-items: center; }
 .pcard .cname { font-family: var(--f-caps); font-weight: 700; font-size: 19px; line-height: 1.15; color: var(--ink); }
-.pcard .flav { font-style: italic; font-size: 15px; color: var(--ink-2); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.pcard .flav { font-style: italic; font-size: 15px; color: var(--ink-2); line-height: 1.25; overflow-wrap: anywhere; }
 .pcard.opp { border-color: var(--or); box-shadow: 0 0 0 3px rgba(176,138,54,.35), 0 8px 22px rgba(42,29,20,.3); }
 .pcard.small { width: 150px; height: 205px; opacity: .92; }
 .pcard .toks { position: absolute; bottom: -14px; left: 0; right: 0; display: flex; justify-content: center; }

@@ -18,6 +18,7 @@ when designing it, and the architecture that follows from them.
 | GM console layout | Three panes: tool rail · active tool · live log with the dice tray docked beneath. |
 | Table modes | **Chronicle** (newest event spotlit, earlier events as a feed) and **Battle** (knights vs foes board + "the Fray"), switching automatically when combat starts/ends; the GM can pin either. |
 | Foe health on the Table | Described wound states only — Unhurt / Wounded / Badly wounded / Unconscious / Near death / Slain / Fled. Knights show exact HP. |
+| Rules on the Table | **Show on Table** lays the whole rule over the Table as a parchment overlay (`rule.shown`) until the GM removes it (`rule.hidden`, via the Rules tool or the top-bar **Rules ▾** menu of pinned rules), clears the Table or starts a session. Rules never enter the Fray. Pins persist in `data/pinned_rules.json`. |
 | Dice tray | Free notation, quick dice, Pendragon check (critical / fumble / critical bonus), opposed roll, label, Secret toggle. Every click-to-roll in the app uses the same engine (`core.dice`). |
 | Narration | A Narrate box (read-aloud, scene title, image link) and "Present" on NPCs to spotlight their read-aloud description. |
 | Party | Lightweight records for the player knights (`data/party.json`): join combats automatically, set encounter scaling, HP carried back after combat. |
@@ -174,6 +175,22 @@ adds the KV Morale gain (half up per Encounter, a GM ruling). Barrage and
 countercharge are recorded before the fight. The tracker shows a battle frame
 (Morale strip, banners, posture rounds, +1 round, Back to battle) and the
 Table's fight view a battle header with compact Morale.
+
+The Table's **fight view** is knight cards · the Field · the Fray: the knights'
+cards down the left (Glory, posture and rounds, mounted, Height and Multiple
+Opponents chips, the LAST line — glanceable state only), the same engagement clusters the GM sees in
+the middle on parchment (`web/static/js/field.js` lays out both boards and
+pushes tokens apart so no two labels overlap; foe tokens carry wound words,
+never numbers; a horse-head badge marks anyone mounted), beneath it the
+**tally strip** — a column per knight listing the foes they are credited
+with ("Knifemen 7 slain") grouped by Day · Turn across every fight of the
+battle, from the same credit that pays the Glory (`table.defeat_tally`; it also
+sits beneath the centre of the battle view between fights) — then any
+uncredited defeats and the Waiting line,
+and the Fray on the right. In the GM tracker a foe's attack roll ticks it as
+having acted this round (derived from `roll.check` events with a `cid`;
+`combat.acted` ticks by hand; `combat.round` clears), shown as a tick on the
+row and token and a "still to act" count in the header.
 
 Between fights the Table's **battle view** tells the turn's story: a result
 banner, the GM's card beside the knights' picks (card frames with name and

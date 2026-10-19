@@ -3,7 +3,7 @@
 // Battle tool at Mustering. Library edits are not logged, as for encounters.
 
 import { h, clear, api, post, put, del, enc, icon, confirmBox, toast, useCss } from "../lib.js";
-import { dayCard, examplesBanner } from "../components.js";
+import { dayCard, examplesBanner, launchBattle } from "../components.js";
 
 // Table 6.1 (mirrors core/battle.py SIZES).
 const SIZES = [
@@ -165,7 +165,7 @@ export default {
         k = await save();
         if (!k) return;
       }
-      await post("/api/battle/start", { key: k });
+      if (!(await launchBattle({ key: k }))) return;
       toast(`Launched “${k}”`, "ok");
       ctx.navigate("battle");
     }

@@ -3,7 +3,8 @@
 
 import { h, clear, icon, debounce } from "./lib.js";
 import { liveStream } from "./stream.js";
-import { knightCard, moraleGauge, cardFrame, deckSpread, knightShield as knightShieldEl } from "./board.js";
+import { knightCard, moraleGauge, cardFrame, deckSpread, tallyStrip, knightShield as knightShieldEl } from "./board.js";
+import { foeFace, layoutField, linkLines, horseBadge } from "./field.js";
 
 const $ = (id) => document.getElementById(id);
 let last = { heroId: null, states: {}, titleCard: null };
@@ -147,11 +148,6 @@ function hero(c, fresh) {
       h("div", { class: "opposed" }, side(d.a), h("div", { class: "mid" }, "⚔"), side(d.b)),
       h("div", { class: "verdict" }, h("span", { class: `ribbon ${d.winner ? "critical" : "failure"}` }, verdict)));
   }
-  if (t === "rule.shown") {
-    return h("div", { class: "hero card rulehero" },
-      h("div", { class: "kicker" }, `${d.book === "gm" ? "GM Handbook" : "Core Rulebook"} · p.${(d.pages || []).join(", ")}`),
-      h("div", { html: d.html }));
-  }
   if (t === "session.started" || t === "session.resumed") {
     return h("div", { class: "hero scene" }, h("div", { class: "kicker" }, t === "session.started" ? "Here begins" : "Here resumes"),
       h("div", { class: "h-title" }, c.title), flourish());
@@ -282,39 +278,83 @@ function foeTile(f, p) {
     (f.chips || []).map((x) => h("span", { class: "tchip" }, x)));
 }
 
-// The fight view: one lane per knight (their card, then the foes on them),
-// a Defeated / Waiting footer, and the Fray with the latest roll.
+// The fight view: the knights' cards down the left (posture, mounted, foes
+// and the penalty, Glory, LAST), the Field in the middle — the same clusters
+// the GM sees, on parchment — and the Fray on the right. Players see wound
+// words on the foes, never numbers.
+const WOUND_RING = { "Unhurt": [1, "#4f7a34"], "Wounded": [.62, "#9a6e22"], "Badly wounded": [.3, "#8e2219"] };
+function fieldToken(c, x, y) {
+  const knight = c.side === "party";
+  const down = c.status !== "active";
+  const prev = last.states[c.id];
+  const hit = !knight && prev && prev !== c.wound_state;
+  last.states[c.id] = c.wound_state;
+  const [pct, col] = WOUND_RING[c.wound_state] || [.12, "#8e2219"];
+  const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${down ? "down" : ""} ${c.elite ? "elite" : ""} ${hit ? "hit" : ""}`,
+    "data-id": c.id, style: { left: `${x}px`, top: `${y}px` } },
+    knight ? h("span", { class: "ftok-face" }, knightShieldEl(down)) : foeFace(c.category, pct, col),
+    c.mounted && !down ? horseBadge() : null,
+    h("span", { class: "ftok-name" }, c.name),
+    h("span", { class: "ftok-sub" }, knight ? (down ? c.wound_state : c.mounted === false ? "On foot" : "Mounted")
+      : [c.wound_state && c.wound_state !== "Unhurt" ? c.wound_state : "", c.disarmed ? "Disarmed" : ""].filter(Boolean).join(" · ")));
+  return node;
+}
+
+function fieldStage(p, knights, foes) {
+  const view = $("view");
+  const W = Math.max(480, view.querySelector(".tfield")?.clientWidth || (view.clientWidth - 300 - 340 - 56) || 720);
+  const kItems = knights.map((k) => ({ id: k.id, side: "party", name: k.name, linked: [], down: k.status !== "active", ref: k }));
+  const fItems = foes.map((f) => ({ id: f.id, side: "foe", name: f.name, linked: f.linked || [], down: f.status !== "active", ref: f }));
+  // Wider screens get roomier clusters (the parchment caps run wide); a
+  // narrow centre column packs them tighter so a two-knight cluster still fits.
+  const scale = W >= 1000 ? 1.2 : W >= 760 ? 1 : .8;
+  const tok = scale > 1 ? { tokW: 156, tokH: 112 } : scale < 1 ? { tokW: 104, tokH: 84 } : { tokW: 130, tokH: 100 };
+  const { placed, lines, height } = layoutField(kItems, fItems, W, { scale, ...tok });
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "cbt-links");
+  const stage = h("div", { class: `tfield ${scale > 1 ? "roomy" : scale < 1 ? "tight" : ""}`, style: { height: `${height}px` } }, svg, placed.map(([t, x, y]) => fieldToken(t.ref, x, y)));
+  linkLines(stage, svg, lines, { glowId: "table-glow" });
+  return stage;
+}
+
 function fight(p) {
   const cs = p.combat;
   if (!cs) return chronicle(p);
-  const knights = p.knights || [];
-  const foes = cs.combatants.filter((c) => c.side !== "party");
+  const cards = p.knights || [];
+  const rows = cs.combatants;
+  const knightRows = rows.filter((c) => c.side === "party");
+  const foes = rows.filter((c) => c.side !== "party");
+  // the card carries mounted / posture; the token needs mounted too
+  for (const k of knightRows) k.mounted = cards.find((c) => c.name === k.name)?.mounted ?? true;
   const [latest, others] = latestRollCard(p);
   const defeated = foes.filter((f) => FATE_WORD[f.status]);
-  const engagedNames = new Set(knights.map((k) => k.name));
-  const waiting = foes.filter((f) => f.status === "active" && !engagedNames.has(f.engaged_with));
-  const lanes = knights.length
-    ? knights.map((k) => h("div", { class: "tlane" }, knightCard(k),
-        h("div", { class: "tlane-foes" }, k.lane.foes.length ? k.lane.foes.map((f) => foeTile(f, p))
-          : h("span", { class: "tlane-none" }, k.status === "active" ? "No foe engaged" : ""))))
-    : [h("div", { class: "tlane solo" }, h("div", { class: "tlane-foes" }, foes.filter((f) => f.status === "active").map((f) => foeTile({ ...f, chips: [] }, p))))];
+  const knightNames = new Set(knightRows.map((k) => k.name));
+  const waiting = foes.filter((f) => f.status === "active" && !(f.linked || []).some((n) => knightNames.has(n)));
   const bt = cs.battle && p.battle && p.battle.id === cs.battle.id ? p.battle : null;
   // Which foes go for the horses is the GM's secret: the players find out when a horse is struck.
   const banners = [bt?.countercharge ? "They countercharge!" : null,
     bt?.barrage ? `${bt.barrage} round${bt.barrage === 1 ? "" : "s"} of arrows before contact` : null].filter(Boolean);
-  return h("div", { class: "fightview" },
-    h("div", { class: "lanes" },
-      bt ? h("div", { class: "fv-head" }, h("span", { class: "fv-battle" }, `${bt.name} · Day ${bt.day} · Turn ${bt.turn}`),
-        bt.morale ? h("span", { class: `fv-morale band-${(bt.morale.band || "").toLowerCase()}` }, h("span", { class: "lbl" }, "Morale"),
-          h("span", { class: "mb" }, h("i", { style: { width: `${Math.round(100 * bt.morale.current / Math.max(1, bt.morale.start))}%` } })),
-          h("b", {}, bt.morale.current), h("span", { class: "mw" }, bt.morale.band)) : null) : null,
+  const head = bt ? h("div", { class: "fv-head" }, h("span", { class: "fv-battle" }, `${bt.name} · Day ${bt.day} · Turn ${bt.turn}`),
+    bt.morale ? h("span", { class: `fv-morale band-${(bt.morale.band || "").toLowerCase()}` }, h("span", { class: "lbl" }, "Morale"),
+      h("span", { class: "mb" }, h("i", { style: { width: `${Math.round(100 * bt.morale.current / Math.max(1, bt.morale.start))}%` } })),
+      h("b", {}, bt.morale.current), h("span", { class: "mw" }, bt.morale.band)) : null) : null;
+  // Beneath the Field: the running tally per knight (every fight of the battle),
+  // then who is still waiting. Foes nobody is credited with are listed too.
+  const uncredited = defeated.filter((f) => !f.credit);
+  const foot = [
+    cards.length ? tallyStrip(cards) : null,
+    uncredited.length || waiting.length ? h("div", { class: "fv-foot" },
+      uncredited.length ? [h("span", { class: "lbl" }, cards.length ? "Also defeated" : "Defeated"), uncredited.map((f) => h("span", { class: "dft" },
+        h("s", {}, f.name), ` ${FATE_WORD[f.status]}`, f.captured_by_name ? h("span", { class: "dcr" }, ` · captive of ${f.captured_by_name}`) : null))] : null,
+      waiting.length ? [h("span", { class: "lbl" }, "Waiting"), h("span", {}, waiting.map((f) => f.name).join(", "))] : null) : null,
+  ];
+  return h("div", { class: `fightview ${cards.length ? "" : "no-knights"}` },
+    cards.length ? h("div", { class: "fv-knights" }, cards.map((k) => knightCard(k, { compact: true }))) : null,
+    h("div", { class: "fv-centre" },
+      head,
       banners.length ? h("div", { class: "row", style: { gap: "10px", flexWrap: "wrap" } }, banners.map((x) => h("div", { class: "fv-banner" }, x))) : null,
-      lanes,
-      defeated.length || waiting.length ? h("div", { class: "fv-foot" },
-        defeated.length ? [h("span", { class: "lbl" }, "Defeated"), defeated.map((f) => h("span", { class: "dft" },
-          h("s", {}, f.name), ` ${FATE_WORD[f.status]}`, f.credit ? h("span", { class: "dcr" }, ` ✦${f.credit.glory} ${f.credit.name}`) : null,
-          f.captured_by_name ? h("span", { class: "dcr" }, ` · captive of ${f.captured_by_name}`) : null))] : null,
-        waiting.length ? [h("span", { class: "lbl" }, "Waiting"), h("span", {}, waiting.map((f) => f.name).join(", "))] : null) : null),
+      fieldStage(p, knightRows, foes),
+      foot),
     h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), latest, others.map(mini)));
 }
 
@@ -365,12 +405,15 @@ function battleView(p) {
   }
   for (const r of b.results || []) centre.push(h("div", { class: `bv-script ${r.kind}` }, r.text));
   if (b.deck && (b.deck.foes.length || b.deck.opportunities.length)) centre.push(deckSpread(b.deck));
+  const strip = tallyStrip(p.battle_knights);
+  if (strip) centre.push(strip);
   return h("div", { class: "battleview" },
     moraleGauge(b.morale),
     h("div", { class: "bv-centre" }, centre),
     h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), p.feed.slice(0, 6).map(mini)),
     (p.battle_knights || []).length ? h("div", { class: "bv-knights" }, p.battle_knights.map((k) => knightCard(k, { compact: true }))) : null);
 }
+
 
 function render(p) {
   $("title").textContent = p.session.scratch ? "Pendragon" : p.session.title;
@@ -385,6 +428,25 @@ function render(p) {
     : h("span", {}, "The Chronicle"));
   if (battle) $("title").textContent = battle.name;
   clear($("view"), combat ? fight(p) : battle ? battleView(p) : chronicle(p));
+  ruleOverlay(p.rule);
+}
+
+// A rule the GM has put on the Table: a parchment laid over whatever is
+// showing, big enough to read across the room, until the GM takes it off.
+let ruleShown = null;
+function ruleOverlay(rule) {
+  const old = document.getElementById("ruleOverlay");
+  if (!rule) { old?.remove(); ruleShown = null; return; }
+  if (old && ruleShown === rule.id) return;              // same rule: leave the scroll position alone
+  old?.remove();
+  ruleShown = rule.id;
+  const body = h("div", { class: "rs-body", html: rule.html });
+  document.body.append(h("div", { class: "rule-overlay", id: "ruleOverlay" },
+    h("div", { class: "rule-scroll" },
+      h("div", { class: "rs-kicker" }, `${rule.book === "gm" ? "GM Handbook" : "Core Rulebook"} · p.${(rule.pages || []).join(", ")}`),
+      h("h2", { class: "rs-title" }, rule.title),
+      flourish(),
+      body)));
 }
 
 // ---------------------------------------------------------------- live

@@ -68,9 +68,29 @@ def _npc_card(npc):
             "description": npc.get("description", "")}
 
 
+# A rule shown on the Table is an overlay for the group to read together, not a
+# card in the Fray: it lives until the GM removes it, the Table is cleared or a
+# new session begins.
+RULE_TYPES = ("rule.shown", "rule.hidden")
+
+
+def shown_rule(events, fl):
+    """The rule on the Table right now, or None."""
+    for ev in reversed(events):
+        if fl.get(ev["id"], {}).get("struck"):
+            continue
+        if ev["type"] in CUTOFF_TYPES or ev["type"] == "rule.hidden":
+            return None
+        if ev["type"] == "rule.shown":
+            d = ev.get("data", {})
+            return {"id": ev["id"], "rule_id": d.get("rule_id"), "title": d.get("title", ""), "html": d.get("html", ""),
+                    "pages": d.get("pages", []), "book": d.get("book", "")}
+    return None
+
+
 def card(ev, fl):
     """A player-safe card for one event, or None if it must not be shown."""
-    if ev["type"] in META_TYPES or ev.get("visibility") == "gm":
+    if ev["type"] in META_TYPES or ev["type"] in RULE_TYPES or ev.get("visibility") == "gm":
         return None
     f = fl.get(ev["id"], {})
     if f.get("struck"):
@@ -132,6 +152,46 @@ def _effects(k, battle=None):
     return out
 
 
+def defeat_tally(events, fl, battle=None):
+    """Foes defeated per knight, newest first: every fight of this battle, or
+    the latest fight when there is no battle. Each entry says who fell, how,
+    and when (day, turn, round) — the same credit that pays the Glory."""
+    from web import combat_state as CS
+    bid = battle.get("id") if battle else None
+    fights, fight = [], None
+    for ev in events:
+        if ev["type"] in META_TYPES or fl.get(ev["id"], {}).get("struck"):
+            continue
+        t, d = ev["type"], ev.get("data") or {}
+        if t == "combat.started":
+            if fight is not None:
+                fights.append(fight)
+            fight = CS.apply(None, ev)
+        elif t == "battle.resumed":
+            if (d.get("snapshot") or {}).get("combat"):
+                if fight is not None:
+                    fights.append(fight)
+                fight = CS.apply(None, ev)
+        elif fight is not None:
+            fight = CS.apply(fight, ev)
+    if fight is not None:
+        fights.append(fight)
+    if bid:
+        fights = [f for f in fights if (f.get("battle") or {}).get("id") == bid]
+    else:
+        fights = fights[-1:]
+    tally = {}
+    for f in fights:
+        link = f.get("battle") or {}
+        for e in CS.defeats(f):
+            tally.setdefault(e["knight"], []).append({"name": e["name"], "fate": e["fate"], "glory": e["glory"],
+                                                      "day": link.get("day"), "turn": link.get("turn"),
+                                                      "round": e["round"], "fight": f.get("started_event")})
+    for lst in tally.values():
+        lst.reverse()
+    return tally
+
+
 def knight_cards(events, fl, combat, battle=None):
     """The players' knight cards for the fight view (reusable by battles,
     feasts and hunts): Glory, reminder chips, the last things that happened
@@ -142,6 +202,7 @@ def knight_cards(events, fl, combat, battle=None):
     rows = combat["combatants"]
     start = combat.get("started_event") or 0
     linked = bool(battle and (combat.get("battle") or {}).get("id") == battle.get("id"))
+    tally = defeat_tally(events, fl, battle if linked else None)
     cards = []
     for k in (r for r in rows if r["side"] == "party"):
         pid = k.get("party_id")
@@ -167,7 +228,8 @@ def knight_cards(events, fl, combat, battle=None):
                       "status": k["status"],
                       "glory": {"value": ((battle or {}).get("glory") or {}).get(pid, 0) if linked
                                 else (combat.get("glory") or {}).get(pid, 0), "scope": "battle" if linked else "fight", "last": last},
-                      "effects": _effects(k, battle if linked else None), "happened": happened, "lane": {"foes": foes}})
+                      "effects": _effects(k, battle if linked else None), "happened": happened, "lane": {"foes": foes},
+                      "tally": tally.get(pid, [])})
     return cards
 
 
@@ -204,8 +266,9 @@ def _battle_chips(k, battle):
 
 
 def battle_knight_cards(events, fl, battle):
-    """Knight cards for the battle view: battle Glory, battle chips, LAST."""
+    """Knight cards for the battle view: battle Glory, battle chips, LAST, tally."""
     cards = []
+    tally = defeat_tally(events, fl, battle)
     for k in battle.pop("knights_raw", []):
         pid = k["pid"]
         happened, last = [], None
@@ -222,7 +285,7 @@ def battle_knight_cards(events, fl, battle):
         cards.append({"pid": pid, "name": k["name"], "player": k["player"], "mounted": k.get("mounted", True),
                       "status": "active" if k.get("position", "conroi") in ("conroi", "alone") else "away",
                       "glory": {"value": battle.get("glory", {}).get(pid, 0), "scope": "battle", "last": last},
-                      "effects": _battle_chips(k, battle), "happened": happened})
+                      "effects": _battle_chips(k, battle), "happened": happened, "tally": tally.get(pid, [])})
     return cards
 
 
@@ -246,5 +309,6 @@ def build(session, combat, pinned_mode="auto", battle=None):
     mode = auto if pinned_mode == "auto" else pinned_mode
     return {"session": {"title": session.title, "scratch": session.scratch},
             "mode": mode, "pinned": pinned_mode, "feed": feed, "combat": combat, "battle": battle,
+            "rule": shown_rule(session.events, fl),
             "knights": knight_cards(session.events, fl, combat, battle),
             **({"battle_knights": battle_knight_cards(session.events, fl, battle)} if battle else {})}

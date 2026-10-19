@@ -59,6 +59,9 @@ def apply(b, ev):
             b["paused_from"] = b["status"]
         b["status"] = "paused"
         return b
+    if t == "battle.ended" and d.get("abandoned"):     # called off before the first turn
+        b["status"] = "ended"
+        return b
     if b["status"] == "aftermath":
         if t == "battle.aftermath":
             b.setdefault("aftermath_patch", {}).update(copy.deepcopy(d.get("patch") or {}))
@@ -253,10 +256,17 @@ def steps(b):
         items.append(("fight", "skipped", "Retired to the Rear", ""))
         items.append(("rest", "done" if t["rest"] is not None else None, "", ""))
     else:
-        done_p = bool(conroi_ids(b)) and all(pid in t["postures"] for pid in conroi_ids(b))
+        # Every knight with the conroi has a posture — vacuously true when nobody
+        # is left with it (all at the rear, Alone or gone), so the turn can end.
+        done_p = all(pid in t["postures"] for pid in conroi_ids(b))
         items.append(("postures", "done" if done_p else None, "", ""))
         f = t["fight"]
-        items.append(("fight", "done" if f and not f.get("active") else None, "", ""))
+        if f:
+            items.append(("fight", "done" if not f.get("active") else None, "", ""))
+        elif not conroi_ids(b):
+            items.append(("fight", "skipped", "No knights with the conroi", ""))
+        else:
+            items.append(("fight", None, "", ""))
     items.append(("end", "done" if t["ended"] else None, "", ""))
     return _states(items)
 
@@ -372,8 +382,11 @@ def _apply_step(b, ev):
         if d.get("forced"):
             b["tokens_spent"].setdefault(str(b["day"]), {})["force"] = True
     elif t_type == "battle.charge":
-        t["charge"] = {"outcome": d["outcome"], "engaged_last": bool(d.get("engaged_last")),
-                       "result": d.get("result") or B.charge_opportunity(d["outcome"], bool(d.get("engaged_last")))}
+        if d.get("skipped"):                       # the GM ruled a charge impossible: not rolled
+            t["charge"] = {"outcome": None, "engaged_last": None, "result": "no_charge", "skipped": True}
+        else:
+            t["charge"] = {"outcome": d["outcome"], "engaged_last": bool(d.get("engaged_last")),
+                           "result": d.get("result") or B.charge_opportunity(d["outcome"], bool(d.get("engaged_last")))}
     elif t_type == "battle.intensity":
         t["intensity"] = {"outcome": d["outcome"], "result": B.intensity_result(d["outcome"])}
     elif t_type == "battle.pick":
@@ -726,7 +739,7 @@ def snapshot(b, combat):
         snap["combat"] = {"name": combat["name"], "round": combat["round"], "players": combat.get("players", 0),
                           "descriptions": combat.get("descriptions", []),
                           "credits": combat.get("credits", {}), "manual": combat.get("manual", {}),
-                          "battle": combat.get("battle"),
+                          "battle": combat.get("battle"), "acted": sorted(combat.get("acted") or []),
                           "combatants": [c.to_dict() for c in combat["combatants"]]}
     return snap
 

@@ -69,3 +69,19 @@ def test_extra_dice_vs_mail_and_breakdown():
 
 def test_armour_never_heals():
     assert blow(rolled=3, armour=10)["wound"] == 0
+
+
+def test_blow_narrative_is_one_sentence():
+    from core.combat import blow_narrative
+    n = lambda **k: blow_narrative(attacker="Sir Erik the Cruel", weapon="Sword", target="Pictish Knifemen 7", amount=23, to_knight=False, **k)
+    assert n(fate="Slain", knockdown="automatic") == "Sir Erik the Cruel’s sword inflicts 23 points of damage on Pictish Knifemen 7, who is knocked down and slain!"
+    assert n(fate="Slain", knockdown="check") == "Sir Erik the Cruel’s sword inflicts 23 points of damage on Pictish Knifemen 7, who is slain."
+    assert n(fate="Wounded", knockdown="check") == "Sir Erik the Cruel’s sword inflicts 23 points of damage on Pictish Knifemen 7, who is wounded and must roll DEX or be knocked down."
+    assert n(fate="Wounded") == "Sir Erik the Cruel’s sword inflicts 23 points of damage on Pictish Knifemen 7, who is wounded."
+    assert n(fate="Major Wound") == "Sir Erik the Cruel’s sword inflicts 23 points of damage on Pictish Knifemen 7, who falls with a Major Wound."
+    assert n(fate="Unconscious", knockdown="automatic") == "Sir Erik the Cruel’s sword inflicts 23 points of damage on Pictish Knifemen 7, who is knocked down and out cold!"
+    assert n(fate="", knockdown="automatic") == "Sir Erik the Cruel’s sword inflicts 23 points of damage on Pictish Knifemen 7, who is knocked down!"
+    k = blow_narrative(attacker="Pictish Knifemen 7", weapon="Dagger", target="Sir Erik the Cruel", amount=9, to_knight=True, knockdown="check")
+    assert k == "Pictish Knifemen 7’s dagger inflicts 9 points of damage on Sir Erik the Cruel, who must roll DEX or be knocked down."
+    assert blow_narrative(attacker="Sir Erik the Cruel", weapon="Sword", target="Pictish Knifemen 7", amount=0, to_knight=False) \
+        == "Sir Erik the Cruel’s sword strikes Pictish Knifemen 7, but armour turns the blow aside."

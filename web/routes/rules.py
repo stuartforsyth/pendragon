@@ -43,6 +43,30 @@ async def pin(request: Request, rule_id: str, body: dict):
     return {"pinned": rule_id in ids}
 
 
+@router.get("/api/rules/shown")
+def shown(request: Request):
+    """The rule on the Table right now (title and id), or null."""
+    from web.sessions import flags
+    from web.table import shown_rule
+    state = st(request)
+    r = shown_rule(state.session.events, flags(state.session.events))
+    return {"shown": {k: r[k] for k in ("rule_id", "title", "book", "pages")} if r else None}
+
+
+@router.post("/api/rules/hide")
+async def hide(request: Request):
+    """Take the rule off the Table: the group has read it, play goes on."""
+    from web.sessions import flags
+    from web.table import shown_rule
+    state = st(request)
+    r = shown_rule(state.session.events, flags(state.session.events))
+    if r is None:
+        bad("No rule is on the Table", 409)
+    ev = state.record("rule.hidden", f"Rule taken off the Table: {r['title']}", title=r["title"], visibility="gm",
+                      data={"rule_id": r["rule_id"]})
+    return {"event": ev}
+
+
 @router.get("/api/rules")
 def search(request: Request, q: str = "", limit: int = 30):
     return {"results": st(request).rules_index.search(q, limit)}

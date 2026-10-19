@@ -2,7 +2,7 @@
 // reused): the deck picker, outcome chips, amount entry, Morale strip, knight
 // chip and day card. GM-only — nothing here is ever on the Table.
 
-import { h, clear, icon, modal } from "./lib.js";
+import { h, clear, icon, modal, post, confirmBox } from "./lib.js";
 
 /**
  * A checklist of battle encounters with Foes / Opportunities tabs and the
@@ -288,14 +288,36 @@ export function moraleStrip(b, { onAdjust, onCommander, onToken, glow = {} } = {
     h("button", { class: "who", title: "Change the commander", onclick: (e) => onCommander?.(e.currentTarget) }, icon("shield"), `Commander: ${b.commander_name || "—"}`));
 }
 
+// ---------------------------------------------------------------- launching a battle
+/**
+ * Launch a battle (saved key or quick definition). If one is already running,
+ * offer to close it first: a battle still at Mustering is called off, one that
+ * has begun is paused (resumable from the Battle tool). Resolves to the start
+ * event, or null if the GM cancelled.
+ */
+export async function launchBattle(body) {
+  try {
+    return await post("/api/battle/start", body, { quiet: [409] });
+  } catch (e) {
+    if (e.status !== 409) throw e;
+    const running = String(e.message || "").replace(/^A battle is already running: /, "");
+    const ok = await confirmBox("A battle is already running", `${running}. Close it and launch this one? A battle that has begun is paused, so you can resume it later; one still at Mustering is called off.`,
+      "Close current battle & launch");
+    if (!ok) return null;
+    return post("/api/battle/start", { ...body, close_current: true });
+  }
+}
+
 // ---------------------------------------------------------------- knight chip
-const POS_LABEL = { conroi: "with the conroi", rear: "at the rear", alone: "alone on the field", left: "left the field" };
+export const POS_LABEL = { conroi: "with the conroi", rear: "at the rear", alone: "alone on the field", left: "left the field" };
 /** A knight in the battle: shield, name, Mounted pill, position, posture. */
 export function knightChip(k, { onMounted, onPosition } = {}) {
   return h("div", { class: `kchip ${k.position && k.position !== "conroi" ? "away" : ""}` },
     icon("shield"), h("b", {}, k.name),
     h("button", { class: `pill-mounted ${k.mounted ? "on" : ""}`, title: "Toggle mounted / on foot", onclick: () => onMounted?.(k) }, k.mounted ? "Mounted" : "On foot"),
-    k.position && k.position !== "conroi" ? h("button", { class: "kpos", onclick: (e) => onPosition?.(k, e.currentTarget) }, POS_LABEL[k.position]) : null,
+    onPosition || (k.position && k.position !== "conroi")
+      ? h("button", { class: "kpos", title: "Where this knight is: with the conroi, at the rear, alone on the field, or gone",
+          onclick: (e) => onPosition?.(k, e.currentTarget) }, POS_LABEL[k.position || "conroi"], onPosition ? " ▾" : "") : null,
     k.posture ? h("span", { class: "kposture" }, k.posture) : null,
     k.passion_used ? h("span", { class: "faint small" }, "Passion used") : null);
 }

@@ -79,13 +79,33 @@ def paused(request: Request):
 # -- launch, pause, resume ---------------------------------------------------------
 
 def _no_running(state):
-    if BS.is_live(state.battle_state()):
-        bad("A battle is running — pause or finish it first", 409)
+    b = state.battle_state()
+    if BS.is_live(b):
+        where = "at Mustering" if b["status"] == "mustering" else f"Day {b['day']}, Turn {b['turn']}"
+        bad(f"A battle is already running: {_name(b)} ({where})", 409)
+
+
+def _close_current(state, b):
+    """Close the running battle so another can launch: one still at Mustering
+    is called off (nothing was played); one that has begun is paused, so it
+    can be resumed later from the Battle tool."""
+    if b["status"] == "mustering":
+        state.record("battle.ended", f"{_name(b)} is called off before it began", title=_name(b), visibility="gm",
+                     data={"abandoned": True, "battle": _link(b)})
+    else:
+        m = b["morale"]
+        state.record("battle.paused", f"Battle paused: {_name(b)}", title="Battle paused", visibility="gm",
+                     data={"summary": {"name": _name(b), "day": b["day"], "turn": b["turn"],
+                                       "morale": [m["current"], m["start"]] if m else None},
+                           "battle": _link(b)})
 
 
 @router.post("/api/battle/start")
 async def start(request: Request, body: dict):
     state = st(request)
+    running = state.battle_state()
+    if BS.is_live(running) and body.get("close_current"):
+        _close_current(state, running)
     _no_running(state)
     key = body.get("key")
     if key:
@@ -120,6 +140,18 @@ async def pause(request: Request):
                       data={"summary": {"name": _name(b), "day": b["day"], "turn": b["turn"],
                                         "morale": [m["current"], m["start"]] if m else None},
                             "battle": _link(b)})
+    return {"event": ev}
+
+
+@router.post("/api/battle/abandon")
+async def abandon(request: Request):
+    """Call off a battle that never got past Mustering (launched by mistake,
+    or to test): it ends there and then, and the Battle tool is free again."""
+    state, b = _live(request)
+    if b["status"] != "mustering":
+        bad("The battle has begun — pause it, or play it out to the aftermath", 409)
+    ev = state.record("battle.ended", f"{_name(b)} is called off before it began", title=_name(b), visibility="gm",
+                      data={"abandoned": True, "battle": _link(b)})
     return {"event": ev}
 
 
@@ -589,6 +621,11 @@ def record_outcome(state, step, payload, source="gm"):
     elif step == "charge":
         if cur != "charge":
             _not_now("the charge roll comes after the Encounter is set")
+        if payload.get("skip"):                   # no charge possible this turn (terrain, all on foot…): don't roll
+            rec("battle.charge", "Charge: not rolled — no charge possible this turn", "charge",
+                {"outcome": None, "engaged_last": None, "result": "no_charge", "skipped": True, "lines": []},
+                table="No charge this turn")
+            return {"events": evs, "battle": BS.gm_view(state.battle_state(), state.party.items, state.combat_data.get("encounters", {}))}
         outcome = payload.get("outcome")
         if outcome not in B.OUTCOMES:
             bad("Choose Critical, Success, Failure or Fumble")
@@ -837,7 +874,9 @@ async def fight(request: Request):
     scaled to the knights with the conroi (Cowardly ones don't count) and
     doubled on an Intensity critical. Knights Alone on the Field get a lane."""
     state, b = _live(request)
-    if BS.current_step(b) not in ("fight", "end") or not BS.conroi_ids(b) \
+    if not BS.conroi_ids(b):
+        _not_now("no knights are with the conroi")
+    if BS.current_step(b) not in ("fight", "end") \
             or not all(pid in b["t"]["postures"] for pid in BS.conroi_ids(b)):
         _not_now("choose postures first")
     enc, card = BS.chosen(b)

@@ -910,3 +910,111 @@ def test_edit_everything_mid_battle(client):
     assert b["step"]["current"] == "intensity"               # the turn carries on where it was
     ok(client.post("/api/battle/commander", json={"commander": third}))
     assert _battle(client)["commander_name"] == "Dame Lynet"
+
+
+def test_nobody_with_the_conroi_turn_can_still_end(client):
+    """Every knight away (at the rear, Alone or gone) once the fight is over:
+    Postures counts as done, the fight is skipped, and End turn is offered —
+    the stepper never waits for a posture nobody can take."""
+    pids = _running(client)
+    _to_morale(client, "Pictish Knifemen")
+    _step(client, "morale", kind="loss", amount=1)
+    _postures(client, pids)
+    assert _cur(client) == "fight"
+    for p in pids:
+        ok(client.post(f"/api/battle/knight/{p}", json={"position": "rear"}))
+    b = _battle(client)
+    states = {i["key"]: i for i in b["step"]["items"]}
+    assert states["postures"]["state"] == "done"
+    assert states["fight"]["state"] == "skipped" and "conroi" in states["fight"]["reason"]
+    assert b["step"]["current"] == "end"
+    r = client.post("/api/battle/fight")
+    assert r.status_code == 409 and "conroi" in r.json()["detail"]
+    _step(client, "end_turn")
+    assert _battle(client)["turn"] == 2
+
+
+def test_abandon_only_before_the_first_turn(client):
+    pids = _party(client, "Sir Bors")
+    _quick(client)
+    ok(client.post("/api/battle/abandon"))
+    assert _battle(client)["status"] == "ended"
+    _quick(client)                                        # the tool is free again
+    _muster(client, pids)
+    assert client.post("/api/battle/abandon").status_code == 409
+
+
+def test_launch_can_close_the_running_battle(client):
+    pids = _party(client, "Sir Bors")
+    _quick(client, "clash")
+    r = client.post("/api/battle/start", json={"key": None, "quick": {"size": "skirmish"}})
+    assert r.status_code == 409 and "at Mustering" in r.json()["detail"]
+    # still at Mustering: called off, and the new one launches
+    ok(client.post("/api/battle/start", json={"quick": {"size": "skirmish"}, "close_current": True}))
+    b = _battle(client)
+    assert b["status"] == "mustering" and b["definition"]["size"] == "skirmish"
+    assert ok(client.get("/api/battle/paused"))["paused"] == []
+    # begun: paused instead, so it can be resumed later
+    _muster(client, pids)
+    r = client.post("/api/battle/start", json={"quick": {"size": "clash"}})
+    assert r.status_code == 409 and "Turn 1" in r.json()["detail"]
+    ok(client.post("/api/battle/start", json={"quick": {"size": "clash"}, "close_current": True}))
+    assert _battle(client)["definition"]["size"] == "clash"
+    sess = ok(client.get("/api/session"))["session"]["id"]
+    events = ok(client.get("/api/session"))["events"]
+    assert any(e["type"] == "battle.paused" for e in events)
+
+
+def test_charge_can_be_skipped_without_a_roll(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="success")
+    _step(client, "morale", kind="loss", amount=1)
+    _postures(client, pids)
+    _step(client, "end_turn")
+    _step(client, "set", encounter="Pictish Knifemen")
+    assert _cur(client) == "charge"
+    r = _step(client, "charge", skip=True)
+    assert r["events"][0]["data"]["table_text"] == "No charge this turn"
+    b = _battle(client)
+    assert b["t"]["charge"] == {"outcome": None, "engaged_last": None, "result": "no_charge", "skipped": True}
+    assert b["step"]["current"] == "intensity"
+    t = ok(client.get("/api/table"))["battle"]
+    assert t["charge_result"] == "no_charge"
+
+
+def test_players_tally_per_knight_across_the_battle(client):
+    """Each knight card on the Table carries a running tally of the foes they
+    defeated — name, fate, day, turn, round — across every fight of the battle."""
+    pids = _three(client)
+    _to_fight(client, pids, "Pictish Knifemen")
+    ok(client.post("/api/battle/fight"))
+    f = _foes(client)
+    ok(client.post(f"/api/combat/{f[0]['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{f[0]['id']}/status", json={"out": "dead"}))
+    ok(client.post("/api/combat/round"))
+    ok(client.post(f"/api/combat/{f[1]['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{f[1]['id']}/status", json={"out": "surrendered"}))
+    t = ok(client.get("/api/table"))
+    bors = next(k for k in t["knights"] if k["name"] == "Sir Bors")
+    assert [(e["fate"], e["day"], e["turn"], e["round"]) for e in bors["tally"]] == [("surrendered", 1, 1, 2), ("slain", 1, 1, 1)]
+    assert bors["tally"][0]["name"] == f[1]["display_name"]
+    assert all(not k["tally"] for k in t["knights"] if k["name"] != "Sir Bors")
+    ok(client.post("/api/combat/end"))
+    _step(client, "end_turn")
+    # between fights: the battle view's cards still carry the tally
+    t = ok(client.get("/api/table"))
+    bors = next(k for k in t["battle_knights"] if k["name"] == "Sir Bors")
+    assert len(bors["tally"]) == 2
+    # a second fight adds to it, with its own turn
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "charge", outcome="failure")
+    _step(client, "intensity", outcome="success")
+    _step(client, "morale", kind="loss", amount=1)
+    _postures(client, pids)
+    ok(client.post("/api/battle/fight"))
+    g = _foes(client)[0]
+    ok(client.post(f"/api/combat/{g['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{g['id']}/status", json={"out": "fled"}))
+    bors = next(k for k in ok(client.get("/api/table"))["knights"] if k["name"] == "Sir Bors")
+    assert len(bors["tally"]) == 3 and bors["tally"][0]["turn"] == 2 and bors["tally"][0]["fate"] == "fled"

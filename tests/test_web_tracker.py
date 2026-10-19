@@ -318,3 +318,39 @@ def test_knights_share_a_foe_outnumbered_automatic_and_adjust(client):
     assert next(c for c in _foes(ok(client.get("/api/combat"))["combat"]) if c["id"] == foe["id"])["linked"] == ["Sir Cai", "Dame Lynet"]
     ok(client.post(f"/api/combat/{foe['id']}/engage", json={"with": "Sir Bors"}))
     assert next(c for c in _foes(ok(client.get("/api/combat"))["combat"]) if c["id"] == foe["id"])["linked"] == ["Sir Bors"]
+
+
+def test_acted_this_round_from_attack_rolls_and_by_hand(client):
+    """A foe's attack roll ticks it as having acted; the GM can tick/untick by
+    hand; Next round clears every tick. The Table never sees it."""
+    cs = _fight(client, "Pictish Knifemen", ("Sir Bors",))
+    foes = _foes(cs)
+    a, b = foes[0], foes[1]
+    assert not a["acted"] and set(cs["to_act"]) == {f["id"] for f in foes}
+    ok(client.post(f"/api/combat/{a['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{a['id']}/roll", json={"what": "attack"}))
+    ok(client.post(f"/api/combat/{b['id']}/acted", json={"on": True}))
+    cs = ok(client.get("/api/combat"))["combat"]
+    by = {c["id"]: c for c in cs["combatants"]}
+    assert by[a["id"]]["acted"] and by[b["id"]]["acted"]
+    assert a["id"] not in cs["to_act"] and b["id"] not in cs["to_act"] and len(cs["to_act"]) == len(foes) - 2
+    ok(client.post(f"/api/combat/{b['id']}/acted", json={"on": False}))
+    assert b["id"] in ok(client.get("/api/combat"))["combat"]["to_act"]
+    ok(client.post("/api/combat/round"))
+    cs = ok(client.get("/api/combat"))["combat"]
+    assert not any(c["acted"] for c in cs["combatants"]) and len(cs["to_act"]) == len(foes)
+    table = ok(client.get("/api/table"))
+    assert all("acted" not in c for c in table["combat"]["combatants"])
+
+
+def test_table_sees_mounted_but_not_horse_attacks(client):
+    cs = _fight(client, "Knights of Gorre", ("Sir Bors",))
+    gorre = _foes(cs)[0]
+    ok(client.post(f"/api/combat/{gorre['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{gorre['id']}/horse", json={"on": True}))
+    rows = ok(client.get("/api/table"))["combat"]["combatants"]
+    foe = next(r for r in rows if r["id"] == gorre["id"])
+    assert foe["mounted"] is True and "attacks_horse" not in foe
+    ok(client.post(f"/api/combat/{gorre['id']}/mounted", json={"mounted": False}))
+    rows = ok(client.get("/api/table"))["combat"]["combatants"]
+    assert next(r for r in rows if r["id"] == gorre["id"])["mounted"] is False

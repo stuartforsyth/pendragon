@@ -279,3 +279,54 @@ def test_all_on_foot_at_mustering(page, app_url):
     pills.first.click()                                         # one knight kept his horse
     expect(pills.first).to_have_text("Mounted")
     expect(page.get_by_role("button", name="All on foot")).to_be_visible()
+
+
+def test_knight_position_menu_and_restore_offer_clears_next_turn(page, app_url):
+    """The position chip on a knight's row is a menu (rear / alone / left / back
+    with the conroi); the "Undone … Restore" offer belongs to its turn only."""
+    quick_launch(page, app_url)
+    muster(page)
+    chip = page.locator(".kchip", has_text="Sir Cai").locator(".kpos")
+    expect(chip).to_contain_text("with the conroi")
+    chip.click()
+    page.locator(".menu button", has_text="at the rear").click()
+    expect(page.locator(".kchip", has_text="Sir Cai").locator(".kpos")).to_contain_text("at the rear")
+    # only the two knights still with the conroi take postures
+    set_encounter(page, "Pictish Knifemen")
+    intensity(page)
+    morale_loss(page, "1")
+    expect(page.locator(".step.cur .posture-row")).to_have_count(2)
+    postures(page, ("V", "V"))
+    expect_step(page, "Fight")
+    # back with the conroi from the same menu: Postures reopens for him alone
+    page.locator(".kchip", has_text="Sir Cai").locator(".kpos").click()
+    page.locator(".menu button", has_text="with the conroi").click()
+    expect(page.locator(".kchip", has_text="Sir Cai").locator(".kpos")).to_contain_text("with the conroi")
+    expect(page.locator(".step.cur .posture-row")).to_have_count(1)
+    postures(page, ("V",))
+    expect_step(page, "Fight")
+    # reopen postures: the Restore offer shows now, and is gone after End turn
+    page.locator(".step.done", has_text="Postures").get_by_role("button", name="reopen").click()
+    confirm(page, "Undo")
+    expect(page.locator(".bl-undone")).to_be_visible()
+    postures(page, ("V", "V", "V"))
+    page.get_by_role("button", name="End turn").click()
+    expect(page.locator(".bhead")).to_contain_text("Turn 2 of 5")
+    expect(page.locator(".bl-undone")).to_have_count(0)
+
+
+def test_launch_from_the_editor_offers_to_close_the_running_battle(page, app_url):
+    quick_launch(page, app_url)                      # a Clash sits at Mustering
+    page.goto(app_url + "/#/battles")
+    page.get_by_role("button", name="New", exact=True).click()
+    expect(page.locator(".bt-head")).to_contain_text("Not yet saved")
+    page.wait_for_timeout(300)
+    page.get_by_placeholder("e.g. Bedegraine", exact=True).fill("Second battle")
+    # the editor's Launch saves, then runs into the running battle and offers to close it
+    page.get_by_role("button", name="Launch", exact=True).click()
+    expect(page.locator(".modal", has_text="Save and launch?")).to_be_visible()
+    confirm(page, "Save & launch")
+    expect(page.locator(".modal", has_text="A battle is already running")).to_be_visible()
+    confirm(page, "Close current battle & launch")
+    expect(page.locator(".panel h3", has_text="The conroi")).to_be_visible()
+    expect(page.locator(".bhead")).to_contain_text("Mustering")

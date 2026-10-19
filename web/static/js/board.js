@@ -44,6 +44,31 @@ export function happenedLine(items) {
   return h("div", { class: "happened" }, h("i", {}, "Last"), items[0]);
 }
 
+/**
+ * The running tally beneath the Field: one column per knight, the foes they
+ * are credited with grouped by Day · Turn (newest first), "Knifemen 7 slain".
+ * The knight cards stay for glanceable state; this is the ledger.
+ */
+export function tallyStrip(knights) {
+  const list = (knights || []).filter((k) => k && k.name);
+  if (!list.length || !list.some((k) => k.tally?.length)) return null;
+  const col = (k) => {
+    const groups = [];
+    for (const e of k.tally || []) {
+      const key = e.day != null && e.turn != null ? `Day ${e.day} · Turn ${e.turn}` : "";
+      if (!groups.length || groups.at(-1).key !== key) groups.push({ key, items: [] });
+      groups.at(-1).items.push(e);
+    }
+    return h("div", { class: "tally-col" },
+      h("div", { class: "tally-head" }, knightShield(), h("span", { class: "tally-name" }, k.name), h("b", {}, (k.tally || []).length)),
+      h("div", { class: "tally-body" }, (k.tally || []).length ? groups.map((g) => h("div", { class: "tally-group" },
+        g.key ? h("span", { class: "tally-when" }, g.key) : null,
+        g.items.map((e) => h("span", { class: `tally-item f-${e.fate}` }, h("span", { class: "tally-who" }, e.name), " ", h("span", { class: "tally-fate" }, e.fate)))))
+        : h("span", { class: "tally-none" }, "none yet")));
+  };
+  return h("div", { class: "tally-strip" }, h("div", { class: "tally-label" }, "Defeated"), list.map(col));
+}
+
 /** One knight: shield, name, player, Glory, chips and the LAST line. */
 export function knightCard(k, { compact = false } = {}) {
   const down = k.status && k.status !== "active";

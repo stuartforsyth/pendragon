@@ -128,7 +128,7 @@ const KIND = (t) => t.startsWith("roll.") ? ["roll", "d20"]
   : t.startsWith("npc.") ? ["npc", "helm"]
   : t === "narrate" ? ["narrate", "feather"]
   : t === "note" ? ["note", "note"]
-  : t === "rule.shown" ? ["rule", "book"]
+  : t === "rule.shown" || t === "rule.hidden" ? ["rule", "book"]
   : t.startsWith("session.") ? ["session", "flag"]
   : t === "table.cleared" ? ["meta", "present"]
   : t.startsWith("meta.") ? ["meta", "undo"] : ["other", "scroll"];
@@ -497,6 +497,18 @@ async function boot() {
   buildLog();
   $("openTable").replaceChildren(icon("present"), "Open Table");
   $("clearTable").onclick = async () => { await post("/api/table/clear"); toast("Table cleared", "ok"); };
+  // Pinned rules, reachable mid-fight: show one on the Table, or take the shown one off.
+  $("pinnedRules").onclick = async (e) => {
+    const anchor = e.currentTarget;                        // gone from the event after the await
+    const [{ pins }, { shown }] = await Promise.all([api("/api/rules/pins"), api("/api/rules/shown")]);
+    const items = [];
+    if (shown) items.push([`Remove “${shown.title}” from the Table`, () => post("/api/rules/hide"), { icon: "present" }], null);
+    for (const p of pins) items.push([p.id === shown?.rule_id ? `${p.title} ✓ on Table` : p.title,
+      () => post(`/api/rules/${encodeURIComponent(p.id)}/show`), { icon: "book" }]);
+    if (!pins.length) items.push(["No pinned rules — pin them in the Rules tool", () => { location.hash = "#/rules"; }, { icon: "pin" }]);
+    items.push(null, ["Open the Rules tool", () => { location.hash = "#/rules"; }, { icon: "search" }]);
+    menu(anchor, items);
+  };
   $("openTable").onclick = () => window.open("/table", "pendragon-table", "width=1280,height=760");
   $("toggleLog").replaceChildren(icon("panel"));
   $("toggleLog").onclick = () => $("shell").classList.toggle("log-collapsed");

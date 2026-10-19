@@ -18,6 +18,7 @@ COMBAT_STATE_TYPES = {
     "combat.round", "combat.ended", "combat.blow",
     "combat.mounted", "combat.horse", "combat.height", "combat.captured",
     "glory.reassigned", "glory.awarded", "battle.resumed", "battle.extra_round", "combat.distribute", "combat.wield", "combat.link",
+    "roll.check", "combat.acted",
 }
 
 
@@ -31,6 +32,7 @@ def apply(state, ev, promotion_cfg=None):
                 "round": 1, "players": d.get("players", 0),
                 "descriptions": d.get("descriptions", []),
                 "started_event": ev["id"], "credits": {}, "manual": {}, "battle": d.get("battle"),
+                "acted": set(),
                 "combatants": [Combatant.from_dict(c) for c in d.get("combatants", [])]}
     if t == "battle.resumed":            # a fight carried over from a paused battle
         snap = (d.get("snapshot") or {}).get("combat")
@@ -40,14 +42,26 @@ def apply(state, ev, promotion_cfg=None):
                 "players": snap.get("players", 0), "descriptions": snap.get("descriptions", []),
                 "started_event": ev["id"], "credits": dict(snap.get("credits", {})),
                 "manual": dict(snap.get("manual", {})), "battle": snap.get("battle"),
+                "acted": set(snap.get("acted") or []),
                 "combatants": [Combatant.from_dict(c) for c in snap.get("combatants", [])]}
     if state is None or not state["active"]:
         return state
     if t == "combat.ended":
         state["active"] = False
         return state
+    # Who has acted this round (derived, GM-only): a foe's attack roll marks it
+    # done; the GM can also tick or untick by hand; Next round clears the lot.
+    acted = state.setdefault("acted", set())
+    if t == "roll.check":
+        if d.get("cid") and "attack" in d:
+            acted.add(d["cid"])
+        return state
+    if t == "combat.acted":
+        (acted.add if d.get("on") else acted.discard)(d.get("cid"))
+        return state
     if t == "combat.round":
         state["round"] = d.get("round", state["round"] + 1)
+        acted.clear()
         return state
     if t == "combat.added":
         state["combatants"].append(Combatant.from_dict(d["combatant"]))
@@ -126,8 +140,10 @@ def apply(state, ev, promotion_cfg=None):
         now = c.status in DEFEATED
         if now and not was_defeated:
             c.defeated_with = c.engaged_with
+            c.fell_round = state["round"]                # for the players' tally
         elif was_defeated and not now:
             c.defeated_with = ""
+            c.fell_round = None
     return state
 
 
@@ -161,7 +177,8 @@ def table_view(c):
            "wound_state": c.wound_state(), "elite": c.elite,
            "named": getattr(c, "named", False), "npc": getattr(c, "npc", False),
            "category": getattr(c, "category", "human"),
-           "engaged_with": c.engaged_with, "linked": c.linked()}
+           "engaged_with": c.engaged_with, "linked": c.linked(),
+           "mounted": bool(getattr(c, "mounted", True))}          # a rider is plain to see
     if side == "party":
         out.update(player=getattr(c, "player", ""), party_id=getattr(c, "party_id", None))
     else:
@@ -215,6 +232,23 @@ def credit_of(state, c):
         return (pid, k.display_name) if pid and k else None
     k = next((k for k in knights if k.display_name == c.defeated_with), None) if c.defeated_with else None
     return (k.party_id, k.display_name) if k else None
+
+
+FATE_WORD = {"dead": "slain", "fled": "fled", "surrendered": "surrendered", "unconscious": "unconscious"}
+
+
+def defeats(state):
+    """Every defeated foe in this fight with who gets the credit and the round
+    it fell — the players' running tally. [{cid, name, fate, knight, knight_name, round, glory}]"""
+    out = []
+    for c in state["combatants"]:
+        cr = credit_of(state, c)
+        if cr is None:
+            continue
+        out.append({"cid": c.id, "name": c.display_name, "fate": FATE_WORD.get(c.status, c.status),
+                    "knight": cr[0], "knight_name": cr[1], "round": getattr(c, "fell_round", None),
+                    "glory": B.glory_for(c)})
+    return out
 
 
 def glory_tally(state):
@@ -298,7 +332,11 @@ def serialise(state, view):
     if view == "gm":
         knights = {c.display_name for c in state["combatants"] if getattr(c, "side", "foe") == "party"}
         foes = [c for c in state["combatants"] if getattr(c, "side", "foe") != "party"]
+        acted = state.get("acted") or set()
+        for r in rows:
+            r["acted"] = r["id"] in acted
         out.update(
+            to_act=[c.id for c in foes if c.status == "active" and c.id not in acted],
             types=_types(state["combatants"]),
             gm_notes=next((d["text"] for d in out["descriptions"] if d.get("type") == "GM notes"), ""),
             defeated=[c.id for c in foes if c.status in DEFEATED],

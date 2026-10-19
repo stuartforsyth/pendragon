@@ -106,6 +106,23 @@
   .cbt-foe-line .cbt-chips:empty { display: none; }
 }
 .cbt-foe-name { all: unset; cursor: pointer; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* who has acted this round: the tick before the name (List) / on the token (Field) */
+.cbt-foe-id { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.acted-tog { all: unset; cursor: pointer; flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--line-2);
+  display: grid; place-items: center; font-size: 11px; line-height: 1; color: #0f1a12; }
+.acted-tog:hover { border-color: var(--or); }
+.acted-tog.on { background: #5fb16d; border-color: #5fb16d; }
+.cbt-foe.acted .cbt-foe-line > :not(.cbt-foe-id) { opacity: .62; }
+.cbt-foe.acted .cbt-foe-name { color: var(--ink-dim); }
+.ftok.acted .ftok-face { opacity: .6; filter: saturate(.6); }
+.ftok.acted .ftok-name { color: var(--ink-dim); }
+.ftok-horse { position: absolute; top: -4px; left: calc(50% - 40px); width: 25px; height: 25px; border-radius: 50%; background: var(--or-bright); color: #2a1d14;
+  display: grid; place-items: center; box-shadow: 0 0 0 2px #141110; pointer-events: none; }
+.ftok-horse svg { width: 20px; height: 20px; display: block; }
+.ftok.is-knight .ftok-horse { top: -4px; }
+.ftok.inline .ftok-horse { left: calc(50% - 36px); }
+.ftok-acted { position: absolute; top: 0; left: calc(50% + 14px); width: 18px; height: 18px; border-radius: 50%; background: #5fb16d; color: #0f1a12;
+  font: 800 12px/18px var(--f-ui); text-align: center; box-shadow: 0 0 0 2px #141110; pointer-events: none; }
 .cbt-foe-name:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
 .cbt-foe-name .marker { color: var(--or); margin-right: 4px; }
 .cbt-foe.t-elite .cbt-foe-name { color: var(--or-bright); }
@@ -205,3 +222,15 @@ span.chip-height { cursor: default; }
 @media (prefers-reduced-motion: reduce) { .cbt-link { animation: none; } }
 .out-tag { white-space: nowrap; }
 .adj-in { width: 52px !important; height: 28px; text-align: center; }
+
+/* the foe's sheet (click its name) */
+.fs-sub { margin: -8px 0 10px; font-size: 13px; color: var(--ink-dim); text-transform: lowercase; }
+.fs-flavour { margin: 0 0 10px; font-family: var(--f-prose, Georgia, serif); font-style: italic; font-size: 16px; line-height: 1.4; color: var(--ink); }
+.fs-notes { margin: 0 0 12px; padding: 8px 12px; border-left: 3px solid var(--or); background: rgba(176, 138, 54, .08); border-radius: 0 6px 6px 0; }
+.fs-notes .label { display: block; margin-bottom: 2px; color: var(--or-bright); }
+.fs-notes p { margin: 0; font-size: 14px; line-height: 1.45; }
+.fs-stats { margin-bottom: 10px; }
+.fs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px 14px; }
+.fs-kv { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dotted var(--line-2); padding: 2px 0; font-size: 13.5px; }
+.fs-kv .fs-k { color: var(--ink-dim); }
+.fs-kv .fs-v { color: var(--ink); font-weight: 600; text-align: right; }

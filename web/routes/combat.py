@@ -355,6 +355,18 @@ async def status(request: Request, cid: str, body: dict):
     return {"event": ev, "prompt": _who_defeated(state, cid, was)}
 
 
+@router.post("/api/combat/{cid}/acted")
+async def acted(request: Request, cid: str, body: dict):
+    """Tick (or untick) a combatant as having acted this round by hand — an
+    attack roll ticks it automatically; Next round clears every tick."""
+    state, cs = _active(request)
+    c = _combatant(cs, cid)
+    on = bool(body.get("on", True))
+    line = f"{c.display_name} has acted this round" if on else f"{c.display_name} is yet to act this round"
+    ev = state.record("combat.acted", line, title=c.display_name, visibility="gm", data={"cid": cid, "on": on})
+    return {"event": ev}
+
+
 @router.post("/api/combat/{cid}/promote")
 async def promote(request: Request, cid: str):
     state, cs = _active(request)

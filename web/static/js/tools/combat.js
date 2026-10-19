@@ -7,6 +7,7 @@ import { h, clear, api, post, icon, menu, modal, toast, useCss, confirmBox, skil
   CHAR_FULL, CHAR_ORDER, debounce } from "../lib.js";
 import { moraleStrip } from "../components.js";
 import { knightShield } from "../board.js";
+import { foeFace as sharedFoeFace, layoutField, linkLines, horseBadge } from "../field.js";
 
 export default {
   async mount(el, ctx) {
@@ -210,6 +211,8 @@ export default {
             bt ? h("button", { class: "btn ghost", onclick: () => ctx.navigate("battle") }, "◂ Back to battle") : null),
           h("div", { class: "row", style: { marginTop: "10px" } },
             h("span", { class: "tag gules" }, `${up} of ${foes.length} foes standing`),
+            up ? h("span", { class: `tag ${cs.to_act.length ? "or" : "vert"}`, title: "A foe's roll marks it as having acted; click the circle on a foe to tick it by hand. Next round clears the ticks." },
+              cs.to_act.length ? `${cs.to_act.length} of ${up} still to act this round` : "Every foe has acted this round") : null,
             knights.length ? h("span", { class: "tag azure" }, `${knights.filter((k) => !k.down).length} of ${knights.length} knights in the fight`) : null,
             note,
             knights.length ? h("span", { class: "seg", role: "group", "aria-label": "View" },
@@ -270,30 +273,19 @@ export default {
     // foe onto a knight (or a knight onto a foe) to engage them, a foe onto a
     // foe to join its knight, a foe onto Waiting to free it. Click a token to
     // open its controls. One foe fights one knight (for now).
-    const FOE_GLYPH = {
-      human: '<path d="M50 22v40M42 58h16M50 62v14" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M50 18l5 9h-10z" fill="currentColor"/>',
-      beast: '<path d="M30 70c4-14 8-30 12-40M46 72c2-16 4-32 6-44M62 70c0-14-1-28-2-40" stroke="currentColor" stroke-width="6" stroke-linecap="round" fill="none"/>',
-      monster: '<path d="M26 70c8-4 10-14 4-20s-4-16 6-20 22 2 24 12-6 14-2 20 14 6 18-2" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="40" cy="31" r="3.5" fill="currentColor"/>',
-      fae: '<path d="M50 20l7 22h23l-18 13 7 22-19-14-19 14 7-22-18-13h23z" fill="currentColor"/>',
-    };
     function foeFace(c) {
-      const pct = Math.max(0, Math.min(1, c.cur_hp / Math.max(1, c.max_hp)));
-      const R = 46, C = 2 * Math.PI * R, col = pct > .5 ? "#79b585" : pct > .25 ? "#d4a84b" : "#d0574b";
-      const s = document.createElement("span");
-      s.className = "ftok-face";
-      s.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" class="medal"/>` +
-        `<g class="glyph">${FOE_GLYPH[c.category] || FOE_GLYPH.human}</g>` +
-        `<circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="6"/>` +
-        `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C * pct} ${C}" transform="rotate(-90 50 50)"/></svg>`;
-      return s;
+      const pct = c.cur_hp / Math.max(1, c.max_hp);
+      return sharedFoeFace(c.category, pct, pct > .5 ? "#79b585" : pct > .25 ? "#d4a84b" : "#d0574b");
     }
     let dragging = null;             // { id, side } while a token is dragged
     function ftok(c, x, y) {
       const knight = c.side === "party";
-      const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${!knight && c.engaged_with ? "engaged" : ""} ${c.down ? "down" : ""} ${c.elite ? "elite" : ""} ${picked === c.id ? "picked" : ""}`,
+      const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${!knight && c.engaged_with ? "engaged" : ""} ${c.down ? "down" : ""} ${c.elite ? "elite" : ""} ${picked === c.id ? "picked" : ""} ${!knight && c.acted && !c.down ? "acted" : ""}`,
         "data-id": c.id, style: { left: `${x}px`, top: `${y}px` }, title: knight ? "Click for controls · drag onto a foe to engage" : "Click for controls · drag onto a knight to engage",
         onclick: () => { picked = picked === c.id ? null : c.id; render(); } },
         knight ? h("span", { class: "ftok-face" }, knightShield(c.down)) : foeFace(c),
+        c.mounted && !c.down ? horseBadge() : null,
+        !knight && c.acted && !c.down ? h("span", { class: "ftok-acted", title: "Has acted this round" }, "✓") : null,
         h("span", { class: "ftok-name" }, c.display_name),
         h("span", { class: "ftok-sub" }, knight ? (c.down ? (c.status === "fled" ? "Out of the fight" : "Down") : c.mounted ? "Mounted" : "On foot")
           : `${c.cur_hp}/${c.max_hp}${c.wound_state && c.wound_state !== "Unhurt" ? " · " + c.wound_state : ""}${c.wielding === "brawl" ? " · Disarmed" : ""}`));
@@ -331,75 +323,9 @@ export default {
 
     function field(knights, foes, pool) {
       const W = Math.max(640, (el.querySelector(".cbt-field")?.clientWidth) || el.clientWidth || 960);
-      const live = foes.filter((f) => !f.down && (f.linked || []).length);
-      // engagements = knights joined through the foes they share
-      const seen = new Set(), groups = [];
-      for (const k of knights) {
-        if (seen.has(k.id)) continue;
-        const g = { ks: [], fs: [] }, todo = [k];
-        while (todo.length) {
-          const x = todo.pop();
-          if (seen.has(x.id)) continue;
-          seen.add(x.id);
-          if (x.side === "party") {
-            g.ks.push(x);
-            live.filter((f) => f.linked.includes(x.display_name)).forEach((f) => todo.push(f));
-          } else {
-            g.fs.push(x);
-            knights.filter((kk) => x.linked.includes(kk.display_name)).forEach((kk) => todo.push(kk));
-          }
-        }
-        groups.push(g);
-      }
-      // Lay out each engagement around (0,0), then flow them across the field
-      // like words in a paragraph, each taking only the room it needs.
-      const ring = (list, r, start, sy = .85) => list.map((t, j) => {
-        const a = start + (2 * Math.PI * j) / list.length;
-        return [t, r * Math.cos(a), r * sy * Math.sin(a)];
-      });
-      const shape = (g) => {
-        let pos;
-        if (g.ks.length === 1) {
-          const n = g.fs.length;
-          pos = [[g.ks[0], 0, 0], ...ring(g.fs, 92 + Math.max(0, n - 6) * 9, n === 2 ? Math.PI : Math.PI / 2)];
-        } else {
-          const shared = g.fs.filter((f) => f.linked.filter((n) => g.ks.some((k) => k.display_name === n)).length > 1);
-          const R = shared.length ? 135 : 0;
-          pos = [...(shared.length === 1 ? [[shared[0], 0, 0]] : ring(shared, 48, Math.PI / 2))];
-          g.ks.forEach((k, i) => {
-            const th = Math.PI + (2 * Math.PI * i) / g.ks.length, kx = R * Math.cos(th), ky = R * .8 * Math.sin(th);
-            pos.push([k, kx, ky]);
-            const own = g.fs.filter((f) => !shared.includes(f) && f.linked.includes(k.display_name));
-            own.forEach((f, j) => {
-              const a = th + (j - (own.length - 1) / 2) * 1.05;
-              pos.push([f, kx + 110 * Math.cos(a), ky + 110 * .9 * Math.sin(a)]);
-            });
-          });
-        }
-        const xs = pos.map((p) => p[1]), ys = pos.map((p) => p[2]);
-        const box = { x0: Math.min(...xs) - 68, x1: Math.max(...xs) + 68, y0: Math.min(...ys) - 34, y1: Math.max(...ys) + 50 };
-        return { pos, w: box.x1 - box.x0, h: box.y1 - box.y0, box };
-      };
-      const shapes = groups.map(shape), rowsOf = [[]];
-      let x = 0;
-      for (const sh of shapes) {
-        if (x + sh.w > W - 16 && rowsOf.at(-1).length) { rowsOf.push([]); x = 0; }
-        rowsOf.at(-1).push(sh); x += sh.w + 12;
-      }
-      const tokens = [], lines = [];
-      let y = 12;
-      for (const row of rowsOf) {
-        const rowW = row.reduce((t, sh) => t + sh.w, 0) + 12 * (row.length - 1), rowH = Math.max(...row.map((sh) => sh.h));
-        let ox = (W - rowW) / 2;
-        for (const sh of row) {
-          const cx = ox - sh.box.x0, cy = y + (rowH - sh.h) / 2 - sh.box.y0;
-          sh.pos.forEach(([t, dx, dy]) => tokens.push(ftok(t, cx + dx, cy + dy)));
-          ox += sh.w + 12;
-        }
-        y += rowH + 14;
-      }
-      groups.forEach((g) => g.fs.forEach((f) => g.ks.forEach((k) => { if (f.linked.includes(k.display_name)) lines.push([k.id, f.id]); })));
-      const height = Math.max(240, y + 6);
+      const item = (c) => ({ id: c.id, side: c.side === "party" ? "party" : "foe", name: c.display_name, linked: c.linked || [], down: c.down, ref: c });
+      const { placed, lines, height } = layoutField(knights.map(item), foes.map(item), W, { tokW: 130, tokH: 94 });
+      const tokens = placed.map(([t, x, y]) => ftok(t.ref, x, y));
 
       const waiting = pool.filter((f) => !f.down);
       const wait = h("div", { class: "cbt-wait" }, h("span", { class: "label" }, "Waiting"),
@@ -422,17 +348,7 @@ export default {
         const k = byId(dragging.id);
         if (k) post("/api/combat/unlink", { knight: k.display_name });
       });
-      const drawLinks = () => {
-        const box = stage.getBoundingClientRect();
-        const centre = (id) => { const f = stage.querySelector(`.ftok[data-id="${id}"] .ftok-face`); if (!f) return null;
-          const b = f.getBoundingClientRect(); return [b.left - box.left + b.width / 2, b.top - box.top + b.height / 2]; };
-        svg.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
-        svg.innerHTML = '<defs><filter id="cbt-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${box.width}" height="${box.height}"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
-          lines.map(([a, b]) => { const p = centre(a), q = centre(b); return p && q ? `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" class="cbt-link" filter="url(#cbt-glow)"/>` : ""; }).join("");
-      };
-      requestAnimationFrame(drawLinks);
-      const ro = new ResizeObserver(() => { if (!stage.isConnected) return ro.disconnect(); drawLinks(); });
-      ro.observe(stage);
+      linkLines(stage, svg, lines, { glowId: "cbt-glow" });
       const pick = picked && byId(picked);
       return [h("div", { class: "cbt-field-wrap" }, stage, pick ? drawer(pick, foes) : null), wait];
     }
@@ -508,11 +424,15 @@ export default {
       const open = openFoes.has(c.id);
       const hpIn = h("input", { class: "input num hp-in", placeholder: "±HP", title: "Damage as negative, healing as positive — Enter",
         onkeydown: (e) => { if (e.key === "Enter") applyHp(c, e.target); } });
-      const line = h("div", { class: `cbt-foe t-${tone} ${open ? "open" : ""}`, "data-id": c.id },
+      const line = h("div", { class: `cbt-foe t-${tone} ${open ? "open" : ""} ${c.acted && !c.down ? "acted" : ""}`, "data-id": c.id },
         h("div", { class: "cbt-foe-line" },
-          h("button", { class: "cbt-foe-name", title: open ? "Hide details" : "Show stats, armour and modifier",
-            onclick: () => { open ? openFoes.delete(c.id) : openFoes.add(c.id); render(); } },
-            c.npc ? icon("helm", "npc-ico") : marker ? h("span", { class: "marker" }, marker) : null, c.display_name),
+          h("span", { class: "cbt-foe-id" },
+            c.down ? null : h("button", { class: `acted-tog ${c.acted ? "on" : ""}`,
+              title: c.acted ? "Has acted this round — click to untick" : "Yet to act this round — its roll ticks it, or click to tick by hand",
+              onclick: () => post(`/api/combat/${c.id}/acted`, { on: !c.acted }) }, c.acted ? "✓" : ""),
+            h("button", { class: "cbt-foe-name", title: "Everything about this foe: stats, armour, Glory, flavour and how it fights",
+              onclick: () => foeSheet(c) },
+              c.npc ? icon("helm", "npc-ico") : marker ? h("span", { class: "marker" }, marker) : null, c.display_name)),
           h("div", { class: "cbt-hp" },
             h("div", { class: "hp-bar big" }, h("i", { class: hpTone, style: { width: `${pct}%` } })),
             h("span", { class: "hp-text" }, h("b", {}, c.cur_hp), h("span", { class: "faint" }, ` / ${c.max_hp}`),
@@ -771,6 +691,31 @@ export default {
         c.morale_minimum ? ` · Min Morale to engage ${c.morale_minimum}` : ""));
       if (!isKnight && !hasChars && !c.attacks?.length) return null;
       return h("div", { class: "cbt-stats" }, parts);
+    }
+
+    // The foe's sheet: everything the card says, including the flavour and the
+    // way it fights ("they flee once a third are down") — shown, not enforced.
+    function foeSheet(c) {
+      const kv = (label, value) => value === undefined || value === null || value === "" ? null
+        : h("div", { class: "fs-kv" }, h("span", { class: "fs-k" }, label), h("span", { class: "fs-v" }, value));
+      const eng = (c.linked || []).length ? c.linked.join(", ") : "nobody";
+      const ransom = Array.isArray(c.ransom) && c.ransom.length ? c.ransom.map((r) => `${r.type || ""} ${r.amount || ""}`.trim()).join(" · ") : null;
+      modal(c.display_name, (close) => [
+        h("div", { class: "fs-sub" }, [c.type !== c.display_name ? c.type : null, c.category !== "human" ? c.category : null,
+          c.elite ? `champion (${c.promotion_title || "elite"})` : null, c.wound_state, `fighting ${eng}`].filter(Boolean).join(" · ")),
+        c.description ? h("p", { class: "fs-flavour" }, c.description) : null,
+        c.notes && c.notes !== c.description ? h("div", { class: "fs-notes" }, h("span", { class: "label" }, "How they fight"), h("p", {}, c.notes)) : null,
+        h("div", { class: "fs-stats" }, statLine(c, false)),
+        h("div", { class: "fs-grid" },
+          kv("Hit Points", `${c.cur_hp} / ${c.max_hp}`), kv("Knockdown", c.knockdown), kv("Major Wound", c.major_wound), kv("Unconscious", c.unconscious),
+          kv("Armour", c.armour_text), kv("Movement", c.movement || null), kv("Glory", c.glory),
+          kv("Knight Value", c.knight_value || null), kv("Minimum Morale", c.morale_minimum), kv("Morale Loss", c.morale_loss || null),
+          kv("Valorous", c.valorous), kv("Ransom", ransom), kv("Culture", c.culture || null), kv("Religion", c.religion || null),
+          kv("Looks", c.looks || null)),
+        h("div", { class: "row", style: { marginTop: "10px", alignItems: "center" } },
+          h("span", { class: "faint small" }, "Situational modifier on every roll"), modInput(c),
+          h("span", { class: "sp" }), h("button", { class: "btn ghost", onclick: () => close() }, "Close")),
+      ], { wide: true });
     }
 
     function flavour(c) {

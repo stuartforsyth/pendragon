@@ -83,10 +83,9 @@ body {
 .mini { padding: 10px 14px; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 2px 12px; animation: rise .45s ease-out; }
 .mini .ic { grid-row: span 2; width: 30px; height: 30px; color: var(--gules); display: grid; place-items: center; }
 .mini .ic svg { width: 24px; height: 24px; }
-.mini .t { font-family: var(--f-caps); font-weight: 700; font-size: 16px; letter-spacing: .04em; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mini .x { font-size: 18px; color: var(--ink-2); line-height: 1.3; overflow: hidden; display: -webkit-box;
-  -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* Fray cards say the whole thing: titles and text wrap, the card takes the height it needs. */
+.mini .t { font-family: var(--f-caps); font-weight: 700; font-size: 16px; letter-spacing: .04em; color: var(--ink); overflow-wrap: anywhere; }
+.mini .x { font-size: 18px; color: var(--ink-2); line-height: 1.3; overflow-wrap: anywhere; }
 .mini .res { font-family: var(--f-caps); font-weight: 700; margin-right: 6px; font-variant-numeric: lining-nums; }
 .mini.sealed .ic { color: var(--purpure); }
 .mini:nth-child(n+6) { opacity: .75; }
@@ -174,13 +173,27 @@ body {
 @keyframes seal { 0% { transform: scale(1.6) rotate(-20deg); opacity: 0; } 60% { transform: scale(.95) rotate(3deg); opacity: 1; } 100% { transform: none; } }
 .sealed-hero .msg { font-size: 34px; font-style: italic; color: var(--ink-2); margin-top: 10px; }
 
-/* rule scroll */
-.rulehero { max-height: calc(100vh - 170px); overflow: hidden; padding: 26px 34px; font-size: 20px;
-  mask-image: linear-gradient(180deg, #000 85%, transparent); }
-.rulehero h1, .rulehero h2, .rulehero h3 { font-family: var(--f-caps); color: var(--gules); margin: .6em 0 .3em; }
-.rulehero table { border-collapse: collapse; margin: .5em 0; font-size: 18px; }
-.rulehero td, .rulehero th { border: 1px solid var(--parch-dark); padding: 3px 10px; }
-.rulehero th { background: rgba(176, 138, 54, .15); }
+/* ---------- a rule on the Table: a parchment laid over the scene ---------- */
+.rule-overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 4vh 4vw;
+  background: rgba(42, 29, 20, .42); backdrop-filter: blur(2px); animation: bloom .45s cubic-bezier(.2, .8, .2, 1); }
+.rule-scroll { width: min(1180px, 100%); max-height: 92vh; overflow: auto; padding: 34px 56px 40px;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(255, 250, 235, .7), transparent 70%),
+    linear-gradient(180deg, #f3e8cf, #e9d9b6);
+  border: 1.5px solid var(--or); border-radius: 6px;
+  box-shadow: 0 0 0 6px rgba(239, 227, 198, .9), 0 0 0 7.5px var(--or), 0 30px 80px rgba(42, 29, 20, .55);
+  font-size: 23px; line-height: 1.5; color: var(--ink); }
+.rule-scroll .rs-kicker { font-family: var(--f-caps); font-size: 15px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-soft); text-align: center; }
+.rule-scroll .rs-title { font-family: var(--f-display); font-weight: 700; font-size: 46px; line-height: 1.1; color: var(--gules); text-align: center; margin: 6px 0 4px; text-wrap: balance; }
+.rule-scroll .flourish { display: block; margin: 0 auto 14px; }
+.rs-body h1, .rs-body h2, .rs-body h3 { font-family: var(--f-caps); color: var(--gules); margin: .8em 0 .3em; font-size: 1.15em; }
+.rs-body p { margin: .45em 0; }
+.rs-body ul, .rs-body ol { padding-left: 1.3em; }
+.rs-body table { border-collapse: collapse; margin: .6em 0; font-size: 20px; }
+.rs-body td, .rs-body th { border: 1px solid var(--parch-dark); padding: 4px 12px; vertical-align: top; }
+.rs-body th { background: rgba(176, 138, 54, .15); font-family: var(--f-caps); font-size: 15px; letter-spacing: .06em; }
+.rs-body strong { color: var(--ink); }
+.rs-body em { color: var(--ink-2); }
 
 /* plain line */
 .linehero { text-align: center; font-size: 34px; font-style: italic; color: var(--ink-2); max-width: 30em; margin: 0 auto; }
@@ -257,9 +270,49 @@ body {
 .blowsteps { margin-top: 12px; font-family: var(--f-caps); font-size: 19px; letter-spacing: .06em; color: var(--ink-2); text-align: center; }
 .blowfx { margin-top: 8px; font-family: var(--f-display); font-size: 30px; color: var(--gules); text-align: center; }
 
-/* ---------- fight view: lanes by knight (S3) ---------- */
-.fightview { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(300px, 1fr); gap: 28px; min-height: 0; }
+/* ---------- fight view: knight cards · the Field · the Fray ---------- */
+.fightview { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(300px, 340px); gap: 24px; min-height: 0; }
+.fightview.no-knights { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); }
+.fv-knights { display: grid; gap: 10px; align-content: start; min-height: 0; overflow: hidden; }
+.fv-centre { display: grid; gap: 10px; align-content: start; min-height: 0; min-width: 0; overflow: hidden; }
 .fightview .lanes { display: grid; gap: 10px; align-content: start; min-height: 0; overflow: hidden; }
+/* the Field on parchment: same geometry as the GM's, inked in heraldic tinctures */
+.tfield { position: relative; border: 1px solid var(--parch-dark); border-radius: 12px; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 35%, rgba(251,244,226,.9), rgba(230,213,176,.75) 70%, rgba(205,182,138,.6));
+  box-shadow: inset 0 0 40px rgba(78,58,40,.12); }
+.tfield .cbt-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.tfield .cbt-link { stroke: var(--gules-bright); stroke-width: 3; stroke-linecap: round; animation: tlink 2.4s ease-in-out infinite; }
+@keyframes tlink { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
+.tfield .ftok { position: absolute; transform: translate(-50%, -27px); display: grid; justify-items: center; gap: 2px; width: 130px; text-align: center; user-select: none; }
+.tfield .ftok-face { display: grid; place-items: center; width: 54px; height: 54px; position: relative; }
+.tfield .ftok-face svg { width: 100%; height: 100%; display: block; }
+.tfield .ftok.is-knight .ftok-face svg { width: 48px; height: 55px; }
+.tfield .ftok .medal { fill: #f6ecd2; stroke: #4e3a28; stroke-width: 3; }
+.tfield .ftok .glyph { color: var(--gules); }
+.tfield .ftok.elite .medal { stroke: var(--or); }
+.tfield .ftok-name { font-family: var(--f-caps); font-weight: 700; font-size: 13.5px; line-height: 1.1; color: var(--ink); max-width: 100%; text-wrap: balance; }
+.tfield.roomy .ftok { width: 156px; }
+.tfield.roomy .ftok-face { width: 60px; height: 60px; }
+.tfield.roomy .ftok.is-knight .ftok-face svg { width: 53px; height: 60px; }
+.tfield.roomy .ftok-name { font-size: 14.5px; }
+.tfield.tight .ftok { width: 104px; transform: translate(-50%, -22px); }
+.tfield.tight .ftok-face { width: 44px; height: 44px; }
+.tfield.tight .ftok.is-knight .ftok-face svg { width: 39px; height: 44px; }
+.tfield.tight .ftok-name { font-size: 12px; }
+.tfield.tight .ftok-sub { font-size: 11.5px; }
+.tfield .ftok.is-knight .ftok-name { color: var(--azure); font-size: 15px; }
+.tfield .ftok.elite .ftok-name { color: #7a5a14; }
+.tfield .ftok-sub { font-style: italic; font-size: 13px; line-height: 1.1; color: var(--ink-soft); white-space: nowrap; }
+.tfield .ftok.down { opacity: .45; filter: grayscale(.7); }
+.tfield .ftok-horse { position: absolute; top: -4px; left: calc(50% - 40px); width: 25px; height: 25px; border-radius: 50%; background: var(--azure); color: #f6ecd2;
+  display: grid; place-items: center; box-shadow: 0 0 0 2px var(--parch); pointer-events: none; }
+.tfield .ftok-horse svg { width: 20px; height: 20px; display: block; }
+.tfield .ftok.is-foe .ftok-horse { background: var(--gules); }
+.tfield.roomy .ftok-horse { left: calc(50% - 44px); width: 27px; height: 27px; }
+.tfield.tight .ftok-horse { left: calc(50% - 32px); width: 18px; height: 18px; }
+.tfield.tight .ftok-horse svg { width: 14px; height: 14px; }
+.tfield .ftok.hit .ftok-face { animation: hit .7s; }
+@media (max-width: 1100px) { .fightview, .fightview.no-knights { grid-template-columns: 1fr; } .fv-knights { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); } }
 .fv-banner { justify-self: start; font-family: var(--f-caps); font-weight: 700; font-size: 16px; letter-spacing: .14em; text-transform: uppercase;
   color: var(--gules); border: 1.5px solid var(--gules); background: rgba(142, 34, 25, .06); padding: 4px 14px; border-radius: 4px; }
 .tlane { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); background: rgba(251, 244, 226, .55); border: 1px solid var(--parch-dark); border-radius: 9px; overflow: hidden; }
@@ -326,6 +379,17 @@ body {
 .bv-script.minus5 { border-left-color: var(--gules); font-style: normal; font-family: var(--f-caps); font-size: 18px; }
 .battleview { height: 100%; min-height: 0; }
 .battleview .fray { overflow: hidden; }
+/* The centre never runs into the knights row: it clips, and on a short screen
+   (a laptop at the table) the title and the deck spread tighten up first. */
+.bv-centre { min-height: 0; overflow: hidden; }
+@media (max-height: 880px) {
+  .bv-title { padding: 6px 10px; gap: 3px; }
+  .bv-name { font-size: 38px; }
+  .bv-against { font-size: 20px; }
+  .bv-script { font-size: 19px; padding: 6px 12px; }
+  .dcard { font-size: 12px; padding: 3px 8px; }
+  .battleview .mgauge { min-height: 300px; }
+}
 
 /* ---------- finale (S10, #t-finale) ---------- */
 .finale { display: grid; justify-items: center; align-content: start; gap: 12px; text-align: center; min-height: 0; width: 100%; padding-top: 6px; }

@@ -555,27 +555,31 @@ def _weapon_phrase(who, weapon, unarmed):
 
 def blow_narrative(*, attacker, weapon, target, amount, to_knight, fate="", critical=False, unarmed=False,
                    knockdown=None):
-    """The players' sentence for a blow — what happened, not the arithmetic.
-    e.g. "Dame Cwylog's sword inflicts 33 points of damage on Pictish Knifeman 2,
-    who is slain." Knights' damage is before their armour (players apply it)."""
+    """The players' sentence for a blow — what happened, not the arithmetic,
+    in one breath: "Sir Erik the Cruel's sword inflicts 23 points of damage on
+    Pictish Knifemen 7, who is knocked down and slain!" Knights' damage is
+    before their armour (players apply it)."""
     subj, plural = _weapon_phrase(attacker, weapon, unarmed)
     verb = "inflict" if plural else "inflicts"
     pts = f"{amount} point{'s' if amount != 1 else ''} of damage"
     lead = "A critical blow! " if critical else ""
-    if to_knight:
-        line = f"{lead}{subj} {verb} {pts} on {target}."
-    elif not amount:
-        line = f"{lead}{subj} {'strike' if plural else 'strikes'} {target}, but armour turns the blow aside."
-    else:
-        tail = {"Slain": ", who is slain", "Major Wound": ", who falls with a Major Wound",
-                "Near death": ", who falls, near death", "Unconscious": ", who falls unconscious",
-                "Badly wounded": ", who is badly wounded", "Wounded": ", who is wounded"}.get(fate, "")
-        line = f"{lead}{subj} {verb} {pts} on {target}{tail}."
+    if not to_knight and not amount:
+        return f"{lead}{subj} {'strike' if plural else 'strikes'} {target}, but armour turns the blow aside."
+    # what became of the target, said plainly…
+    fell = {"Slain": "slain", "Major Wound": "falls with a Major Wound", "Near death": "falls, near death",
+            "Unconscious": "falls unconscious", "Badly wounded": "badly wounded", "Wounded": "wounded"}.get(fate, "")
+    # …and with the fall folded in when the blow knocks them down
+    down = {"Slain": "knocked down and slain", "Major Wound": "knocked down with a Major Wound",
+            "Near death": "knocked down, near death", "Unconscious": "knocked down and out cold",
+            "Badly wounded": "knocked down and badly wounded", "Wounded": "knocked down and wounded"}.get(fate, "knocked down")
+    out = fate in ("Slain", "Major Wound", "Near death", "Unconscious")      # no DEX roll for someone already down
     if knockdown == "automatic":
-        line += f" {target} is knocked down!"
-    elif knockdown == "check":
-        line += f" {target} must roll DEX or be knocked down."
-    return line
+        tail = f", who is {down}!"
+    elif knockdown == "check" and not out:
+        tail = f", who is {fell} and must roll DEX or be knocked down." if fell else ", who must roll DEX or be knocked down."
+    else:
+        tail = f", who {'is ' if fell and not fell.startswith('falls') else ''}{fell}." if fell else "."
+    return f"{lead}{subj} {verb} {pts} on {target}{tail}"
 
 
 def resolve_blow(*, expr=None, rolled=None, critical=False, unarmed=False,

@@ -49,3 +49,6 @@
 .rule-pins .label svg { width: 14px; height: 14px; }
 .pin-item { padding: 5px 8px; }
 .pin-item.reading { background: #2b2416; }
+.rule-ontable { margin-bottom: 10px; }
+.rule-ontable-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rule-ontable-row svg { width: 14px; height: 14px; vertical-align: -2px; }
