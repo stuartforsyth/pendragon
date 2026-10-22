@@ -439,7 +439,7 @@ export default {
       // charge? Knights can charge foot troops; the foe's own charge only comes
       // in on a fumble. The GM can skip the roll when no charge is possible.
       const chargeLabel = h("div", { class: "label", title: "Table 6.3, Mounted Charge Opportunity: the conroi commander's Battle roll decides whether the knights may make a mounted charge this turn" },
-        "Our commander's charge roll — may the knights charge?");
+        [h("span", { class: "tag or" }, "Conroi commander rolls"), " Commander's charge roll (Battle, mounted charge opportunity) — may the knights charge?"]);
       const allFoot = b.conroi_now.length && b.conroi_now.every((pid) => !b.knights[pid]?.mounted);
       const left = ch.state === "skipped" ? h("div", { class: "half skip" }, chargeLabel, h("em", {}, ch.reason))
         : ch.state === "done" ? h("div", { class: "half" }, chargeLabel, summary("charge"))
@@ -454,11 +454,11 @@ export default {
                 : "Mounted knights may charge foes on foot too; a fumble means enemy knights charge.")),
             b.minus5 && b.turn === 1 ? h("div", { class: "bl-reminder" }, "−5 Battle this turn") : null);
         })();
-      const right = inten.state === "skipped" ? h("div", { class: "half skip" }, h("div", { class: "label" }, "Intensity roll"), h("em", {}, inten.reason))
-        : inten.state === "current" ? h("div", { class: "half" }, h("div", { class: "label" }, `Intensity roll (${b.intensity_today})`),
+      const right = inten.state === "skipped" ? h("div", { class: "half skip" }, h("div", { class: "label" }, "GM's Intensity roll"), h("em", {}, inten.reason))
+        : inten.state === "current" ? h("div", { class: "half" }, h("div", { class: "label" }, h("span", { class: "tag gules" }, "GM rolls"), ` Intensity roll against the battle's Intensity (${b.intensity_today}) — does the Encounter stand?`),
           h("div", { class: "row" }, h("button", { class: "btn primary sm", onclick: () => step("intensity", { roll_for_me: true }) }, icon("d20"), "Roll for me"),
             outcomeChips({ keys: ch.state !== "current", onPick: (o) => step("intensity", { outcome: o }) })))
-        : h("div", { class: "half todo" }, h("div", { class: "label" }, "Intensity roll"), h("em", {}, "after the charge"));
+        : h("div", { class: "half todo" }, h("div", { class: "label" }, "GM's Intensity roll (against the battle's Intensity)"), h("em", {}, "after the charge"));
       const lines = b.t.charge?.result ? b.conroi_now.map((pid) => `${knightName(pid)}: ${({ may_charge_plus5: "charges +5", may_charge: "may charge", no_charge: "no charge", enemy_charge: "enemy knights charge!" })[b.t.charge.result]}${b.knights[pid]?.mounted ? "" : " (on foot)"}`) : [];
       return [h("div", { class: "split2" }, left, right), lines.length ? h("div", { class: "hint" }, lines.join(" · ")) : null];
     }

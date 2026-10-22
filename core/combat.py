@@ -568,7 +568,7 @@ def _dice_term(label, expr, roll_fn):
 
 
 def _weapon_phrase(who, weapon, unarmed):
-    """"Dame Cwylog's sword", "Pictish Knifeman 1's fists", or just the name."""
+    """"Dame Cwyllog's sword", "Pictish Knifeman 1's fists", or just the name."""
     w = (weapon or "").strip()
     if unarmed or w.lower() in ("brawling", "fist", "punch", "unarmed"):
         return f"{who}’s fists" if who else "A fist", True

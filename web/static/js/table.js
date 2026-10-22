@@ -453,8 +453,11 @@ function battleView(p) {
   else if (STATUS_LINE[b.status]) centre.push(h("div", { class: "bv-status" }, STATUS_LINE[b.status]));
   const cards = [];
   const withMin = (c) => ({ ...c, minimum: (b.options || []).find((o) => o.name === c.name)?.minimum ?? c.minimum });
-  if (tt.set) cards.push(cardFrame(withMin(tt.set), { kind: tt.picks?.length ? "The GM sets" : "This turn", small: tt.picks?.length > 0 }));
-  for (const pk of tt.picks || []) {
+  if (tt.selected_card) {      // the card the turn is fought against replaces the set and the picks
+    const sc = tt.selected_card;
+    cards.push(cardFrame(withMin(sc), { kind: sc.opportunity ? "★ Opportunity" : "The commander chooses" }));
+  } else if (tt.set) cards.push(cardFrame(withMin(tt.set), { kind: tt.picks?.length ? "The GM sets" : "This turn", small: tt.picks?.length > 0 }));
+  for (const pk of tt.selected_card ? [] : tt.picks || []) {
     if (pk.name === tt.set?.name) continue;
     cards.push(cardFrame(withMin(pk), { kind: pk.opportunity ? "★ Opportunity" : "Picked", token: pk.knight_name.split(" ").slice(-1)[0], crit: pk.crit }));
   }

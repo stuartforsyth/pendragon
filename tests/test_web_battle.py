@@ -693,6 +693,15 @@ def test_table_options_follow_the_route(client):
     assert list(opts()) == ["Pictish Knifemen"]
 
 
+def test_table_shows_the_commanders_chosen_opportunity(client):
+    _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="fumble")
+    _step(client, "select", encounter="Clash of Champions", via="fumble")
+    tt = _tb(client)["battle"]["this_turn"]
+    assert tt["selected_card"]["name"] == "Clash of Champions" and tt["selected_card"]["opportunity"]
+
+
 def test_spent_opportunity_flag_on_table(client):
     pids = _running(client)
     _step(client, "set", encounter="Pictish Knifemen")
@@ -1071,3 +1080,13 @@ def test_battle_fight_couches_lances_and_countercharges(client):
     cs = ok(client.get("/api/combat"))["combat"]
     assert not any(c["lance"] for c in cs["combatants"] if c["side"] == "party")
     assert not any(c["charging"] for c in cs["combatants"] if c["side"] != "party")
+
+
+def test_resume_without_a_fight_ends_the_earlier_one():
+    """A fight still open earlier in the session must not outlive a resume whose
+    battle has none — the Table would keep showing it instead of the battle."""
+    from web import combat_state
+    started = {"id": 1, "type": "combat.started", "data": {"name": "Old fight", "combatants": []}}
+    resumed = {"id": 2, "type": "battle.resumed", "data": {"snapshot": {"battle": {}, "combat": None}}}
+    assert combat_state.reduce([started])["active"]
+    assert combat_state.reduce([started, resumed]) is None

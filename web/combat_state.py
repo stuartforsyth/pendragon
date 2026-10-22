@@ -36,8 +36,8 @@ def apply(state, ev, promotion_cfg=None):
                 "combatants": [Combatant.from_dict(c) for c in d.get("combatants", [])]}
     if t == "battle.resumed":            # a fight carried over from a paused battle
         snap = (d.get("snapshot") or {}).get("combat")
-        if not snap:
-            return state
+        if not snap:                     # no fight in the resumed battle: any earlier one is over
+            return None
         return {"active": True, "name": snap.get("name", "Encounter"), "round": snap.get("round", 1),
                 "players": snap.get("players", 0), "descriptions": snap.get("descriptions", []),
                 "started_event": ev["id"], "credits": dict(snap.get("credits", {})),

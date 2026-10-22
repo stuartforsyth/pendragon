@@ -705,7 +705,10 @@ def table_view(b, party, library=None):
                 "opportunity": False, "minimum": mn(t["set"].get("card"))} if t.get("set") else None,
         "picks": [{"name": p["encounter"], "flavour": card_flav(p.get("card")), "opportunity": is_opp(p.get("card")),
                    "minimum": mn(p.get("card")), "knight_name": nm(pid), "crit": bool(p.get("crit"))} for pid, p in (t.get("picks") or {}).items()],
-        "selected": (t.get("select") or {}).get("encounter")}
+        "selected": (t.get("select") or {}).get("encounter"),
+        "selected_card": {"name": t["select"]["encounter"], "flavour": card_flav(t["select"].get("card")),
+                          "opportunity": is_opp(t["select"].get("card")), "minimum": mn(t["select"].get("card")),
+                          "via": t["select"].get("via")} if t.get("select") else None}
     dd = _day_def(b)
     deck_eff = effective_deck(b, library, with_script=False)
     in_play = {x for x in [(t.get("set") or {}).get("encounter"), (t.get("select") or {}).get("encounter")] if x}
