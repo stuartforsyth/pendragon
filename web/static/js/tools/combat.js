@@ -360,7 +360,9 @@ export default {
       // the Field shares its row with the drawer: when its width changes, lay the clusters out again
       const widthWatch = new ResizeObserver(() => {
         if (!stage.isConnected) return widthWatch.disconnect();
-        if (Math.abs(stage.clientWidth - measured) > 40) { widthWatch.disconnect(); render(); }
+        // A tool the GM has left is hidden and measures 0 wide — and so is the Field the redraw makes, which
+        // would redraw again, for ever (Firefox reports a hidden target at once): only a shown Field is laid out.
+        if (stage.clientWidth && Math.abs(stage.clientWidth - measured) > 40) { widthWatch.disconnect(); render(); }
       });
       widthWatch.observe(stage);
       stage.addEventListener("dragover", (e) => { if (dragging?.side === "knight") e.preventDefault(); });

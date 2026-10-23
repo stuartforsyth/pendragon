@@ -73,14 +73,31 @@ def app_url(tmp_path, library):
 
 
 @pytest.fixture(scope="session")
-def browser():
+def playwright_instance():
     with pw.sync_playwright() as p:
-        try:
-            b = p.chromium.launch()
-        except Exception as exc:  # browser binaries not installed
-            pytest.skip(f"Chromium for Playwright isn't installed: {exc}")
-        yield b
-        b.close()
+        yield p
+
+
+@pytest.fixture(scope="session")
+def browser(playwright_instance):
+    try:
+        b = playwright_instance.chromium.launch()
+    except Exception as exc:  # browser binaries not installed
+        pytest.skip(f"Chromium for Playwright isn't installed: {exc}")
+    yield b
+    b.close()
+
+
+@pytest.fixture(scope="session")
+def firefox(playwright_instance):
+    """The GM's own browser. Some bugs only Firefox has (it reports a hidden element to a
+    ResizeObserver at once, Chromium doesn't) — skipped when it isn't installed."""
+    try:
+        b = playwright_instance.firefox.launch()
+    except Exception as exc:
+        pytest.skip(f"Firefox for Playwright isn't installed: {exc}")
+    yield b
+    b.close()
 
 
 @pytest.hookimpl(hookwrapper=True)
