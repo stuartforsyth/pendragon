@@ -5,7 +5,7 @@ import json
 import os
 import uuid
 
-from core import rules as rules_module
+from core import battle_cards, rules as rules_module
 from core.names import find_data_file, parse_names_file
 from core.npc import Generator
 from web import battle_state, combat_state, table
@@ -76,10 +76,21 @@ class AppState:
         self.rules_index = RulesIndex(os.path.join(root, "rules_corpus", "index.jsonl"))
         self.hub = Hub()
         self.table_mode = "auto"
+        self.battle_cards = battle_cards.load(self.data_dir, root)
 
     @property
     def combat_data(self):
         return self.rules.combat
+
+    def card_faces(self, name):
+        """The printed faces and Glory rewards of one Opportunity card."""
+        return battle_cards.faces(self.battle_cards, name, self.combat_data.get("encounters", {}).get(name),
+                                  self.combat_data.get("adversaries", {}))
+
+    def gm_battle(self):
+        """The battle as the GM console reads it."""
+        return battle_state.gm_view(self.battle_state(), self.party.items, self.combat_data.get("encounters", {}),
+                                    self.card_faces)
 
     def save_combat_data(self):
         return rules_module.save_combat(self.rules.combat, self.data_dir)
@@ -121,5 +132,6 @@ class AppState:
 
     def table_payload(self):
         cs = combat_state.serialise(self.combat_state(), "table")
-        b = battle_state.table_view(self.battle_state(), self.party.items, self.combat_data.get("encounters", {}))
+        b = battle_state.table_view(self.battle_state(), self.party.items, self.combat_data.get("encounters", {}),
+                                    self.card_faces)
         return table.build(self.session, cs, self.table_mode, battle=b)

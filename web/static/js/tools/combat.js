@@ -431,7 +431,7 @@ export default {
           h("span", { class: "cbt-lane-slots" },
             k.mo?.n > 1 ? h("span", { class: `chip-mo ${k.mo.over ? "warn" : ""}`,
               title: k.mo.over ? `More than ${k.mo.limit} ${k.mo.limit === 2 ? "mounted foes" : "foes on foot"} can't all attack one knight` : "Multiple Opponents: the knight applies this to each opponent" },
-              `⚠ ${k.mo.n} foes · −${-k.mo.mod} vs each`) : null,
+              k.mo.over ? `⚠ ${k.mo.n} foes (counts ${k.mo.faced}) · −${-k.mo.mod} vs each` : `⚠ ${k.mo.n} foes · −${-k.mo.mod} vs each`) : null,
             heightReminders(k.height_chips || [])),
           k.posture ? h("span", { class: "meta" }, `${k.posture[0].toUpperCase() + k.posture.slice(1)} · round ${Math.min(cs.round, k.rounds + k.extra_rounds)} of ${k.rounds + k.extra_rounds}`,
             k.last_round ? h("b", { class: "withdraw" }, " · withdraws after this round") : k.withdraws ? h("b", { class: "withdraw" }, " · withdraws") : null) : null,

@@ -1153,7 +1153,7 @@ Opportunity at the table, then End turn").
 - Morale += `kv_morale_gain([[kv of foes in DEFEATED] for each fight linked to this turn])`, capped (Q3/Q4).
 - `fought_days[pid]` adds the day for knights in any fight that day with position `conroi` at ⑨ and not
   Cowardly (Q27).
-- A turn whose selected Opportunity has no roster allows ⑩ right after ⑧ and adds no fought day (Open point 16).
+- A turn whose selected Opportunity was played (`battle.opportunity_done`) counts as fought for knights with the conroi (Open point 16).
 
 ### UI
 - **Battle tool ⑨** (`#gm-turn`):
@@ -1163,7 +1163,7 @@ Opportunity at the table, then End turn").
     or an amount entry 1D6 + roll for me.
   - **Begin the fight → combat tracker** (Enter) posts, then `ctx.navigate("combat")`.
   - After the fight: the line `Fought Pictish Knifemen ×6: 5 defeated · ✦ 45`.
-  - Opportunity without a roster: its rules text + **✦ Award Glory** + "Play it at the table, then End turn".
+  - Opportunities have no ⑨: see ★ Play the Opportunity (Open point 16).
 - **⑩:** a preview line `Foes defeated: KV 1⅜ → Morale +1 (GM ruling: rounded half up)`, then **End turn** / **End day**.
 - **Combat tracker battle frame** (`#gm-fight` top):
   - title `Pictish Knifemen` + `Bedegraine · Day 1 · Turn 3 · Round 2`
@@ -1462,9 +1462,18 @@ decision unless marked as one for the user to confirm.
 15. **Turn-script placement.** Piece 5 d5 says step ①, while design §6.5 and §14 say ②, with ① now
     implicit. **Rec.:** show scripts beside ② (§14), and also on a rear turn, which honours "at the start
     of the turn".
-16. **Opportunity with no roster at ⑨.** There is nothing to fight. **Rec.:** ⑨ shows the rules text and
-    Award Glory, and ⑩ is allowed right away. It doesn't add a "fought" day (Q27 says "in any fight"),
-    and the aftermath can edit that.
+16. **Opportunities are played at the table (revised 2026-10-23).** Opportunities don't follow combat
+    rules and vary too much for a common framework, so every Opportunity — rostered or not — is played
+    offline. After ⑦ Morale the turn has a step **★ Play the Opportunity** (`opportunity`) in place of ⑧
+    Postures and ⑨ Fight (both skipped; `/api/battle/fight` answers 409). The **Table** shows only the
+    card's green title box (name + flavour), large; the **GM console** shows the whole printed card —
+    instruction faces and stat faces — transcribed word for word in `data/battle_cards.json`
+    (`core/battle_cards.py`; a card with no transcription gets a generated one), with the Glory printed on
+    it as presets. The GM awards Glory to one knight, several, or **All with the conroi**
+    (`opportunity_glory` → one `glory.awarded` per knight, linked to step `opportunity`, folded into
+    `manual_glory`, struck with the step), then **Done** (`battle.opportunity_done`) rejoins ⑩. A played
+    Opportunity counts as fought: the day is added to `fought_days` for knights with the conroi and
+    `fought_last` is set. Plan: `.claude/plans/2026-10-23-opportunity-cards.md`.
 17. **Resume double-counting.** A snapshot taken mid-fight holds both the battle aggregates and the open
     fight. **Rec.:** the battle state keeps closed-fight aggregates separate from the open fight, and the
     snapshot stores the closed part plus the combat (S8). *Implementation choice.*

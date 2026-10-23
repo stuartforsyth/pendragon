@@ -64,3 +64,39 @@ def test_rule_on_the_table_is_an_overlay_until_removed(page, table, app_url):
     page.locator("#pinnedRules").click()
     page.locator(".menu button", has_text=re.compile("^Remove")).click()
     expect(table.locator(".rule-overlay")).to_have_count(0)
+
+
+def test_foe_that_has_acted_wears_a_green_tick_on_the_table(page, table, app_url):
+    r = page.request
+    r.post(app_url + "/api/combat/start", data={"encounter": "Pictish Knifemen"})
+    r.post(app_url + "/api/combat/distribute")
+    foes = [c for c in r.get(app_url + "/api/combat").json()["combat"]["combatants"] if c["side"] != "party"]
+    table.goto(app_url + "/table")
+    expect(table.locator(".tfield .ftok.is-foe").first).to_be_visible()
+    expect(table.locator(".tfield .ftok-acted")).to_have_count(0)
+    r.post(app_url + f"/api/combat/{foes[0]['id']}/acted", data={"on": True})
+    expect(table.locator(f'.tfield .ftok[data-id="{foes[0]["id"]}"] .ftok-acted')).to_have_text("✓")
+    expect(table.locator(".tfield .ftok-acted")).to_have_count(1)
+    r.post(app_url + "/api/combat/round")                                   # a new round clears every tick
+    expect(table.locator(".tfield .ftok-acted")).to_have_count(0)
+
+
+def test_knight_cards_are_ranked_by_glory_and_the_leader_is_crowned(page, table, app_url):
+    r = page.request
+    r.post(app_url + "/api/combat/start", data={"encounter": "Pictish Knifemen"})
+    table.goto(app_url + "/table")
+    cards = table.locator(".fv-knights .kcard")
+    expect(cards).to_have_count(3)
+    expect(table.locator(".kcard.leader")).to_have_count(0)                  # nobody has Glory yet: table order, no crown
+    first_before = cards.first.locator(".kc-name").inner_text()
+    r.post(app_url + "/api/glory", data={"knight": "k3", "amount": 40, "reason": "A deed"})
+    expect(cards.first.locator(".kc-name")).to_have_text("Dame Lynet", ignore_case=True)
+    expect(cards.first).to_have_class(__import__("re").compile(r"leader"))
+    expect(cards.first.locator(".gl-laurel")).to_have_count(1)
+    expect(table.locator(".kcard.leader")).to_have_count(1)
+    assert first_before.lower() != "dame lynet"
+    r.post(app_url + "/api/glory", data={"knight": "k1", "amount": 40, "reason": "A deed"})      # a tie shares the crown
+    expect(table.locator(".kcard.leader")).to_have_count(2)
+    r.post(app_url + "/api/glory", data={"knight": "k2", "amount": 70, "reason": "A deed"})
+    expect(cards.first.locator(".kc-name")).to_have_text("Sir Cai", ignore_case=True)
+    expect(table.locator(".kcard.leader")).to_have_count(1)

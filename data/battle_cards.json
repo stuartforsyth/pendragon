@@ -1,0 +1,2191 @@
+{
+ "_note": "Faithful transcription of the Foe and Opportunity cards in battlecards.pdf (pp. 1-36). `front` faces are the instruction side (Player board + GM); `back` faces are the stat side (GM only). Inline markup: **bold**, *italic*. `rewards` lists the Glory printed on the card (scope: one = to one knight, all = to every knight with the conroi) for the GM's allocation panel. Opportunities without an entry here fall back to a generated card (core/battle_cards.py).",
+ "cards": {
+  "Capture the Banner": {
+   "front": [
+    {
+     "title": "Capture the Banner",
+     "flavour": "In the hurly-burly of the melee, you spot an enemy commander’s personal banner. Capturing it will strike a decisive blow against the enemy.",
+     "blocks": [
+      {
+       "p": "A conroi of the lord’s hand-picked knights guards the banner. There are as many guards as there are Player-knights. The Player-knights may not charge—there is too much in the way. The guards stand ready to defend the banner to the death and may roll their Homage (Lord) Passion in order to inspire themselves to do so."
+      },
+      {
+       "p": "Check the **Valorous** and **Reckless** Traits, and the Passion(s) used for the conroi’s Morale."
+      },
+      {
+       "p": "To seize the banner, one or more Player-knights must first defeat their own opponent, then either defeat the standard bearer or win in a Grapple (Seize Weapon) Action to rip the banner from their hands."
+      },
+      {
+       "p": "Once in possession of the banner, the Player-knights may break off combat to escort the banner back to their lines. All Player-knights except the banner carrier must make opposed **Horsemanship** rolls to outrun pursuit by the remaining enemy knights. If there are more Player-knights than opponents, the opponents each suffer a –5 modifier to their **Horsemanship** in the same manner as if they were fighting multiple opponents (to a maximum of –15)."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "13"
+     }
+    },
+    {
+     "blocks": [
+      {
+       "rows": {
+        "title": "Roll Result",
+        "rows": [
+         [
+          "Win",
+          "Block one knight from attacking the banner carrier"
+         ],
+         [
+          "Partial Success",
+          "Block one knight, but a banner guard attacks you"
+         ],
+         [
+          "Lose",
+          "A banner guard slips past and attacks the banner carrier"
+         ],
+         [
+          "Fumble",
+          "A banner guard attacks you for one Combat Round on their way to attacking the banner carrier"
+         ]
+        ]
+       }
+      },
+      {
+       "p": "Any banner guards slipping past the escorts may take one Combat Action against the banner carrier. If they kill, knock unconscious, or rip the banner from the banner carrier, they return the banner to their own lines. Otherwise, the banner is captured!"
+      },
+      {
+       "p": "In either event, the Encounter is over. If the Player-knights retain the banner, they immediately Retire to the Rear."
+      },
+      {
+       "p": "If the Player-knights bring the banner to their lines, the banner carrier gains +100 Glory, while the escorts each gain +50 Glory. All gain +£2 base loot."
+      },
+      {
+       "p": "The opposing Division Commander must make a Battle roll at –5 (if not known, roll 2D6+5 for their Battle Skill), leaving the field if they fail and taking their Division with them! If they succeed in their Battle roll, all Minimum Morale values are reduced by 3 for the remainder of the battle."
+      }
+     ]
+    }
+   ],
+   "back": [
+    {
+     "title": "Capture the Banner",
+     "subtitle": "Guards",
+     "chars": [
+      [
+       "SIZ",
+       "16"
+      ],
+      [
+       "DEX",
+       "15"
+      ],
+      [
+       "STR",
+       "14"
+      ],
+      [
+       "CON",
+       "17"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear",
+       "Spear",
+       "16",
+       "5D6"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "20",
+       "5D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "33"
+      ],
+      [
+       "Knockdown",
+       "16"
+      ],
+      [
+       "Major Wound",
+       "17"
+      ],
+      [
+       "Unconscious",
+       "9"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "3D6"
+      ],
+      [
+       "Armor Points",
+       "12+6"
+      ],
+      [
+       "Glory Award",
+       "50"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Advanced hauberk, advanced nasal helm, aketon + kite shield"
+      ],
+      [
+       "Traits",
+       "Valorous 18"
+      ],
+      [
+       "Skills",
+       "Horsemanship 20"
+      ],
+      [
+       "Passions",
+       "Homage (Lord) 20"
+      ]
+     ],
+     "ransom": "£5"
+    }
+   ],
+   "rewards": [
+    {
+     "label": "Banner carrier (banner brought to the lines)",
+     "amount": 100,
+     "scope": "one"
+    },
+    {
+     "label": "Each escort",
+     "amount": 50,
+     "scope": "one"
+    },
+    {
+     "label": "Banner Guard defeated",
+     "amount": 50,
+     "scope": "one"
+    }
+   ]
+  },
+  "Fight Enemy Commander": {
+   "front": [
+    {
+     "title": "Fight Enemy Commander",
+     "flavour": "One of the enemy flank commanders (vanguard or rearguard) stands apart from his division, with their picked bodyguards surrounding them. This is a chance to capture a high-ranking noble!",
+     "blocks": [
+      {
+       "p": "There are 1½ as many bodyguards as there are Player-knights. They double-team as many Player-knights as possible, starting with those who have the highest Glory—this is no time for chivalric niceties! If the Player-knights capture or kill the enemy commander, the commander’s entire division leaves the battle! Another noble may attempt to rally the division with a Battle roll at –10 (roll 2D6+5 to determine the Battle Skill, if not known)."
+      },
+      {
+       "p": "If this roll fails, the Minimum Morale is reduced by 5 and Morale Loss reduced by 2 for all Encounters for the rest of the battle."
+      },
+      {
+       "p": "To fight the commander, each Player-knight must first defeat their own opponent(s)."
+      },
+      {
+       "p": "**Rewards:** All knights in the conroi who did not kill or capture the commander still gain +50 Glory and earn +£5 loot."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "14"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Fight Enemy Commander",
+     "subtitle": "Bodyguards",
+     "chars": [
+      [
+       "SIZ",
+       "16"
+      ],
+      [
+       "DEX",
+       "15"
+      ],
+      [
+       "STR",
+       "12"
+      ],
+      [
+       "CON",
+       "17"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear",
+       "Spear",
+       "18 (16)",
+       "6D6"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "20 (16)",
+       "6D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "33"
+      ],
+      [
+       "Knockdown",
+       "16"
+      ],
+      [
+       "Major Wound",
+       "17"
+      ],
+      [
+       "Unconscious",
+       "9"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "3D6"
+      ],
+      [
+       "Armor Points",
+       "12+6"
+      ],
+      [
+       "Glory Award",
+       "50"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Advanced hauberk, advanced nasal helm, aketon + kite shield"
+      ],
+      [
+       "Traits",
+       "Valorous 18"
+      ],
+      [
+       "Skills",
+       "Horsemanship 16"
+      ],
+      [
+       "Passions",
+       "Homage (Lord) 20 (+2)"
+      ]
+     ],
+     "ransom": "£5"
+    },
+    {
+     "title": "Fight Enemy Commander",
+     "subtitle": "Commander",
+     "chars": [
+      [
+       "SIZ",
+       "15"
+      ],
+      [
+       "DEX",
+       "14"
+      ],
+      [
+       "STR",
+       "15"
+      ],
+      [
+       "CON",
+       "18"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear",
+       "Spear",
+       "20 (16)",
+       "5D6"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "20 (16)",
+       "5D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "33"
+      ],
+      [
+       "Knockdown",
+       "16"
+      ],
+      [
+       "Major Wound",
+       "18"
+      ],
+      [
+       "Unconscious",
+       "9"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "3D6"
+      ],
+      [
+       "Armor Points",
+       "13+6"
+      ],
+      [
+       "Glory Award",
+       "150"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Reinforced mail, advanced nasal helm, aketon + kite shield"
+      ],
+      [
+       "Traits",
+       "Valorous 20+1"
+      ],
+      [
+       "Skills",
+       "Horsemanship 16"
+      ]
+     ],
+     "ransom": "£100 or more, depending on rank!"
+    }
+   ],
+   "rewards": [
+    {
+     "label": "Killed or captured the Commander",
+     "amount": 150,
+     "scope": "one"
+    },
+    {
+     "label": "Every other knight in the conroi",
+     "amount": 50,
+     "scope": "all"
+    },
+    {
+     "label": "Bodyguard defeated",
+     "amount": 50,
+     "scope": "one"
+    }
+   ]
+  },
+  "Rescue Captive Knights": {
+   "front": [
+    {
+     "title": "Rescue Captive Knights",
+     "flavour": "The conroi has penetrated to the rear area of the enemy lines! A large number of friendly knights have been captured, and if the Player-knights can rescue them they will prove invaluable to the battle effort.",
+     "blocks": [
+      {
+       "p": "As many dismounted squires as there are Player-knights guard the prisoner knights."
+      },
+      {
+       "p": "If the Player-knights defeat all their opponents in four Combat Rounds or less, they rescue the captive knights before reinforcements arrive. There are enough spare horses that all the knights can mount, and enough weapons and armor that they will be able to re-arm and rejoin the battle. The conroi must Retire to the Rear as they escort the freed knights back to their lines."
+      },
+      {
+       "p": "A large contingent of mounted knights arrives if the conroi is still fighting after four Combat Rounds. At this point, each Player-knight may break off combat and flee back to their lines—there is no shame in it! If they are currently engaged, they must succeed with an Evade Action. If they choose or are forced to remain locked in combat, they must face two Knight Encounters of the Gamemaster’s choosing at once before fleeing. The captive knights remain captive, and the Player-knights may join them if things go badly!"
+      },
+      {
+       "p": "**Rewards:** If the conroi manages to free the captive knights, they each gain 100 Glory, and each Player-knight must make an unopposed Battle roll."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "13"
+     }
+    },
+    {
+     "blocks": [
+      {
+       "rows": {
+        "title": "Battle Roll Result",
+        "rows": [
+         [
+          "Critical",
+          "One of the rescued knights is a high-ranking noble (or the son of one), and the Player-knight gains 350 Glory."
+         ],
+         [
+          "Success",
+          "The Player-knight receives 150 Glory."
+         ],
+         [
+          "Failure",
+          "The Player-knight receives 50 Glory."
+         ],
+         [
+          "Fumble",
+          "The Player-knight receives no Glory."
+         ]
+        ]
+       }
+      },
+      {
+       "p": "At the Gamemaster’s option, if using the Favor system from the core rules, the nobles may instead owe Favors to the Player-knights equivalent to the Glory awards."
+      }
+     ]
+    }
+   ],
+   "back": [
+    {
+     "title": "Dismounted Squires",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "12"
+      ],
+      [
+       "DEX",
+       "12"
+      ],
+      [
+       "STR",
+       "12"
+      ],
+      [
+       "CON",
+       "14"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear",
+       "Spear",
+       "9",
+       "4D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "26"
+      ],
+      [
+       "Knockdown",
+       "12"
+      ],
+      [
+       "Major Wound",
+       "14"
+      ],
+      [
+       "Unconscious",
+       "7"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "3D6"
+      ],
+      [
+       "Armor Points",
+       "5+6"
+      ],
+      [
+       "Glory Award",
+       "10"
+      ],
+      [
+       "Knight Value",
+       "¼"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Gambeson, open helm + round shield"
+      ],
+      [
+       "Traits",
+       "Valorous 14"
+      ]
+     ],
+     "ransom": "£1"
+    }
+   ],
+   "rewards": [
+    {
+     "label": "Captives freed — each knight",
+     "amount": 100,
+     "scope": "all"
+    },
+    {
+     "label": "Battle roll: Critical (high-ranking noble)",
+     "amount": 350,
+     "scope": "one"
+    },
+    {
+     "label": "Battle roll: Success",
+     "amount": 150,
+     "scope": "one"
+    },
+    {
+     "label": "Battle roll: Failure",
+     "amount": 50,
+     "scope": "one"
+    },
+    {
+     "label": "Dismounted Squire defeated",
+     "amount": 10,
+     "scope": "one"
+    }
+   ]
+  },
+  "Rally the Division!": {
+   "front": [
+    {
+     "title": "Rally the Division!",
+     "flavour": "Suddenly the entire wing of your army is starting to crack! Knights and foot soldiers are turning around, ready to flee. Only bold action can save the army, and your conroi is the only one in position to do it.",
+     "blocks": [
+      {
+       "p": "This Encounter has three stages."
+      },
+      {
+       "p": "Player-knights may roll only one Passion for this encounter but may roll it at the start of any of the three stages."
+      },
+      {
+       "h": "1. Recognize the Danger"
+      },
+      {
+       "p": "Each Player-knight must roll against Battle to recognize the danger. If they fail, they do nothing important for the rest of the Encounter. On a success, they must roll against Valorous, Honor, and Homage. Each critical rolled is worth 2 points, every success 1 point, every failure 0, and every fumble –2. If a knight tallies up a positive score, they can proceed to the next phase."
+      },
+      {
+       "h": "2. Stop the Panic"
+      },
+      {
+       "p": "It is assumed that the Player-knights have or can find horns or trumpets and know the battle calls for division orders, such as halt, reform, etc. This is part of a knight’s training, after all. Any knight who made it this far may roll Play Instrument at –10. If more than one Player-knight has made it to this stage, only one may make this roll. A critical success gives everyone +10 to Orate in the next stage. A success means the divisional retreat slows, though they do not stop completely; everyone gains +5 to Orate in the next stage. A fumble confuses everyone, and most run away—the attempt has failed. The rest of the division sweeps the Player-knights away from the field, the same as an “All Fumble” result in the next stage."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "12"
+     }
+    },
+    {
+     "blocks": [
+      {
+       "h": "3. Rally the Troops"
+      },
+      {
+       "p": "Now is the time for Orate to remind the knights and soldiers of their duty! But before that, the routing troops have a collective Cowardly Trait of 20. Each Player-knight still attempting the rally rolls against Valorous, Honor, and Homage (Lord). For each win, modify the Cowardly value by –5; for each loss, increase it by +5. Now each knight may roll Orate, against the crowd’s modified Cowardly."
+      },
+      {
+       "h": "Results"
+      },
+      {
+       "p": "**All Fumble:** The division quits the field. The Player-knights may join in the general rout (–1 Honor and –1 Homage; check to Prudent; Retire to the Rear) or stay, facing the enemy (+1 Honor and +1 Reckless; fight triple the number of foes in the next Encounter—if they defeat them all, they are worthy of five times normal battle Glory, and plunder equal to a Division Commander to each)."
+      },
+      {
+       "p": "**More Losses than Wins:** The division loses half its troops to retreat. The Player-knights may join the withdrawal (–1 Honor; check Cowardly; Retire to the Rear), or stay and face the enemy (+1 Honor; check Reckless; face twice the number of foes in the next Encounter—if they defeat them all, they gain triple normal battle Glory and each receives plunder as a conroi commander, or as a Division Commander for the actual conroi commander)."
+      },
+      {
+       "p": "**More Wins than Losses:** The division stops, reforms, and stands on the defensive for the next Battle Turn. The Player-knights receive +1 Honor, a check to Honor and Orate, double battle Glory, and plunder as per a conroi commander (the conroi commander receives plunder as a Division Commander)."
+      },
+      {
+       "p": "**All Win:** The division quickly reforms and goes on the offensive! Choose a random Foe Encounter. Each Player-knight receives +5 to every Skill (Weapon Skill, Horsemanship, etc.) during the Encounter. All Player-knights receive +1 Honor, +1 Homage, +1 to a Passion used in this encounter, a check to Orate, triple Battle Glory, and plunder as a Division Commander."
+      }
+     ],
+     "footer": {
+      "label": "Morale Loss",
+      "value": "3D6"
+     }
+    }
+   ],
+   "back": [],
+   "rewards": []
+  },
+  "Clash of Champions": {
+   "front": [
+    {
+     "title": "Clash of Champions",
+     "flavour": "The enemy parts, and a champion rides out to challenge someone on the Player-knights’ side to a duel.",
+     "blocks": [
+      {
+       "p": "The conroi commander may choose anyone in the conroi as their champion—even themselves. If a Player-knight wishes the honor, they may make their plea to the commander based on their Skill, Glory, or possibly favors owed, any of which may be sufficient to win the nomination, at the Gamemaster’s discretion."
+      },
+      {
+       "p": "If more than one qualified candidate is making a plea, the Player-knights must oppose Honor, a suitable Hate, or other Passion to make their case; Orate or other Skills cannot modify this roll, though a critical Valorous or Reckless success may provide a +5 modifier, at the Gamemaster’s option. (Player-knights may choose different Passions for the opposed roll.)"
+      },
+      {
+       "p": "On a loss, the conroi commander does not consider them as a champion. A critical success automatically nominates the Player-knight. Otherwise, the winner of the contest is then considered by the conroi commander, as outlined in the first paragraph."
+      },
+      {
+       "p": "The champions chosen, the opposing conrois create a space between them for the two warriors to make a Mounted Charge at each other. Chivalrous opponents may give their opponent a spare lance if they lack one. Only the two champions fight for the first Combat Round. Most cultures honor the custom of heroic challenge (Saxons perhaps even more than the knights!). Picts do not offer it, and wicked knights may attack the conroi while they are distracted watching the combat."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "14"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Clash of Champions",
+     "subtitle": "Champion",
+     "chars": [
+      [
+       "SIZ",
+       "16"
+      ],
+      [
+       "DEX",
+       "15"
+      ],
+      [
+       "STR",
+       "18"
+      ],
+      [
+       "CON",
+       "17"
+      ]
+     ],
+     "attacks": [
+      [
+       "Sword",
+       "Charge",
+       "18",
+       "7D6*"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "19",
+       "6D6"
+      ]
+     ],
+     "attack_notes": [
+      "* Or as per the best warhorse of the Period"
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "33"
+      ],
+      [
+       "Knockdown",
+       "16"
+      ],
+      [
+       "Major Wound",
+       "17"
+      ],
+      [
+       "Unconscious",
+       "9"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "0"
+      ],
+      [
+       "Armor Points",
+       "12+6"
+      ],
+      [
+       "Glory Award",
+       "50"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Advanced hauberk, advanced nasal helm, aketon + kite shield"
+      ],
+      [
+       "Traits",
+       "Valorous 20"
+      ],
+      [
+       "Skills",
+       "Horsemanship 19"
+      ],
+      [
+       "Passions",
+       "Homage (Lord) 18"
+      ],
+      [
+       "Note",
+       "The Gamemaster may replace the knight’s Sword Skill with another Weapon Skill (for example, Hafted, corresponding to a mace, or, in later Periods, a hammer) if they so desire."
+      ]
+     ],
+     "ransom": "£15"
+    }
+   ],
+   "rewards": [
+    {
+     "label": "Champion defeated",
+     "amount": 50,
+     "scope": "one"
+    }
+   ]
+  },
+  "Knights of Gorre": {
+   "front": [
+    {
+     "title": "Knights of Gorre",
+     "flavour": "Stern men from the kingdom of Gorre, far to the north. These knights may look a bit archaic, but they fight as well as any knights.",
+     "blocks": [
+      {
+       "p": "There are as many Knights of Gorre as there are Player-knights. The knights may counter-charge."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "13"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Knights of Gorre",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "15"
+      ],
+      [
+       "DEX",
+       "11"
+      ],
+      [
+       "STR",
+       "15"
+      ],
+      [
+       "CON",
+       "15"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear or Sword",
+       "Charge",
+       "17",
+       "6D6"
+      ],
+      [
+       "Spear",
+       "Spear",
+       "15",
+       "5D6"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "17",
+       "5D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "30"
+      ],
+      [
+       "Knockdown",
+       "15"
+      ],
+      [
+       "Major Wound",
+       "15"
+      ],
+      [
+       "Unconscious",
+       "8"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6+3"
+      ],
+      [
+       "Armor Points",
+       "7+6"
+      ],
+      [
+       "Glory Award",
+       "50"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Haubergeon, aketon, open helm + kite shield"
+      ],
+      [
+       "Traits",
+       "Valorous 18"
+      ],
+      [
+       "Skills",
+       "Horsemanship 17"
+      ]
+     ],
+     "ransom_table": {
+      "head": [
+       "1D6",
+       "Type",
+       "Amount"
+      ],
+      "rows": [
+       [
+        "1",
+        "Poor Knight",
+        "£3"
+       ],
+       [
+        "2–5",
+        "Household Knight",
+        "£4"
+       ],
+       [
+        "6",
+        "Vassal Knight",
+        "£10"
+       ]
+      ]
+     }
+    }
+   ],
+   "rewards": []
+  },
+  "Knights of Lothian": {
+   "front": [
+    {
+     "title": "Knights of Lothian",
+     "flavour": "An extra-large large conroi of men from King Lot’s kingdom of Lothian. Not only are there more of them, they strike harder than other knights!",
+     "blocks": [
+      {
+       "p": "There are 1½ as many Knights of Lothian as there are Player-knights (rounded normally). The knights may counter-charge."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "13"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Knights of Lothian",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "16"
+      ],
+      [
+       "DEX",
+       "11"
+      ],
+      [
+       "STR",
+       "16"
+      ],
+      [
+       "CON",
+       "14"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear or Sword",
+       "Charge",
+       "17",
+       "6D6"
+      ],
+      [
+       "Spear",
+       "Spear",
+       "15",
+       "5D6"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "17",
+       "5D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "31"
+      ],
+      [
+       "Knockdown",
+       "16"
+      ],
+      [
+       "Major Wound",
+       "14"
+      ],
+      [
+       "Unconscious",
+       "8"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "2D6"
+      ],
+      [
+       "Armor Points",
+       "10+6"
+      ],
+      [
+       "Glory Award",
+       "50"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Hauberk, aketon, nasal helm + kite shield"
+      ],
+      [
+       "Traits",
+       "Valorous 15"
+      ],
+      [
+       "Skills",
+       "Horsemanship 17"
+      ]
+     ],
+     "ransom_table": {
+      "head": [
+       "1D6",
+       "Type",
+       "Amount"
+      ],
+      "rows": [
+       [
+        "1",
+        "Poor Knight",
+        "£3"
+       ],
+       [
+        "2–6",
+        "Household Knight",
+        "£4"
+       ]
+      ]
+     }
+    }
+   ],
+   "rewards": []
+  },
+  "Knights of Malahaut": {
+   "front": [
+    {
+     "title": "Knights of Malahaut",
+     "flavour": "These knights dress much like Roman cavalry of a century earlier, with large oval shields and crested helmets.",
+     "blocks": [
+      {
+       "p": "There are as many Knights of Malahaut as there are Player-knights. Their penalty for fighting with large shields on horseback is factored into their Skill values already. The knights may counter-charge."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "13"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Knights of Malahaut",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "14"
+      ],
+      [
+       "DEX",
+       "11"
+      ],
+      [
+       "STR",
+       "14"
+      ],
+      [
+       "CON",
+       "13"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear or Sword",
+       "Charge",
+       "15",
+       "6D6"
+      ],
+      [
+       "Spear",
+       "Spear",
+       "13",
+       "5D6"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "15",
+       "5D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "27"
+      ],
+      [
+       "Knockdown",
+       "14"
+      ],
+      [
+       "Major Wound",
+       "13"
+      ],
+      [
+       "Unconscious",
+       "7"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "2D6"
+      ],
+      [
+       "Armor Points",
+       "11+6"
+      ],
+      [
+       "Glory Award",
+       "25"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Hauberk, aketon, advanced nasal helm + scutum"
+      ],
+      [
+       "Traits",
+       "Valorous 15"
+      ],
+      [
+       "Skills",
+       "Horsemanship 15"
+      ]
+     ],
+     "ransom_table": {
+      "head": [
+       "1D6",
+       "Type",
+       "Amount"
+      ],
+      "rows": [
+       [
+        "1",
+        "Poor Knight",
+        "£3"
+       ],
+       [
+        "2–6",
+        "Household Knight",
+        "£4"
+       ]
+      ]
+     }
+    }
+   ],
+   "rewards": []
+  },
+  "Knights of Cornwall": {
+   "front": [
+    {
+     "title": "Knights of Cornwall",
+     "flavour": "A conroi of poor but motivated knights from Cornwall.",
+     "blocks": [
+      {
+       "p": "There are as many Knights of Cornwall as there are Player-knights. The knights may counter-charge."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "12"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Knights of Cornwall",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "13"
+      ],
+      [
+       "DEX",
+       "12"
+      ],
+      [
+       "STR",
+       "13"
+      ],
+      [
+       "CON",
+       "14"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear or Sword",
+       "Charge",
+       "15",
+       "5D6"
+      ],
+      [
+       "Spear",
+       "Spear",
+       "12",
+       "4D6"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "15",
+       "4D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "26"
+      ],
+      [
+       "Knockdown",
+       "13"
+      ],
+      [
+       "Major Wound",
+       "14"
+      ],
+      [
+       "Unconscious",
+       "7"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6+1"
+      ],
+      [
+       "Armor Points",
+       "9+6"
+      ],
+      [
+       "Glory Award",
+       "25"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Hauberk, aketon, open helm + kite shield"
+      ],
+      [
+       "Traits",
+       "Valorous 15"
+      ],
+      [
+       "Skills",
+       "Horsemanship 15"
+      ]
+     ],
+     "ransom_table": {
+      "head": [
+       "1D6",
+       "Type",
+       "Amount"
+      ],
+      "rows": [
+       [
+        "1–2",
+        "Poor Knight",
+        "£3"
+       ],
+       [
+        "3–5",
+        "Household Knight",
+        "£4"
+       ],
+       [
+        "6",
+        "Vassal Knight",
+        "£10"
+       ]
+      ]
+     }
+    }
+   ],
+   "rewards": []
+  },
+  "Northern Prickers": {
+   "front": [
+    {
+     "title": "Northern Prickers",
+     "flavour": "Hailing from the lands around the Roman Wall, these rough men ride tough hill ponies. While they may be the best-armed men of their remote dales, they are no match for a southern knight.",
+     "blocks": [
+      {
+       "p": "There is one Northern Pricker for every Player-knight. They are armed with lances and may counter-charge."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "10"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Northern Prickers",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "10"
+      ],
+      [
+       "DEX",
+       "13"
+      ],
+      [
+       "STR",
+       "12"
+      ],
+      [
+       "CON",
+       "14"
+      ]
+     ],
+     "attacks": [
+      [
+       "Lance",
+       "Charge",
+       "10",
+       "5D6"
+      ],
+      [
+       "Mace",
+       "Hafted",
+       "13",
+       "4D6*"
+      ]
+     ],
+     "attack_notes": [
+      "* +1D6 vs mail"
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "24"
+      ],
+      [
+       "Knockdown",
+       "10"
+      ],
+      [
+       "Major Wound",
+       "14"
+      ],
+      [
+       "Unconscious",
+       "6"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6"
+      ],
+      [
+       "Armor Points",
+       "8+4"
+      ],
+      [
+       "Glory Award",
+       "25"
+      ],
+      [
+       "Knight Value",
+       "½"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Haubergeon, aketon, nasal helm + targe"
+      ],
+      [
+       "Skills",
+       "Horsemanship 16"
+      ]
+     ],
+     "ransom": "None"
+    }
+   ],
+   "rewards": []
+  },
+  "Pictish Pikemen": {
+   "front": [
+    {
+     "title": "Pictish Pikemen",
+     "flavour": "Painted men from the mountains far beyond Lothian. They wear no armor and carry no weapons other than a long spear—not even a knife.",
+     "blocks": [
+      {
+       "p": "There are two Pictish Pikemen for every Player-knight. They flee if a third of their number is slain."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "8"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Pictish Pikemen",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "10"
+      ],
+      [
+       "DEX",
+       "15"
+      ],
+      [
+       "STR",
+       "10"
+      ],
+      [
+       "CON",
+       "14"
+      ]
+     ],
+     "attacks": [
+      [
+       "Two-handed Spear",
+       "Spear",
+       "10",
+       "5D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "24"
+      ],
+      [
+       "Knockdown",
+       "10"
+      ],
+      [
+       "Major Wound",
+       "14"
+      ],
+      [
+       "Unconscious",
+       "6"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6+1"
+      ],
+      [
+       "Armor Points",
+       "—"
+      ],
+      [
+       "Glory Award",
+       "10"
+      ],
+      [
+       "Knight Value",
+       "⅛"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "None"
+      ]
+     ],
+     "ransom": "None"
+    }
+   ],
+   "rewards": []
+  },
+  "Pictish Javeliniers": {
+   "front": [
+    {
+     "title": "Pictish Javeliniers",
+     "flavour": "They move like snipes across the landscape, darting to and fro, hurling their javelins before melting back amidst their fellows.",
+     "blocks": [
+      {
+       "p": "There are three Pictish Javeliniers for every Player-knight. See “Encountering Missile Weapons” in the Battle rules to determine how many Combat Rounds they may hurl their javelins before the knights reach them. They always attempt to Evade when entering contact with the enemy."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "5"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Pictish Javeliniers",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "10"
+      ],
+      [
+       "DEX",
+       "15"
+      ],
+      [
+       "STR",
+       "10"
+      ],
+      [
+       "CON",
+       "14"
+      ]
+     ],
+     "attacks": [
+      [
+       "Javelin (Melee)",
+       "Spear",
+       "8",
+       "1D6+3"
+      ],
+      [
+       "Javelin",
+       "Thrown Weapon",
+       "18",
+       "3D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "24"
+      ],
+      [
+       "Knockdown",
+       "10"
+      ],
+      [
+       "Major Wound",
+       "14"
+      ],
+      [
+       "Unconscious",
+       "6"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6"
+      ],
+      [
+       "Armor Points",
+       "—"
+      ],
+      [
+       "Glory Award",
+       "5"
+      ],
+      [
+       "Knight Value",
+       "⅛"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "None"
+      ]
+     ],
+     "ransom": "None"
+    }
+   ],
+   "rewards": []
+  },
+  "Pictish Knifemen": {
+   "front": [
+    {
+     "title": "Pictish Knifemen",
+     "flavour": "Rushing forward at a half-crouch, these grubby little men clutch wickedly sharp daggers, their eyes gleaming with malice.",
+     "blocks": [
+      {
+       "p": "There are three Pictish Knifemen for every Player-knight. They always target the horses of mounted knights first, ignoring all attacks until they kill the poor animal, at which point they fall upon the knight. They flee as soon as one-third of their number is down and out of the fight."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "5"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Pictish Knifemen",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "8"
+      ],
+      [
+       "DEX",
+       "16"
+      ],
+      [
+       "STR",
+       "8"
+      ],
+      [
+       "CON",
+       "14"
+      ]
+     ],
+     "attacks": [
+      [
+       "Dagger",
+       "Brawling",
+       "15",
+       "2D6+3"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "22"
+      ],
+      [
+       "Knockdown",
+       "8"
+      ],
+      [
+       "Major Wound",
+       "14"
+      ],
+      [
+       "Unconscious",
+       "6"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "3D6"
+      ],
+      [
+       "Armor Points",
+       "—"
+      ],
+      [
+       "Glory Award",
+       "5"
+      ],
+      [
+       "Knight Value",
+       "⅛"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "None"
+      ]
+     ],
+     "ransom": "None"
+    }
+   ],
+   "rewards": []
+  },
+  "Saxon Warriors": {
+   "front": [
+    {
+     "title": "Saxon Warriors",
+     "flavour": "A fierce band of seasoned, armored Saxon warriors.",
+     "blocks": [
+      {
+       "p": "There are two Saxon Warriors for every Player-knight. One of each pair of opponents for each knight is armed with spear, axe, or sword plus shield. These form a shield wall to Defend against a Mounted Charge in the first Combat Round, then team up on their opponents with the rest, who have two-handed axes and no shields, for the rest of the combat. The Saxon Warriors fight until three-quarters of their number are out of the fight."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "8"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Saxon Warriors",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "15"
+      ],
+      [
+       "DEX",
+       "10"
+      ],
+      [
+       "STR",
+       "15"
+      ],
+      [
+       "CON",
+       "15"
+      ]
+     ],
+     "attacks": [
+      [
+       "Battle Axe",
+       "Hafted",
+       "14",
+       "5D6*"
+      ],
+      [
+       "Spear",
+       "Spear",
+       "14",
+       "5D6**"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "14",
+       "5D6"
+      ],
+      [
+       "Great Axe",
+       "Two-Handed Hafted",
+       "14",
+       "7D6*"
+      ]
+     ],
+     "attack_notes": [
+      "* –1D6 Shield Protection",
+      "** Negates height penalty for fighting mounted opponents"
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "30"
+      ],
+      [
+       "Knockdown",
+       "15"
+      ],
+      [
+       "Major Wound",
+       "15"
+      ],
+      [
+       "Unconscious",
+       "8"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6+2"
+      ],
+      [
+       "Armor Points",
+       "5+6 or 5"
+      ],
+      [
+       "Glory Award",
+       "25"
+      ],
+      [
+       "Knight Value",
+       "¼"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Haubergeon, open helm + round shield; no shield if armed with a Great Axe"
+      ]
+     ],
+     "rolls": {
+      "title": "For each opponent, roll 1D6:",
+      "rows": [
+       [
+        "1–2",
+        "Sword"
+       ],
+       [
+        "3–4",
+        "Battle Axe"
+       ],
+       [
+        "5–6",
+        "Spear"
+       ]
+      ]
+     },
+     "ransom": "None"
+    }
+   ],
+   "rewards": []
+  },
+  "Irish Kerns": {
+   "front": [
+    {
+     "title": "Irish Kerns",
+     "flavour": "Poorly-armed and unarmored men from the Island across the Irish Sea, they were brought to Britain to serve as mercenaries.",
+     "blocks": [
+      {
+       "p": "There are four Irish Kerns for every Player-knight. They are really rather pathetic as warriors go, with little discipline, and can barely be called armed, using a variety of weapons. What they lack in martial qualities, they make up for in numbers. They prefer to attack the knight’s horse, then swarm the knight if they are thrown or otherwise brought down. (Remember that only three kerns may attack an opponent at once.) They flee once more than half their numbers are down."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "6"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Irish Kerns",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "11"
+      ],
+      [
+       "DEX",
+       "12"
+      ],
+      [
+       "STR",
+       "9"
+      ],
+      [
+       "CON",
+       "15"
+      ]
+     ],
+     "attacks": [
+      [
+       "Battle Axe",
+       "Hafted",
+       "8",
+       "3D6*"
+      ],
+      [
+       "Mace",
+       "Hafted",
+       "8",
+       "3D6†"
+      ],
+      [
+       "Spear",
+       "Spear",
+       "8",
+       "3D6**"
+      ],
+      [
+       "Inferior Sword",
+       "Sword",
+       "8",
+       "4D6‡"
+      ]
+     ],
+     "attack_notes": [
+      "* –1D6 Shield Protection",
+      "** Negates height penalty for fighting mounted opponents",
+      "† +1D6 vs mail",
+      "‡ Breaks on ties like a normal weapon"
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "28"
+      ],
+      [
+       "Knockdown",
+       "11"
+      ],
+      [
+       "Major Wound",
+       "15"
+      ],
+      [
+       "Unconscious",
+       "7"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6–1"
+      ],
+      [
+       "Armor Points",
+       "4"
+      ],
+      [
+       "Glory Award",
+       "10"
+      ],
+      [
+       "Knight Value",
+       "⅛"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Targe"
+      ]
+     ],
+     "rolls": {
+      "title": "For each opponent, roll 1D6:",
+      "rows": [
+       [
+        "1",
+        "Inferior Sword"
+       ],
+       [
+        "2",
+        "Battle Axe"
+       ],
+       [
+        "3",
+        "Mace"
+       ],
+       [
+        "4–6",
+        "Spear"
+       ]
+      ]
+     },
+     "ransom": "None"
+    }
+   ],
+   "rewards": []
+  },
+  "Cambrian Archers": {
+   "front": [
+    {
+     "title": "Cambrian Archers",
+     "flavour": "Archers from the hills, wielding the dreaded longbow.",
+     "blocks": [
+      {
+       "p": "There are three Cambrian Archers for every Player-knight. See “Encountering Missile Weapons” in the Battle rules to determine how many Combat Rounds the archers may loose their arrows before the knights reach them. They must make a Valorous roll or flee if there are more mounted knights than dismounted knights in the conroi when it reaches them. They will flee at any point if one-third are seriously injured."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "6"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Cambrian Archers",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "10"
+      ],
+      [
+       "DEX",
+       "13"
+      ],
+      [
+       "STR",
+       "12"
+      ],
+      [
+       "CON",
+       "14"
+      ]
+     ],
+     "attacks": [
+      [
+       "Longbow",
+       "Bow",
+       "12",
+       "4D6"
+      ],
+      [
+       "Dagger",
+       "Brawling",
+       "11",
+       "2D6+4"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "24"
+      ],
+      [
+       "Knockdown",
+       "10"
+      ],
+      [
+       "Major Wound",
+       "14"
+      ],
+      [
+       "Unconscious",
+       "6"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6+1"
+      ],
+      [
+       "Armor Points",
+       "—"
+      ],
+      [
+       "Glory Award",
+       "25"
+      ],
+      [
+       "Knight Value",
+       "⅛"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "None"
+      ]
+     ],
+     "ransom": "None"
+    }
+   ],
+   "rewards": []
+  },
+  "Breton Mercenary Knights": {
+   "front": [
+    {
+     "title": "Breton Mercenary Knights",
+     "flavour": "A conroi of mercenary knights from the peninsula of Little Britain, settled years ago by British families.",
+     "blocks": [
+      {
+       "p": "There are as many Breton Mercenary Knights as there are Player-knights. The knights may counter-charge."
+      }
+     ],
+     "footer": {
+      "label": "Morale Minimum",
+      "value": "12"
+     }
+    }
+   ],
+   "back": [
+    {
+     "title": "Breton Mercenary Knights",
+     "subtitle": "",
+     "chars": [
+      [
+       "SIZ",
+       "13"
+      ],
+      [
+       "DEX",
+       "12"
+      ],
+      [
+       "STR",
+       "12"
+      ],
+      [
+       "CON",
+       "15"
+      ]
+     ],
+     "attacks": [
+      [
+       "Spear or Sword",
+       "Charge",
+       "12",
+       "5D6"
+      ],
+      [
+       "Spear",
+       "Spear",
+       "12",
+       "4D6"
+      ],
+      [
+       "Sword",
+       "Sword",
+       "15",
+       "4D6"
+      ]
+     ],
+     "health": [
+      [
+       "Hit Points",
+       "27"
+      ],
+      [
+       "Knockdown",
+       "13"
+      ],
+      [
+       "Major Wound",
+       "15"
+      ],
+      [
+       "Unconscious",
+       "7"
+      ]
+     ],
+     "other": [
+      [
+       "Morale Loss",
+       "1D6+2"
+      ],
+      [
+       "Armor Points",
+       "9+6"
+      ],
+      [
+       "Glory Award",
+       "25"
+      ],
+      [
+       "Knight Value",
+       "1"
+      ]
+     ],
+     "lines": [
+      [
+       "Armor",
+       "Hauberk, aketon open helm + kite shield"
+      ],
+      [
+       "Traits",
+       "Valorous 13"
+      ],
+      [
+       "Skills",
+       "Horsemanship 16"
+      ]
+     ],
+     "ransom_table": {
+      "head": [
+       "1D6",
+       "Type",
+       "Amount"
+      ],
+      "rows": [
+       [
+        "1–2",
+        "Poor Knight",
+        "£3"
+       ],
+       [
+        "3–5",
+        "Household Knight",
+        "£4"
+       ],
+       [
+        "6",
+        "Vassal Knight",
+        "£10"
+       ]
+      ]
+     }
+    }
+   ],
+   "rewards": []
+  }
+ }
+}

@@ -43,7 +43,7 @@ def muster(page, morale="21", commander="Sir Bors", roll_intensity=True):
 
 
 def set_encounter(page, name):
-    page.locator(".step.cur .gcard", has_text=name).first.click()
+    page.locator(".step.cur .ct", has=page.locator(".cf-title", has_text=name)).first.click()
 
 
 def intensity(page, outcome="Success"):
@@ -83,7 +83,7 @@ def test_quick_battle_full_turn_with_a_fight(page, table, app_url):
     quick_launch(page, app_url)
     muster(page)
     # an empty deck means every battle Foe: the cards are there to click
-    expect(page.locator(".step.cur .gcard")).not_to_have_count(0)
+    expect(page.locator(".step.cur .ct")).not_to_have_count(0)
     set_encounter(page, "Pictish Knifemen")
     intensity(page, "Success")
     table.goto(app_url + "/table")
@@ -210,7 +210,7 @@ def test_build_bedegraine_in_the_editor_and_play_it(page, app_url):
     page.get_by_role("button", name="Begin Turn 1 ▸").click()
     expect_step(page, "Set Encounter")
     # only today's deck is offered, and the Force token is there to arm
-    expect(page.locator(".step.cur .gcard")).to_have_count(3)
+    expect(page.locator(".step.cur .ct")).to_have_count(3)
     expect(page.get_by_text("⚑ Force this Encounter")).to_be_visible()
     set_encounter(page, "Pictish Knifemen")
     intensity(page)
@@ -330,3 +330,55 @@ def test_launch_from_the_editor_offers_to_close_the_running_battle(page, app_url
     confirm(page, "Close current battle & launch")
     expect(page.locator(".panel h3", has_text="The conroi")).to_be_visible()
     expect(page.locator(".bhead")).to_contain_text("Mustering")
+
+
+def test_opportunity_is_played_at_the_table_then_glory_awarded(page, table, app_url):
+    quick_launch(page, app_url)
+    muster(page)
+    table.goto(app_url + "/table")
+    set_encounter(page, "Pictish Knifemen")
+    intensity(page, "Fumble")
+    expect_step(page, "Commander's choice")
+    page.locator(".step.cur .gcard", has_text="Clash of Champions").click()
+    morale_loss(page, "0")
+    # the GM plays it offline: the whole card on the console, only the green title box on the Table
+    expect_step(page, "Play the Opportunity")
+    expect(page.locator(".step.done", has_text="Postures")).to_have_count(0)
+    expect(page.locator(".step.cur .cf-gm .cf.front")).to_have_count(1)
+    expect(page.locator(".step.cur .cf-gm .cf.back")).to_contain_text("Champion")
+    expect(page.locator(".step.cur .cf-gm")).to_contain_text("conroi commander may choose anyone")
+    expect(table.locator(".cf-bandcard")).to_contain_text("Clash of Champions")
+    expect(table.locator("body")).not_to_contain_text("conroi commander may choose anyone")
+    expect(table.locator("body")).not_to_contain_text("Hit Points")
+    # Glory printed on the card: +50 to one knight, then +10 to everyone with the conroi
+    page.get_by_role("button", name=re.compile(r"^\+50 Champion defeated")).click()
+    page.locator(".opp-glory .chip", has_text="Sir Cai").click()
+    page.get_by_role("button", name="Award Glory").click()
+    expect(page.locator(".opp-awards")).to_contain_text("+50 Glory · Sir Cai — Champion defeated")
+    page.locator(".opp-glory input[type=number]").fill("10")
+    page.locator(".opp-glory input:not([type=number])").fill("Taking part")
+    page.locator(".opp-glory .chip", has_text="All with the conroi").click()
+    page.get_by_role("button", name="Award Glory").click()
+    expect(page.locator(".opp-awards li")).to_have_count(4)
+    page.get_by_role("button", name="Done — back to the turn's end").click()
+    expect_step(page, "End turn")
+    page.get_by_role("button", name="End turn").click()
+    expect_step(page, "Set Encounter")
+
+
+def test_encounter_cards_flip_to_their_stat_block(page, app_url):
+    quick_launch(page, app_url)
+    muster(page)
+    tile = page.locator(".step.cur .ct", has=page.locator(".cf-title", has_text="Pictish Knifemen")).first
+    expect(tile.locator(".cf.front")).to_contain_text("three Pictish Knifemen for every Player-knight")
+    expect(tile.locator(".cf.front .cf-foot")).to_contain_text("Morale Minimum5")
+    expect(tile).not_to_have_class(re.compile(r"flipped"))
+    tile.locator(".ct-flip").click()                               # the corner toggle: flipping doesn't pick the card
+    expect(tile).to_have_class(re.compile(r"flipped"))
+    expect(tile.locator(".cf.back")).to_contain_text("Hit Points")
+    expect(tile.locator(".cf.back")).to_contain_text("Brawling")
+    expect_step(page, "Set Encounter")
+    tile.locator(".ct-flip").click()
+    expect(tile).not_to_have_class(re.compile(r"flipped"))
+    tile.click()
+    expect(page.locator(".step.done", has_text="Set Encounter")).to_contain_text("Pictish Knifemen")

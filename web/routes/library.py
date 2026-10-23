@@ -347,7 +347,8 @@ def battle_decks(request: Request, role: str | None = None):
                       "morale_loss": d.get("morale_loss") or loss, "kv": kvs,
                       "kv_per_knight": _kv_per_knight(d, advs), "missile": bool(d.get("missile")),
                       "countercharge": B.has_countercharge(ed, advs), "mounted_charge": B.mounted_charge_card(ed, advs),
-                      "has_roster": bool(ed["roster"] or ed.get("leader")), "rules": d.get("rules", "")})
+                      "has_roster": bool(ed["roster"] or ed.get("leader")), "rules": d.get("rules", ""),
+                      "faces": st(request).card_faces(key)})
     return {"cards": cards}
 
 

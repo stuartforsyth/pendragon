@@ -324,7 +324,7 @@ def test_opportunity_pick_needs_crit_and_is_once_per_battle(client):
     assert client.post("/api/battle/step", json={"step": "select", "encounter": "Pictish Javeliniers"}).status_code == 400
     _step(client, "select", encounter="Clash of Champions")
     _step(client, "morale", kind="loss", amount=0)
-    _postures(client, pids)
+    _step(client, "opportunity_done")
     _step(client, "end_turn")
     _step(client, "set", encounter="Pictish Knifemen")
     _step(client, "charge", outcome="failure", engaged_last=True)
@@ -1090,3 +1090,56 @@ def test_resume_without_a_fight_ends_the_earlier_one():
     resumed = {"id": 2, "type": "battle.resumed", "data": {"snapshot": {"battle": {}, "combat": None}}}
     assert combat_state.reduce([started])["active"]
     assert combat_state.reduce([started, resumed]) is None
+
+
+def _play_opportunity(client, pids, name="Clash of Champions"):
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="fumble")
+    _step(client, "select", encounter=name, via="fumble")
+    _step(client, "morale", kind="loss", amount=0)
+
+
+def test_opportunity_replaces_postures_and_fight_and_awards_glory(client):
+    pids = _running(client)
+    _play_opportunity(client, pids)
+    assert _cur(client) == "opportunity"
+    steps = {i["key"]: i["state"] for i in _battle(client)["step"]["items"]}
+    assert steps["postures"] == "skipped" and steps["fight"] == "skipped"
+    assert client.post("/api/battle/fight").status_code == 409
+    assert client.post("/api/battle/step", json={"step": "posture", "knight": pids[0], "posture": "valorous"}).status_code == 409
+    assert client.post("/api/battle/step", json={"step": "end_turn"}).status_code == 409
+    _step(client, "opportunity_glory", knights=[pids[0]], amount=50, reason="Champion defeated")
+    _step(client, "opportunity_glory", knights="all", amount=10, reason="Every knight")
+    g = _battle(client)["glory_battle"]
+    assert g[pids[0]] == 60 and g[pids[1]] == 10
+    assert [a["amount"] for a in _battle(client)["opportunity"]["awards"]] == [50, 10, 10]
+    assert client.post("/api/battle/step", json={"step": "opportunity_glory", "knights": "all", "amount": 0, "reason": "x"}).status_code == 400
+    assert client.post("/api/battle/step", json={"step": "opportunity_glory", "knights": "all", "amount": 5, "reason": ""}).status_code == 400
+    _step(client, "opportunity_done")
+    assert _cur(client) == "end"
+    _step(client, "end_turn")
+    b = _battle(client)
+    assert b["turn"] == 2 and b["fought_last"] and 1 in b["fought_days"][pids[0]]
+
+
+def test_opportunity_glory_undo_with_the_step(client):
+    pids = _running(client)
+    _play_opportunity(client, pids)
+    _step(client, "opportunity_glory", knights=[pids[0]], amount=50, reason="Champion defeated")
+    ok(client.post("/api/battle/undo", json={"step": "morale"}))
+    assert _battle(client)["glory_battle"].get(pids[0], 0) == 0 and _cur(client) == "morale"
+
+
+def test_table_gets_only_the_title_box_after_morale(client):
+    pids = _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    _step(client, "intensity", outcome="fumble")
+    _step(client, "select", encounter="Clash of Champions", via="fumble")
+    assert _tb(client)["battle"]["opportunity"] is None
+    _step(client, "morale", kind="loss", amount=0)
+    tb = _tb(client)["battle"]["opportunity"]
+    assert tb["name"] == "Clash of Champions" and tb["title"] == "Clash of Champions" and tb["flavour"].startswith("The enemy parts")
+    assert set(tb) == {"name", "title", "flavour"}              # nothing of the instructions or stats
+    assert "conroi commander" not in json.dumps(_tb(client)["battle"])
+    gm = _battle(client)["opportunity"]
+    assert gm["back"][0]["subtitle"] == "Champion" and gm["rewards"][0]["amount"] == 50

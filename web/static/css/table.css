@@ -490,3 +490,14 @@ body {
   font-size: 21px; font-weight: 700; color: var(--ink); padding: 5px 8px; box-shadow: 0 0 10px rgba(210,166,69,.45); }
 .tally-row.winner .tr-rank { color: var(--or); font-size: 22px; }
 .tally-row.winner .tr-glory { font-size: 24px; color: var(--gules); }
+
+/* an Opportunity being played: the card takes the whole centre; the Fray column makes way */
+.battleview.opp { grid-template-columns: 230px minmax(0, 1fr); }
+.opp-centre { display: flex; flex-direction: column; align-content: stretch; overflow: hidden; padding-bottom: 4px; }
+.opp-centre .cf-row { flex: 1 1 0; }
+
+/* a foe that has acted this round: a green tick on its token (and in the list), like the GM's board */
+.tfield .ftok-acted { position: absolute; top: calc(-2px * var(--s)); left: calc(50% + 15px * var(--s)); width: calc(20px * var(--s)); height: calc(20px * var(--s)); border-radius: 50%;
+  background: #2f8a4a; color: #f4fbf5; font: 800 calc(13px * var(--s))/calc(20px * var(--s)) var(--f-caps); text-align: center; box-shadow: 0 0 0 2px #efe3c6; pointer-events: none; }
+.tfield .ftok.acted .ftok-face { opacity: .78; }
+.tfoe .tacted { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: 6px; border-radius: 50%; background: #2f8a4a; color: #f4fbf5; font: 800 12px/1 var(--f-caps); }

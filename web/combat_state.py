@@ -325,7 +325,8 @@ def _derive(state, rows, view):
             mine = [f for f in cs if getattr(f, "side", "foe") != "party"
                     and f.status == "active" and c.display_name in f.linked()]
             n = len(mine)
-            limit = B.mo_limit(any(f.mounted for f in mine))
+            cap = B.mo_limit(any(f.mounted for f in mine))      # only this many can reach one knight
+            faced = min(n, cap)                                  # …so the −5s stop there
             chips = []
             for f in mine:
                 _, k = B.height(f.mounted, c.mounted, f.height_override, f.attacks_horse, getattr(f, "prone", False), getattr(c, "prone", False))
@@ -342,10 +343,10 @@ def _derive(state, rows, view):
                 r.update(posture=c.posture, rounds=c.rounds, extra_rounds=c.extra_rounds or 0, position=c.position,
                          last_round=state["round"] == limit, withdraws=state["round"] > limit)
             if view == "gm":
-                r.update(mo={"n": n, "mod": B.multiple_opponents(n), "limit": limit, "over": n > limit},
+                r.update(mo={"n": n, "faced": faced, "mod": B.multiple_opponents(faced), "limit": cap, "over": n > cap},
                          height_chips=chips)
             else:
-                r.update(mo_mod=B.multiple_opponents(n), mo_n=n,
+                r.update(mo_mod=B.multiple_opponents(faced), mo_n=faced,
                          height_chips=[{"foe": ch["foe"], "text": f"{ch['mod']:+d} Height".replace("-", "−")} for ch in chips])
             continue
         on_me = [knights[n] for n in c.linked() if n in knights and knights[n].status == "active"]
@@ -390,6 +391,11 @@ def serialise(state, view):
            "players": state.get("players", 0),
            "descriptions": state.get("descriptions", []) if view == "gm" else [],
            "combatants": rows}
+    if view != "gm":                      # the players see who has acted this round, nothing behind it
+        acted = state.get("acted") or set()
+        for r in rows:
+            if r.get("side") != "party":
+                r["acted"] = r["id"] in acted
     if view == "gm":
         knights = {c.display_name for c in state["combatants"] if getattr(c, "side", "foe") == "party"}
         foes = [c for c in state["combatants"] if getattr(c, "side", "foe") != "party"]

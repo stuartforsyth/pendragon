@@ -154,13 +154,13 @@ def apply(b, ev):
 
 # ----------------------------------------------------------------- the turn
 
-STEP_ORDER = ("field", "set", "charge", "intensity", "picks", "select", "morale", "postures", "fight", "rest", "end")
+STEP_ORDER = ("field", "set", "charge", "intensity", "picks", "select", "morale", "opportunity", "postures", "fight", "rest", "end")
 STEP_EVENTS = {"battle.field", "battle.rest", "battle.set", "battle.charge", "battle.intensity", "battle.pick",
                "battle.select", "battle.morale", "battle.posture", "battle.passion", "battle.turn_ended",
-               "battle.day_ended", "battle.fight", "battle.barrage", "battle.countercharge"}
+               "battle.day_ended", "battle.fight", "battle.barrage", "battle.countercharge", "battle.opportunity_done"}
 EVENT_STEP = {"battle.field": "field", "battle.rest": "rest", "battle.set": "set", "battle.charge": "charge",
               "battle.intensity": "intensity", "battle.pick": "picks", "battle.select": "select",
-              "battle.morale": "morale", "battle.posture": "postures", "battle.turn_ended": "end",
+              "battle.morale": "morale", "battle.opportunity_done": "opportunity", "battle.posture": "postures", "battle.turn_ended": "end",
               "battle.day_ended": "end", "battle.fight": "fight", "battle.barrage": "fight",
               "battle.countercharge": "fight"}
 
@@ -168,7 +168,7 @@ EVENT_STEP = {"battle.field": "field", "battle.rest": "rest", "battle.set": "set
 def new_turn():
     return {"retired": False, "set": None, "charge": None, "intensity": None, "picks": {}, "select": None,
             "morale": None, "postures": {}, "rest": None, "rear_choice": None, "fight": None, "ended": False,
-            "barrage": None, "countercharge": None, "events": {}}
+            "barrage": None, "countercharge": None, "opportunity": None, "awards": [], "events": {}}
 
 
 def effective_deck(b, library=None, with_script=True):
@@ -185,6 +185,11 @@ def effective_deck(b, library=None, with_script=True):
         foes = sorted(k for k, e in library.items() if e.get("battle_role") == "foe")
         opps = sorted(k for k, e in library.items() if e.get("battle_role") == "opportunity")
     return {"foes": foes, "opportunities": opps, "all": not deck.get("foes") and not deck.get("opportunities")}
+
+
+def is_opportunity(b):
+    """The Encounter this turn is an Opportunity card (played offline)."""
+    return ((chosen(b)[1] or {}).get("role")) == "opportunity"
 
 
 def chosen(b):
@@ -255,6 +260,11 @@ def steps(b):
         items.append(("postures", "skipped", "Not enough Morale — retired", ""))
         items.append(("fight", "skipped", "Retired to the Rear", ""))
         items.append(("rest", "done" if t["rest"] is not None else None, "", ""))
+    elif is_opportunity(b):
+        # Played at the table: no postures, no combat tracker; the GM resolves the Glory
+        items.append(("opportunity", "done" if t.get("opportunity") else None, "", ""))
+        items.append(("postures", "skipped", "An Opportunity is played at the table", ""))
+        items.append(("fight", "skipped", "An Opportunity is played at the table", ""))
     else:
         # Every knight with the conroi has a posture — vacuously true when nobody
         # is left with it (all at the rear, Alone or gone), so the turn can end.
@@ -356,13 +366,18 @@ def _apply_step(b, ev):
                     days_ = b.setdefault("fought_days", {}).setdefault(pid, [])
                     if b["day"] not in days_:
                         days_.append(b["day"])
+            if t.get("opportunity"):                  # an Opportunity played counts as fought
+                for pid in conroi_ids(b):
+                    days_ = b.setdefault("fought_days", {}).setdefault(pid, [])
+                    if b["day"] not in days_:
+                        days_.append(b["day"])
             if gain and m:
                 before = m["current"]
                 m["current"] = B.apply_morale(m["current"], m["start"], gain)
                 m["last"] = {"delta": m["current"] - before, "reason": "foes defeated"}
             retired = t["retired"] or (t["morale"] or {}).get("kind") == "forced_retire" or b["status"] == "rear"
             b["prev_postures"] = {pid: p["posture"] for pid, p in t["postures"].items()} or b["prev_postures"]
-            b["fought_last"] = bool(t["fight"]) or bool(t["postures"])
+            b["fought_last"] = bool(t["fight"]) or bool(t["postures"]) or bool(t.get("opportunity"))
             b["retired_last"] = retired
             b["turn"] += 1
             b["status"] = "rear" if retired and b["status"] != "aftermath" else ("turn" if b["status"] != "aftermath" else "aftermath")
@@ -399,6 +414,8 @@ def _apply_step(b, ev):
         t["select"] = {"encounter": d["encounter"], "card": d.get("card") or {}, "via": d.get("via", "commander")}
         if (d.get("card") or {}).get("role") == "opportunity" and d["encounter"] not in b["spent_opportunities"]:
             b["spent_opportunities"].append(d["encounter"])
+    elif t_type == "battle.opportunity_done":
+        t["opportunity"] = {"encounter": d.get("encounter")}
     elif t_type == "battle.morale":
         t["morale"] = {"kind": d.get("kind", "loss"), "amount": d.get("amount"), "negated": bool(d.get("negated"))}
         if d.get("negated"):
@@ -441,6 +458,9 @@ def reduce(events):
                 mg = b.setdefault("manual_glory", {})
                 pid = ev["data"].get("knight")
                 mg[pid] = mg.get(pid, 0) + int(ev["data"].get("amount", 0))
+                if link.get("step") == "opportunity" and b.get("t") is not None:
+                    b["t"].setdefault("awards", []).append({"event": ev["id"], "knight": pid, "amount": int(ev["data"].get("amount", 0)),
+                                             "reason": ev["data"].get("reason", "")})
             continue
         if t == "combat.started":
             link = (ev.get("data") or {}).get("battle")
@@ -617,7 +637,7 @@ def _names(party):
     return {m["id"]: m for m in party}
 
 
-def gm_view(b, party, library=None):
+def gm_view(b, party, library=None, faces_for=None):
     if b is None:
         return None
     if b["status"] in ("turn", "rear", "mustering"):
@@ -629,6 +649,9 @@ def gm_view(b, party, library=None):
         b["step"] = steps(b)
         enc, card = chosen(b)
         b["chosen"] = {"encounter": enc, "card": card} if enc else None
+        b["opportunity"] = ({"name": enc, **(faces_for(enc) if faces_for else {"front": [], "back": [], "rewards": []}),
+                             "awards": b["t"].get("awards", []), "done": bool(b["t"].get("opportunity"))}
+                            if enc and is_opportunity(b) else None)
         b["first_charge_turn"] = first_charge_turn(b)
         b["conroi_now"] = conroi_ids(b)
         b["kv_gain"] = kv_gain(b)
@@ -659,7 +682,7 @@ _BANNER = {"critical": ("The foe comes on in strength — doubled!", "harm"), "s
            "fumble": ("Fortune smiles — an Opportunity?", "boon"), "failure": ("Intensity fails · choose your fate", "harm")}
 
 
-def table_view(b, party, library=None):
+def table_view(b, party, library=None, faces_for=None):
     """What players may see (the battle view). Never: Loss, KV, the cards'
     rules, the definition, unrevealed scripts, dice or tokens. A card's
     Minimum Morale is shown — the players need it to choose."""
@@ -697,6 +720,14 @@ def table_view(b, party, library=None):
     elif b["status"] == "rear":
         banner = {"text": "The conroi rests at the rear", "tone": "state"}
     out["banner"] = banner
+    # Morale is paid: the card's green title box (name and flavour) fills the board.
+    # The instructions and stats beneath it are the GM's — never sent here.
+    out["opportunity"] = None
+    if b["status"] == "turn" and b.get("t") and is_opportunity(b) and (t["morale"] or {}).get("kind") != "forced_retire" \
+            and t["morale"]:
+        enc = chosen(b)[0]
+        top = ((faces_for(enc) if faces_for else {}).get("front") or [{}])[0]
+        out["opportunity"] = {"name": enc, "title": top.get("title") or enc, "flavour": top.get("flavour", "")}
     card_flav = lambda c: (c or {}).get("description", "")
     is_opp = lambda c: (c or {}).get("role") == "opportunity"
     mn = lambda c: (c or {}).get("morale_minimum")

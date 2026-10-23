@@ -4,6 +4,7 @@
 // Players roll and resolve at the table; the GM records outcomes here.
 
 import { h, clear, api, post, icon, modal, confirmBox, toast, useCss, debounce, menu } from "../lib.js";
+import { cardFace, statFace } from "../cardface.js";
 import { dayCard, deckPicker, outcomeChips, amountEntry, moraleStrip, knightChip, examplesBanner, POS_LABEL, launchBattle } from "../components.js";
 
 const SIZES = {
@@ -277,11 +278,11 @@ export default {
     // ------------------------------------------------------------ the turn stepper
     // Answering a step completes it; done steps collapse to their result and
     // can be reopened (cascade undo). Matches the approved #gm-turn mockup.
-    const NUM = { field: "①", set: "②", charge: "③", intensity: "④", picks: "⑤", select: "⑥", morale: "⑦", postures: "⑧", fight: "⑨", rest: "☾", end: "⑩" };
+    const NUM = { field: "①", set: "②", charge: "③", intensity: "④", picks: "⑤", select: "⑥", morale: "⑦", opportunity: "★", postures: "⑧", fight: "⑨", rest: "☾", end: "⑩" };
     const NAME = { field: "Field or rear", set: "Set Encounter", charge: "Charge", intensity: "Intensity", picks: "Picks", select: "Commander's choice",
-      morale: "Morale", postures: "Postures", fight: "Fight", rest: "Rest at the rear", end: "End turn" };
+      morale: "Morale", opportunity: "Play the Opportunity", postures: "Postures", fight: "Fight", rest: "Rest at the rear", end: "End turn" };
     const OUT_WORD = { critical: "critical", success: "success", failure: "failed", fumble: "fumble" };
-    const ui = { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, lastUndo: null, turnKey: "" };
+    const ui = { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, lastUndo: null, turnKey: "", opp: null, flipped: new Set() };
     const knightName = (pid) => b.knight_list.find((k) => k.pid === pid)?.name || "A knight";
     const cardOf = (key) => decks.find((c) => c.key === key) || b.cards?.[key] || { key };
     // Recording an outcome releases the cursor, so the stepper can redraw (it
@@ -292,6 +293,7 @@ export default {
       const t = b.t;
       switch (key) {
         case "set": return t.set ? [h("b", {}, t.set.encounter), t.set.flavour ? h("em", {}, ` · “${t.set.flavour}”`) : null, t.set.forced ? h("span", { class: "tag gules" }, "forced") : null] : "";
+        case "opportunity": return t.opportunity ? [h("b", {}, b.chosen.encounter), " resolved", (t.awards || []).length ? ` · ${t.awards.reduce((n, a) => n + a.amount, 0)} Glory in ${t.awards.length} award${t.awards.length === 1 ? "" : "s"}` : ""] : "";
         case "charge": return !t.charge ? "" : t.charge.skipped ? "not rolled — no charge possible"
           : { may_charge_plus5: "Charge! (+5, mounted)", may_charge: "may charge (mounted)", no_charge: "no charge", enemy_charge: "Enemy knights charge!" }[t.charge.result];
         case "intensity": return t.intensity ? [`Intensity: `, h("b", { class: `o-${t.intensity.outcome}` }, OUT_WORD[t.intensity.outcome]),
@@ -311,7 +313,7 @@ export default {
       const tk = `${b.day}.${b.turn}`;
       // A new turn (or day) resets the stepper's scratch state, including the
       // "Undone … Restore" offer: restoring a past turn's steps would no longer fit.
-      if (ui.turnKey !== tk) Object.assign(ui, { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, lastUndo: null, turnKey: tk });
+      if (ui.turnKey !== tk) Object.assign(ui, { pickCard: null, choosing: false, forceArmed: false, flavour: null, postures: {}, lastUndo: null, turnKey: tk, opp: null });
       const items = b.step.items;
       const rows = [];
       for (const it of items) {
@@ -352,7 +354,7 @@ export default {
           h("div", { class: "row" }, h("span", { class: "n" }, NUM[it.key]), h("span", { class: "nm" }, NAME[it.key]), h("span", { class: "res" }, ""), h("span")),
           h("div", { class: "body" }, stepBody(it.key)));
       }
-      const hint = { set: "", picks: "picks from a failed Intensity roll", select: "the commander chooses", morale: "minimum check, then the Loss",
+      const hint = { set: "", opportunity: "played at the table, then its Glory", picks: "picks from a failed Intensity roll", select: "the commander chooses", morale: "minimum check, then the Loss",
         postures: b.prev_postures && Object.keys(b.prev_postures).length ? `last turn: ${Object.entries(b.prev_postures).map(([p, v]) => `${knightName(p)} ${v}`).join(" · ")}` : "",
         fight: "Begin the fight → combat tracker", end: `KV Morale gain, then Turn ${b.turn + 1}` }[it.key] || "";
       return row(it.state === "optional" ? "todo" : "todo", NUM[it.key], NAME[it.key], h("em", {}, hint));
@@ -366,6 +368,23 @@ export default {
         const r = await post("/api/battle/undo", { step: key });
         ui.lastUndo = { id: r.event.id, text: r.event.text };
       } }, "reopen");
+    }
+
+    // A whole printed card to choose from: the front (what the players are told), flipped
+    // with the corner toggle to the back (the stat block) — no physical card needed.
+    function cardTile(key, c, onPick, onHover) {
+      const faces = c.faces || { front: [], back: [] };
+      const flipped = ui.flipped.has(key);
+      const tile = h("div", { class: `ct ${flipped ? "flipped" : ""}`, role: "button", tabindex: 0, title: `Set ${key} as this turn's Encounter`,
+        onclick: onPick, onmouseenter: onHover, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick(); } } },
+        h("div", { class: "ct-inner" },
+          h("div", { class: "ct-face" }, (faces.front.length ? faces.front : [{ title: key, flavour: c.description || "", blocks: [] }]).slice(0, 1).map((f) => cardFace(f))),
+          h("div", { class: "ct-face ct-back" }, faces.back.length ? faces.back.map((f) => statFace(f)).slice(0, 1) : h("div", { class: "ct-noback" }, "No stat block for this card."))),
+        faces.back.length > 1 ? h("span", { class: "ct-more" }, `+${faces.back.length - 1} more on the back`) : null,
+        h("button", { class: "ct-flip", title: flipped ? "Show the front" : "Flip to the stat block", "aria-label": "Flip the card",
+          onclick: (e) => { e.stopPropagation(); ui.flipped.has(key) ? ui.flipped.delete(key) : ui.flipped.add(key); tile.classList.toggle("flipped");
+            e.currentTarget.title = ui.flipped.has(key) ? "Show the front" : "Flip to the stat block"; } }, "⟳"));
+      return h("div", { class: "ct-wrap" }, tile, h("div", { class: "ct-meta" }, gmMeta(c)));
     }
 
     function gmMeta(c) {
@@ -395,6 +414,7 @@ export default {
         case "picks": return picksBody();
         case "select": return selectBody();
         case "morale": return moraleBody();
+        case "opportunity": return opportunityBody();
         case "postures": return posturesBody();
         case "fight": return fightBody();
         case "rest": return restBody();
@@ -416,12 +436,9 @@ export default {
       const forceAvail = b.tokens.force === "available";
       return [
         missingBanner,
-        keys.length ? h("div", { class: "cards" }, keys.map((k) => {
-          const c = cardOf(k);
-          return h("button", { class: "gcard", title: c.description || k, onmouseenter: () => { if (!ui.flavour) fl.placeholder = c.description || fl.placeholder; },
-            onclick: () => step("set", { encounter: k, flavour: ui.flavour, forced: ui.forceArmed }) },
-            h("span", { class: "cn" }, k), gmMeta(c));
-        })) : h("div", { class: "hint" }, "No battle Foes in your library yet — mark encounters as Foes in the Encounter Creator, add the battle cards with Encounters → Examples…, or ",
+        keys.length ? h("div", { class: "ct-deck" }, keys.map((k) => cardTile(k, cardOf(k),
+          () => step("set", { encounter: k, flavour: ui.flavour, forced: ui.forceArmed }),
+          () => { if (!ui.flavour) fl.placeholder = cardOf(k).description || fl.placeholder; }))) : h("div", { class: "hint" }, "No battle Foes in your library yet — mark encounters as Foes in the Encounter Creator, add the battle cards with Encounters → Examples…, or ",
           h("button", { class: "linkish", onclick: quickEncounter }, "+ New encounter"), "."),
         b.deck_now?.all && keys.length ? h("div", { class: "faint small" }, "No deck set for today, so every battle Foe in your library is available. ",
           h("button", { class: "linkish", onclick: settingsDrawer }, "Choose today's deck")) : null,
@@ -599,11 +616,6 @@ export default {
     function fightBody() {
       const t = b.t, c = b.chosen?.card || {};
       const out = [];
-      if (!c.has_roster) {
-        return [h("div", { class: "hint" }, h("b", {}, b.chosen.encounter), " has no foes to fight — play it at the table."),
-          c.rules ? h("div", { class: "bl-script" }, c.rules) : null,
-          h("div", { class: "row" }, h("button", { class: "btn", onclick: () => ctx.navigate("combat") }, icon("star"), "Award Glory in Combat…"), endButtons())];
-      }
       if (t.fight && t.fight.active) {
         return [h("div", { class: "hint" }, `Fighting ${t.fight.encounter}: ${t.fight.defeated} of ${t.fight.foes} defeated.`),
           h("button", { class: "btn primary", onclick: () => ctx.navigate("combat") }, icon("swords"), "Back to the fight")];
@@ -626,6 +638,42 @@ export default {
           icon("swords"), `Begin the fight${b.t.intensity?.outcome === "critical" ? " (foes doubled)" : ""} → combat tracker`) : null,
         endButtons()));
       return out;
+    }
+
+    // An Opportunity is played offline: the card's instructions are on the Table; here is
+    // the whole card (stats too) and, once it's over, the Glory printed on it.
+    function opportunityBody() {
+      const o = b.opportunity;
+      if (!o) return null;
+      const sel = ui.opp ||= { all: false, knights: new Set(), amount: "", reason: "" };
+      const redraw = render;
+      const fillFrom = (r) => { sel.amount = String(r.amount); sel.reason = r.label; sel.all = r.scope === "all"; if (sel.all) sel.knights.clear(); };
+      const award = async () => {
+        const knights = sel.all ? "all" : [...sel.knights];
+        if (!sel.all && !knights.length) return toast("Choose who receives the Glory", "err");
+        const ok = await post("/api/battle/step", { step: "opportunity_glory", knights, amount: Number(sel.amount), reason: sel.reason }).catch(() => null);
+        if (ok) Object.assign(sel, { amount: "", reason: "" });
+      };
+      const chip = (label, on, onclick, cls = "") => h("button", { class: `chip ${on ? "on" : ""} ${cls}`, onclick }, label);
+      return [
+        h("div", { class: "hint" }, h("b", {}, o.name), " is played at the table — no postures, no combat tracker. The players read the card on the Table; the stats are yours."),
+        h("div", { class: "cf-gm" }, o.front.map((f) => cardFace(f)), o.back.map((f) => statFace(f))),
+        h("div", { class: "opp-glory" },
+          h("div", { class: "label" }, "Resolve — award Glory"),
+          o.rewards.length ? h("div", { class: "row wrap" }, o.rewards.map((r) =>
+            h("button", { class: "btn ghost sm", title: r.scope === "all" ? "Every knight with the conroi" : "One knight at a time",
+              onclick: () => { fillFrom(r); redraw(); } }, `+${r.amount} ${r.label}`))) : h("div", { class: "faint small" }, "No Glory is printed on this card — enter an amount."),
+          h("div", { class: "row wrap" }, h("span", { class: "faint small" }, "To"),
+            chip("All with the conroi", sel.all, () => { sel.all = !sel.all; sel.knights.clear(); redraw(); }),
+            b.conroi_now.map((pid) => chip(knightName(pid), !sel.all && sel.knights.has(pid), () => {
+              sel.all = false; sel.knights.has(pid) ? sel.knights.delete(pid) : sel.knights.add(pid); redraw(); }))),
+          h("div", { class: "row" },
+            h("input", { class: "input num", type: "number", placeholder: "Glory", value: sel.amount, oninput: (e) => { sel.amount = e.target.value; } }),
+            h("input", { class: "input", placeholder: "What for", value: sel.reason, oninput: (e) => { sel.reason = e.target.value; }, style: { flex: 1 } }),
+            h("button", { class: "btn", onclick: award }, icon("star"), "Award Glory")),
+          o.awards.length ? h("ul", { class: "opp-awards" }, o.awards.map((a) =>
+            h("li", {}, `${a.amount > 0 ? "+" : ""}${a.amount} Glory · ${knightName(a.knight)} — ${a.reason}`))) : null),
+        h("div", { class: "row" }, h("button", { class: "btn primary", onclick: () => step("opportunity_done") }, "Done — back to the turn's end"))];
     }
 
     function restBody() {
@@ -840,7 +888,7 @@ export default {
     // ------------------------------------------------------------ wiring
     const loadSoon = debounce(load, 60);
     ctx.onEvent((evs, { reset }) => {
-      if (reset || evs.some((e) => e.type.startsWith("battle.") || e.type.startsWith("meta.") || e.type.startsWith("session."))) loadSoon();
+      if (reset || evs.some((e) => e.type.startsWith("battle.") || (e.type.startsWith("glory.") && e.data?.battle) || e.type.startsWith("meta.") || e.type.startsWith("session."))) loadSoon();
     });
     // Catch up after typing — but only if something changed meanwhile, and only
     // once the click that moved the cursor away has landed.

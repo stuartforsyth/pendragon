@@ -142,3 +142,16 @@
 .kcard.compact .kc-name { font-size: 17px; }
 .kcard.compact .glory-counter .gl-value { font-size: 24px; }
 @media (prefers-reduced-motion: reduce) { .pcard { animation: none; } }
+
+/* the Glory race: the leader's number sits in a laurel wreath under a crown */
+.glory-counter .gl-wrap { position: relative; display: inline-grid; place-items: center; }
+.glory-counter.leader .gl-wrap { padding: 20px 30px 6px; }
+.glory-counter .gl-laurel { position: absolute; left: 50%; top: 50%; width: 136px; height: 70px; transform: translate(-50%, -38%); pointer-events: none; }
+.glory-counter .gl-crown { position: absolute; left: 50%; top: 2px; width: 28px; transform: translateX(-50%); filter: drop-shadow(0 1px 1px rgba(42, 29, 20, .4)); }
+.glory-counter.leader .gl-value { position: relative; color: #a87614; text-shadow: 0 0 10px rgba(210, 166, 69, .75), 0 1px 0 rgba(255, 244, 214, .8); }
+.glory-counter.leader .gl-label { color: #8a6a1c; font-weight: 700; }
+.kcard.leader { border-color: var(--or-bright); box-shadow: 0 0 0 2px rgba(210, 166, 69, .55), 0 0 18px rgba(210, 166, 69, .4); animation: leader-glow 3.2s ease-in-out infinite; }
+@keyframes leader-glow { 50% { box-shadow: 0 0 0 2px rgba(210, 166, 69, .8), 0 0 26px rgba(210, 166, 69, .6); } }
+@media (prefers-reduced-motion: reduce) { .kcard.leader { animation: none; } }
+.kcard.compact .glory-counter.leader .gl-value { font-size: 32px; }
+.glory-counter.leader .gl-label { margin-bottom: 0; }

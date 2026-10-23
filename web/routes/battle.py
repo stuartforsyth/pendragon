@@ -67,7 +67,7 @@ def _card(state, key):
 @router.get("/api/battle")
 def get_battle(request: Request):
     state = st(request)
-    return {"battle": BS.gm_view(state.battle_state(), state.party.items, state.combat_data.get("encounters", {}))}
+    return {"battle": state.gm_battle()}
 
 
 @router.get("/api/battle/paused")
@@ -537,7 +537,7 @@ def _today_deck(state, b, role="foe"):
 
 
 _STEP_TITLE = {"field": "The conroi", "set": "This turn", "charge": "The charge", "intensity": "Intensity",
-               "picks": "A pick", "select": "The commander's choice", "morale": "Morale", "postures": "Posture",
+               "picks": "A pick", "select": "The commander's choice", "morale": "Morale", "opportunity": "The Opportunity", "postures": "Posture",
                "rest": "At the rear", "fight": "The fight", "end": "End of the turn"}
 
 
@@ -625,7 +625,7 @@ def record_outcome(state, step, payload, source="gm"):
             rec("battle.charge", "Charge: not rolled — no charge possible this turn", "charge",
                 {"outcome": None, "engaged_last": None, "result": "no_charge", "skipped": True, "lines": []},
                 table="No charge this turn")
-            return {"events": evs, "battle": BS.gm_view(state.battle_state(), state.party.items, state.combat_data.get("encounters", {}))}
+            return {"events": evs, "battle": state.gm_battle()}
         outcome = payload.get("outcome")
         if outcome not in B.OUTCOMES:
             bad("Choose Critical, Success, Failure or Fumble")
@@ -833,6 +833,30 @@ def record_outcome(state, step, payload, source="gm"):
         yes = B.countercharge(False, roll)
         line = "They countercharge!" if yes else "No countercharge — their lances are spent"
         rec("battle.countercharge", f"{line} (1D6: {roll})", "fight", {"roll": roll, "rolled": rolled}, table=line)
+    elif step == "opportunity_glory":
+        if cur != "opportunity":
+            _not_now("the Opportunity is being played")
+        amount = to_int(payload.get("amount"), "Glory")
+        if not amount:
+            bad("Enter the Glory to award")
+        reason = (payload.get("reason") or "").strip()
+        if not reason:
+            bad("Say what the Glory is for")
+        who = BS.conroi_ids(b) if payload.get("knights") == "all" else list(payload.get("knights") or [])
+        if not who or any(pid not in b["conroi"] for pid in who):
+            bad("Choose the knights to award")
+        for pid in who:
+            name = _pid_name(state, pid)
+            line = f"{amount:+d} Glory · {name} — {reason}"
+            rec("glory.awarded", line, "opportunity",
+                {"knight": pid, "knight_name": name, "amount": amount, "reason": reason, "fight": None,
+                 "touches": [pid], "glory_amount": amount}, title="Glory")
+    elif step == "opportunity_done":
+        if cur != "opportunity":
+            _not_now("the Opportunity is being played")
+        enc = BS.chosen(b)[0]
+        rec("battle.opportunity_done", f"{enc} is resolved", "opportunity", {"encounter": enc},
+            table="The Opportunity is resolved")
     elif step == "extra_round":
         cs = state.combat_state()
         if not cs or not cs.get("active") or (cs.get("battle") or {}).get("id") != b["id"]:
@@ -865,7 +889,7 @@ def record_outcome(state, step, payload, source="gm"):
                                     data={"table_text": dline, "battle": {**_link(b, "end")}, **src}))
     else:
         bad("Unknown step")
-    return {"events": evs, "battle": BS.gm_view(state.battle_state(), state.party.items, state.combat_data.get("encounters", {}))}
+    return {"events": evs, "battle": state.gm_battle()}
 
 
 @router.post("/api/battle/fight")
@@ -874,14 +898,14 @@ async def fight(request: Request):
     scaled to the knights with the conroi (Cowardly ones don't count) and
     doubled on an Intensity critical. Knights Alone on the Field get a lane."""
     state, b = _live(request)
+    enc, card = BS.chosen(b)
+    if (card or {}).get("role") == "opportunity":
+        bad("An Opportunity is played at the table, then its Glory is awarded here", 409)
     if not BS.conroi_ids(b):
         _not_now("no knights are with the conroi")
     if BS.current_step(b) not in ("fight", "end") \
             or not all(pid in b["t"]["postures"] for pid in BS.conroi_ids(b)):
         _not_now("choose postures first")
-    enc, card = BS.chosen(b)
-    if not card.get("has_roster"):
-        bad("Play this Opportunity at the table, then End turn")
     t = b["t"]
     if card.get("missile") and not t.get("barrage"):
         _not_now("record the commander's barrage roll first")

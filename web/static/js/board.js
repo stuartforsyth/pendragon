@@ -21,14 +21,45 @@ export function knightShield(down = false) {
   'class="kshield" viewBox="0 0 44 50" aria-hidden="true"');
 }
 
-/** The big Glory number; it ticks up with "+n · reason" when it rises. */
-export function gloryCounter(pid, g, label = "Glory") {
+/**
+ * The Glory race: the cards sorted by Glory, highest first (ties keep the table's
+ * order), once anyone has any. The knight(s) on top — with at least two in the
+ * race and some Glory on the board — are the leaders: ``leader`` is true on them.
+ */
+export function rankByGlory(knights) {
+  const list = (knights || []).filter(Boolean);
+  const val = (k) => k.glory?.value || 0;
+  const top = Math.max(0, ...list.map(val));
+  if (!top) return { list, leaders: new Set() };
+  const sorted = list.map((k, i) => [k, i]).sort((a, b) => val(b[0]) - val(a[0]) || a[1] - b[1]).map((x) => x[0]);
+  return { list: sorted, leaders: list.length > 1 ? new Set(sorted.filter((k) => val(k) === top)) : new Set() };
+}
+
+/** A laurel wreath for the leader's number: two branches of leaves round it. */
+function laurel() {
+  let leaves = "";
+  for (let i = 0; i < 7; i++) {
+    const a = (115 + i * 17) * Math.PI / 180, x = 60 + 29 * Math.cos(a), y = 31 - 25 * Math.sin(a), rot = 115 + i * 17 + 90;
+    for (const side of [1, -1]) {
+      leaves += `<ellipse cx="${side > 0 ? 120 - x : x}" cy="${y}" rx="${6.2 - i * 0.25}" ry="2.6" transform="rotate(${side > 0 ? 180 - rot : rot} ${side > 0 ? 120 - x : x} ${y})"/>`;
+    }
+  }
+  return svg(`<g fill="#b8892b" opacity=".92">${leaves}</g>`, 'class="gl-laurel" viewBox="0 0 120 62" aria-hidden="true"');
+}
+
+const CROWN = '<path d="M2 17 5 5l6 6 5-9 5 9 6-6 3 12Z" fill="#d2a645" stroke="#8a6a1c" stroke-width="1.2" stroke-linejoin="round"/><circle cx="5" cy="4.5" r="1.7" fill="#8e2219"/><circle cx="16" cy="2.5" r="1.7" fill="#8e2219"/><circle cx="27" cy="4.5" r="1.7" fill="#8e2219"/>';
+
+/** The big Glory number; it ticks up with "+n · reason" when it rises. The leader's
+ * wears a laurel wreath and a crown. */
+export function gloryCounter(pid, g, label = "Glory", { leader = false } = {}) {
   const before = prevGlory[pid];
   const rose = before !== undefined && g.value > before;
   prevGlory[pid] = g.value;
-  return h("div", { class: `glory-counter ${rose ? "rose" : ""}` },
-    h("span", { class: "gl-label" }, label),
-    h("b", { class: "gl-value" }, g.value),
+  return h("div", { class: `glory-counter ${rose ? "rose" : ""} ${leader ? "leader" : ""}` },
+    h("span", { class: "gl-label" }, leader ? "Glory · leading" : label),
+    h("span", { class: "gl-wrap" },
+      leader ? [laurel(), svg(CROWN, 'class="gl-crown" viewBox="0 0 30 18" aria-hidden="true"')] : null,
+      h("b", { class: "gl-value" }, g.value)),
     rose && g.last ? h("span", { class: "gl-plus" }, `+${g.last.amount}`) : null);
 }
 
@@ -70,14 +101,14 @@ export function tallyStrip(knights) {
 }
 
 /** One knight: shield, name, player, Glory, chips and the LAST line. */
-export function knightCard(k, { compact = false } = {}) {
+export function knightCard(k, { compact = false, leader = false } = {}) {
   const down = k.status && k.status !== "active";
-  return h("div", { class: `kcard ${compact ? "compact" : ""} ${down ? "down" : ""}` },
+  return h("div", { class: `kcard ${compact ? "compact" : ""} ${down ? "down" : ""} ${leader ? "leader" : ""}` },
     h("div", { class: "kc-top" },
       knightShield(down),
       h("div", { class: "kc-id" }, h("div", { class: "kc-name" }, k.name),
         k.player ? h("div", { class: "kc-player" }, `played by ${k.player}`) : null),
-      gloryCounter(k.pid, k.glory)),
+      gloryCounter(k.pid, k.glory, "Glory", { leader })),
     effectChips(k.effects),
     happenedLine(k.happened));
 }

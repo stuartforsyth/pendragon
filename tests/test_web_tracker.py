@@ -105,9 +105,14 @@ def test_mo_chip_counts_and_limit(client):
     for f in knife[:3]:
         ok(client.post(f"/api/combat/{f['id']}/engage", json={"with": "Sir Bors"}))
     mo = _knight(ok(client.get("/api/combat"))["combat"], "Sir Bors")["mo"]
-    assert mo == {"n": 3, "mod": -10, "limit": 3, "over": False}
+    assert mo == {"n": 3, "faced": 3, "mod": -10, "limit": 3, "over": False}
     ok(client.post(f"/api/combat/{knife[3]['id']}/engage", json={"with": "Sir Bors"}))
-    assert _knight(ok(client.get("/api/combat"))["combat"], "Sir Bors")["mo"]["over"]
+    ok(client.post(f"/api/combat/{knife[4]['id']}/engage", json={"with": "Sir Bors"}))
+    ok(client.post(f"/api/combat/{knife[5]['id']}/engage", json={"with": "Sir Bors"}))
+    mo = _knight(ok(client.get("/api/combat"))["combat"], "Sir Bors")["mo"]      # six on him, only three can reach
+    assert mo["over"] and mo["n"] == 6 and mo["faced"] == 3 and mo["mod"] == -10
+    tb = next(c for c in ok(client.get("/api/table"))["combat"]["combatants"] if c["name"] == "Sir Bors")   # the players' chip stops at three too
+    assert tb["mo_n"] == 3 and tb["mo_mod"] == -10
     cs = _fight(client, knights=())                          # restart with Gorre (mounted)
     gorre = _foes(cs)[:2]
     for f in gorre:
@@ -322,7 +327,7 @@ def test_knights_share_a_foe_outnumbered_automatic_and_adjust(client):
 
 def test_acted_this_round_from_attack_rolls_and_by_hand(client):
     """A foe's attack roll ticks it as having acted; the GM can tick/untick by
-    hand; Next round clears every tick. The Table never sees it."""
+    hand; Next round clears every tick. The Table shows the foes' ticks — and nothing for knights."""
     cs = _fight(client, "Pictish Knifemen", ("Sir Bors",))
     foes = _foes(cs)
     a, b = foes[0], foes[1]
@@ -339,8 +344,11 @@ def test_acted_this_round_from_attack_rolls_and_by_hand(client):
     ok(client.post("/api/combat/round"))
     cs = ok(client.get("/api/combat"))["combat"]
     assert not any(c["acted"] for c in cs["combatants"]) and len(cs["to_act"]) == len(foes)
-    table = ok(client.get("/api/table"))
-    assert all("acted" not in c for c in table["combat"]["combatants"])
+    ok(client.post(f"/api/combat/{b['id']}/acted", json={"on": True}))
+    table = ok(client.get("/api/table"))["combat"]["combatants"]
+    assert [c["acted"] for c in table if c["id"] == b["id"]] == [True]
+    assert all("acted" not in c for c in table if c["side"] == "party")
+    assert not [c for c in table if c["side"] != "party" and c["id"] != b["id"] and c["acted"]]
 
 
 def test_table_sees_mounted_but_not_horse_attacks(client):

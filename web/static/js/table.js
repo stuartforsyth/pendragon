@@ -3,7 +3,8 @@
 
 import { h, clear, icon, debounce } from "./lib.js";
 import { liveStream } from "./stream.js";
-import { knightCard, moraleGauge, cardFrame, deckSpread, tallyStrip, knightShield as knightShieldEl } from "./board.js";
+import { knightCard, rankByGlory, moraleGauge, cardFrame, deckSpread, tallyStrip, knightShield as knightShieldEl } from "./board.js";
+import { bandFace } from "./cardface.js";
 import { foeFace, layoutArea, linkLines, horseBadge, proneBadge, stanceBadge } from "./field.js";
 
 const $ = (id) => document.getElementById(id);
@@ -301,6 +302,7 @@ function foeTile(f, p) {
   const ws = (f.wound_state || "").toLowerCase().replace(/\s+/g, "-");
   return h("div", { class: `tfoe s-${ws} ${c.elite ? "elite" : ""} ${hit ? "hit" : ""}` },
     shield(c), h("b", {}, f.name), h("span", { class: "wd" }, f.wound_state),
+    c.acted && c.status === "active" ? h("span", { class: "tacted", title: "Has acted this round" }, "✓") : null,
     (f.chips || []).map((x) => h("span", { class: "tchip" }, x)));
 }
 
@@ -330,10 +332,11 @@ function fieldToken(c, x, y) {
   last.states[c.id] = c.wound_state;
   const [rim, tint, drops] = WOUND_LOOK[c.wound_state] || ["#8e2219", "#e8b7a8", 2];
   const stance = !knight && !down ? (c.stance || "attack") : "attack";
-  const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${down ? "down" : ""} ${c.elite ? "elite" : ""} ${hit ? "hit" : ""} ${stance !== "attack" ? "st-" + stance + (stance === "trample" ? "" : " defensive") : ""}`,
+  const node = h("div", { class: `ftok ${knight ? "is-knight" : "is-foe"} ${down ? "down" : ""} ${c.elite ? "elite" : ""} ${hit ? "hit" : ""} ${!knight && !down && c.acted ? "acted" : ""} ${stance !== "attack" ? "st-" + stance + (stance === "trample" ? "" : " defensive") : ""}`,
     "data-id": c.id, style: { left: `${x}px`, top: `${y}px` } },
     knight ? h("span", { class: "ftok-face" }, knightShieldEl(down)) : foeFace(c.category, 1, rim, { struck: down, ring: false, rim: down ? "#8a8378" : rim, tint: down ? null : tint }),
     !knight && !down ? woundBadge(drops) : null,
+    !knight && !down && c.acted ? h("span", { class: "ftok-acted", title: "Has acted this round" }, "✓") : null,
     c.mounted && !down ? horseBadge() : null,
     c.prone && !down ? proneBadge() : null,
     stanceBadge(stance),
@@ -413,7 +416,7 @@ function fight(p) {
       waiting.length ? [h("span", { class: "lbl" }, "Waiting"), h("span", {}, waiting.map((f) => f.name).join(", "))] : null) : null,
   ];
   return h("div", { class: `fightview ${cards.length ? "" : "no-knights"}` },
-    cards.length ? h("div", { class: "fv-knights" }, cards.map((k) => knightCard(k, { compact: true }))) : null,
+    cards.length ? h("div", { class: "fv-knights" }, glorySorted(cards)) : null,
     h("div", { class: "fv-centre" },
       head,
       banners.length ? h("div", { class: "row", style: { gap: "10px", flexWrap: "wrap" } }, banners.map((x) => h("div", { class: "fv-banner" }, x))) : null,
@@ -439,6 +442,12 @@ function finaleScene(f) {
         h("li", {}, h("span", {}, `Participation${k.role_label ? ` (${k.role_label})` : ""}`), h("span", {}, k.participation)),
         k.plunder ? h("li", {}, h("span", {}, "Plunder"), h("span", {}, k.plunder)) : null,
         (k.ransoms || []).map((r) => h("li", {}, h("span", {}, `Ransom · ${r.captive}`), h("span", {}, r.amount || "—"))))))));
+}
+
+// The knights' cards, best Glory first once anyone has some; the leader wears the laurel.
+function glorySorted(knights) {
+  const { list, leaders } = rankByGlory(knights);
+  return list.map((k) => knightCard(k, { compact: true, leader: leaders.has(k) }));
 }
 
 function battleView(p) {
@@ -478,11 +487,17 @@ function battleView(p) {
   if (opts.length) centre.push(deckSpread(opts, { label: tt.picks?.length || (b.banner?.text || "").startsWith("Intensity fails") ? "Choose your fate" : (b.banner?.text || "").startsWith("Fortune") ? "An Opportunity — or the foe before you" : "The battlefield" }));
   const strip = tallyStrip(p.battle_knights);
   if (strip) centre.push(strip);
+  if (b.opportunity) {      // played at the table: the card's green title box fills the board
+    return h("div", { class: "battleview opp" },
+      moraleGauge(b.morale),
+      h("div", { class: "bv-centre opp-centre" }, h("div", { class: "cf-row" }, bandFace(b.opportunity))),
+      (p.battle_knights || []).length ? h("div", { class: "bv-knights" }, glorySorted(p.battle_knights)) : null);
+  }
   return h("div", { class: "battleview" },
     moraleGauge(b.morale),
     h("div", { class: "bv-centre" }, centre),
     h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), p.feed.slice(0, 6).map(mini)),
-    (p.battle_knights || []).length ? h("div", { class: "bv-knights" }, p.battle_knights.map((k) => knightCard(k, { compact: true }))) : null);
+    (p.battle_knights || []).length ? h("div", { class: "bv-knights" }, glorySorted(p.battle_knights)) : null);
 }
 
 

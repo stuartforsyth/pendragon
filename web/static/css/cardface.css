@@ -1,0 +1,68 @@
+/* The printed faces of an Opportunity card (web/static/js/cardface.js). Self-contained
+   — parchment on both the dark GM console and the Table. The row sets the height; each
+   face keeps the printed card's proportions and its text is fitted by the script. */
+.cf-row { display: flex; gap: 18px; justify-content: center; align-items: stretch; height: 100%; min-height: 0; }
+.cf { --cf-ink: #2a1d14; --cf-red: #8e2219; --cf-green: #355a2a; --cf-gold: #d2a645;
+  height: 100%; aspect-ratio: 198 / 342; min-width: 0; flex: 0 1 auto; box-sizing: border-box; display: flex; flex-direction: column;
+  background: #e8dcc2; color: var(--cf-ink); border: 2px solid #4e3a28; border-radius: 6px; overflow: hidden; text-align: left;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .4); font-family: "EB Garamond", Garamond, Georgia, serif; }
+.cf-body { flex: 1 1 0; min-height: 0; overflow: hidden; padding: .7em .9em .4em; line-height: 1.22; font-weight: 500; }
+.cf-body p { margin: 0 0 .55em; }
+.cf-body h4 { margin: .5em 0 .2em; font-family: "Cinzel", Georgia, serif; font-size: 1.05em; }
+.cf-body b { font-weight: 700; }
+
+/* instruction faces: olive title band, red-braided edge, Morale roundel footer */
+.cf.front { border-image: none; box-shadow: 0 8px 24px rgba(0, 0, 0, .4), inset 0 0 0 5px #e8dcc2, inset 0 0 0 7px rgba(142, 34, 25, .55); }
+.cf-band { background: linear-gradient(180deg, #5a6b2c, #3f5020); color: #fbf4e2; text-align: center; padding: .75em .8em .7em;
+  border-bottom: 3px solid #8e2219; margin: 7px 7px 0; border-radius: 3px; }
+.cf-title { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.5em; line-height: 1.1; text-wrap: balance; }
+.cf-flav { font-style: italic; font-size: 1.05em; line-height: 1.2; margin-top: .35em; color: #f3e6c8; }
+.cf.front:not(.first) .cf-body { padding-top: 1em; }
+.cf-rt { font-family: "Cinzel", Georgia, serif; font-weight: 700; border-bottom: 1.5px solid var(--cf-ink); margin-bottom: .3em; }
+.cf-rows { margin-bottom: .55em; }
+.cf-rows p { margin: 0 0 .3em 1em; }
+.cf-foot { flex: none; display: grid; justify-items: center; line-height: 1; padding: .35em 0 .55em; font-family: "Cinzel", Georgia, serif; color: var(--cf-red); font-weight: 700; }
+.cf-fl { font-size: .7em; letter-spacing: .12em; text-transform: uppercase; }
+.cf-fv { font-size: 1.4em; margin-top: .1em; }
+
+/* stat faces: dark bar, red subtitle, ruled tables */
+.cf.back { background: #f6efdc; border: 4px double #4a6b3a; }
+.cf-bar { flex: none; background: #3f5020; color: #fbf4e2; font-family: "Cinzel", Georgia, serif; font-weight: 700; text-align: center; font-size: 1.35em; padding: .3em .5em; }
+.cf-sub { flex: none; text-align: center; font-family: "Cinzel", Georgia, serif; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--cf-red); font-size: 1.1em; margin-top: .4em; }
+.cf.back .cf-body { padding-top: .3em; }
+.cf-chars { display: flex; justify-content: center; gap: .9em; color: var(--cf-red); font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.15em; border-bottom: 1.5px solid var(--cf-red); padding-bottom: .15em; margin-bottom: .4em; }
+.cf-chars span { display: grid; justify-items: center; line-height: 1.05; }
+.cf-chars small { font-size: .7em; color: var(--cf-ink); letter-spacing: .08em; }
+.cf-sec { font-family: "Cinzel", Georgia, serif; font-variant: small-caps; color: var(--cf-red); font-weight: 700; font-size: 1.05em; margin: .35em 0 .15em; }
+.cf-table { width: 100%; border-collapse: collapse; font-size: .92em; margin-bottom: .2em; }
+.cf-table th { background: #231a14; color: #fbf4e2; font-family: "Cinzel", Georgia, serif; font-variant: small-caps; font-size: .85em; text-align: left; padding: .12em .35em; }
+.cf-table td, .cf-table tbody th { padding: .1em .35em; }
+.cf-table tbody tr:nth-child(odd) td { background: rgba(78, 58, 40, .12); }
+.cf-table.kv tbody tr td:first-child { font-weight: 700; }
+.cf-table.kv td:last-child { text-align: right; }
+.cf-two { display: grid; grid-template-columns: 1fr 1fr; gap: .6em; }
+.cf-note { font-size: .85em; margin: 0 0 .3em; }
+.cf-ransom { display: grid; justify-items: center; line-height: 1; margin-top: .3em; font-family: "Cinzel", Georgia, serif; color: var(--cf-red); font-weight: 700; }
+
+/* the GM console: every face at a readable fixed height, wrapping */
+.cf-gm { display: flex; flex-wrap: wrap; gap: 14px; justify-content: flex-start; align-items: flex-start; }
+.cf-gm .cf { height: 640px; flex: none; }
+
+/* the players' card: just the green box with the red border, as large as fits */
+.cf-bandcard { height: 100%; max-height: 100%; aspect-ratio: 3 / 2; max-width: 100%; margin: 0 auto; box-sizing: border-box; display: grid; place-items: center;
+  background: linear-gradient(180deg, #5a6b2c, #3f5020); color: #fbf4e2; border: 6px solid #8e2219; border-radius: 10px; text-align: center;
+  box-shadow: 0 0 0 4px #e8dcc2, 0 14px 40px rgba(0, 0, 0, .45); font-family: "EB Garamond", Garamond, Georgia, serif; overflow: hidden; }
+.cf-bandbody { width: 100%; box-sizing: border-box; padding: 5% 7%; overflow: hidden; }
+.cf-bandbody .cf-title { font-size: 1.9em; margin-bottom: .35em; }
+.cf-bandbody .cf-flav { font-size: 1.15em; line-height: 1.25; margin-top: 0; }
+
+/* the console's own table styles must not reach into the printed card */
+.cf table { display: table; width: 100%; color: var(--cf-ink); }
+.cf thead { display: table-header-group; } .cf tbody { display: table-row-group; } .cf tr { display: table-row; }
+.cf th, .cf td { display: table-cell; border: 0; color: var(--cf-ink); font-size: inherit; letter-spacing: normal; text-transform: none; }
+.cf .cf-table th { background: #231a14; color: #fbf4e2; }
+
+.cf-sec.mid { text-align: center; font-size: 1.15em; }
+.cf-rollt { margin: .4em 0 .1em; }
+.cf-table.rolls th { background: none; color: var(--cf-ink); font-family: inherit; font-variant: normal; font-size: 1em; width: 3.2em; }
+.cf-table.rt td:last-child { text-align: right; }
