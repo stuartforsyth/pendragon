@@ -447,3 +447,4 @@ textarea.input { height: auto; padding: 8px 10px; resize: vertical; line-height:
 .log-divider:hover .ld-x { opacity: 1; }
 .log-divider.struck .ld-text { text-decoration: line-through; opacity: .5; }
 .log-earlier { display: block; margin: 8px auto; }
+#spotChip[hidden] { display: none; }

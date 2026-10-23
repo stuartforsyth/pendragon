@@ -728,16 +728,21 @@ def table_view(b, party, library=None, faces_for=None):
         enc = chosen(b)[0]
         top = ((faces_for(enc) if faces_for else {}).get("front") or [{}])[0]
         out["opportunity"] = {"name": enc, "title": top.get("title") or enc, "flavour": top.get("flavour", "")}
-    card_flav = lambda c: (c or {}).get("description", "")
+    def green(name, fallback=""):
+        """What the printed card says in its green box — all the players may read of it."""
+        top = ((faces_for(name) if faces_for else {}).get("front") or [{}])[0]
+        return top.get("flavour") or fallback
+    # a flavour line the GM typed for the Table wins; one that is just the card's own description (the default) doesn't
+    typed_flavour = lambda st: "" if (st.get("flavour") or "") == (st.get("card") or {}).get("description", "") else (st.get("flavour") or "")
     is_opp = lambda c: (c or {}).get("role") == "opportunity"
     mn = lambda c: (c or {}).get("morale_minimum")
     out["this_turn"] = {
-        "set": {"name": t["set"]["encounter"], "flavour": t["set"].get("flavour") or card_flav(t["set"].get("card")),
+        "set": {"name": t["set"]["encounter"], "flavour": typed_flavour(t["set"]) or green(t["set"]["encounter"], (t["set"].get("card") or {}).get("description", "")),
                 "opportunity": False, "minimum": mn(t["set"].get("card"))} if t.get("set") else None,
-        "picks": [{"name": p["encounter"], "flavour": card_flav(p.get("card")), "opportunity": is_opp(p.get("card")),
+        "picks": [{"name": p["encounter"], "flavour": green(p["encounter"], (p.get("card") or {}).get("description", "")), "opportunity": is_opp(p.get("card")),
                    "minimum": mn(p.get("card")), "knight_name": nm(pid), "crit": bool(p.get("crit"))} for pid, p in (t.get("picks") or {}).items()],
         "selected": (t.get("select") or {}).get("encounter"),
-        "selected_card": {"name": t["select"]["encounter"], "flavour": card_flav(t["select"].get("card")),
+        "selected_card": {"name": t["select"]["encounter"], "flavour": green(t["select"]["encounter"], (t["select"].get("card") or {}).get("description", "")),
                           "opportunity": is_opp(t["select"].get("card")), "minimum": mn(t["select"].get("card")),
                           "via": t["select"].get("via")} if t.get("select") else None}
     dd = _day_def(b)
@@ -747,7 +752,15 @@ def table_view(b, party, library=None, faces_for=None):
     out["deck"] = {"foes": [{"name": k, "in_play": k in in_play} for k in deck_eff["foes"]],
                    "opportunities": [{"name": k, "in_play": k in in_play, "spent": k in b.get("spent_opportunities", [])}
                                      for k in deck_eff["opportunities"]]}
-    out["options"] = _table_options(b, t, deck_eff, library, in_play, m)
+    out["options"] = _table_options(b, t, deck_eff, library, in_play, m, green)
+    # who has what in the deck: the GM's set card and each knight's pick, marked on the cards themselves
+    picked_by = {}
+    for pid, p_ in (t.get("picks") or {}).items():
+        picked_by.setdefault(p_["encounter"], []).append({"knight": nm(pid), "crit": bool(p_.get("crit"))})
+    set_name = (t.get("set") or {}).get("encounter")
+    for o in out["options"] or []:
+        o["set"] = o["name"] == set_name
+        o["picked_by"] = picked_by.get(o["name"], [])
     results = []
     if (t.get("intensity") or {}).get("outcome") in ("success", "critical"):
         for sc in dd.get("scripts", []):
@@ -769,6 +782,16 @@ def table_view(b, party, library=None, faces_for=None):
     return out
 
 
+def table_card(b, name, library, faces_for):
+    """A card as the players may read it — name, the green-box flavour, the Morale Minimum — for a spotlight."""
+    if name not in (library or {}):
+        return None
+    info = _card_info(b or {}, library, name)
+    top = ((faces_for(name) if faces_for else {}).get("front") or [{}])[0]
+    return {"name": name, "flavour": top.get("flavour") or info["flavour"], "minimum": info["minimum"],
+            "opportunity": info["role"] == "opportunity"}
+
+
 def _card_info(b, library, key):
     """What the players may read off a card: its flavour and the Morale it
     needs. Loss, KV and rules stay with the GM."""
@@ -780,14 +803,14 @@ def _card_info(b, library, key):
             "mounted_charge": bool(snap.get("mounted_charge"))}
 
 
-def _table_options(b, t, deck_eff, library, in_play, m):
+def _table_options(b, t, deck_eff, library, in_play, m, green=None):
     """The battlefield as the players may choose from it this step — only the
     cards the rules allow, each saying the Morale it needs and whether the
     conroi has it. Before the Intensity roll: the whole deck. Fumble: the set
     card or an Opportunity. Failure: anything (the knights pick). Success or
     an enemy charge: the card in play alone. After the choice: that card."""
-    if b["status"] == "mustering":                     # the day's battlefield, laid out for all to see
-        t = new_turn()
+    if b["status"] == "mustering":                     # nothing to choose yet: the title stands alone (cards come with the choices)
+        return []
     elif b["status"] != "turn":
         return None
     spent = set(b.get("spent_opportunities", []))
@@ -815,7 +838,7 @@ def _table_options(b, t, deck_eff, library, in_play, m):
     for k in dict.fromkeys(keys):
         info = _card_info(b, library, k)
         need = info["minimum"]
-        out.append({"name": k, "flavour": info["flavour"], "opportunity": info["role"] == "opportunity",
+        out.append({"name": k, "flavour": green(k, info["flavour"]) if green else info["flavour"], "opportunity": info["role"] == "opportunity",
                     "minimum": need, "playable": (need is None or cur >= need) and (k not in spent or k in in_play),
                     "spent": k in spent and k not in in_play, "in_play": k in in_play})
     return out

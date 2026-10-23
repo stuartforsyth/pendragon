@@ -23,7 +23,22 @@ const table = (head, rows, cls = "") =>
     h("tbody", {}, rows.map((r) => h("tr", {}, r.map((x, i) => h(i === 0 && !head ? "th" : "td", {}, x))))));
 
 /** Grow the text to the largest size that still fits the face (it never scrolls). */
-function fit(el, body, max, min = 9, box = body) {
+/** The text in x is wider than x's content box (its padding, for the flip button, is not room). */
+function textTooWide(x) {
+  const r = document.createRange();
+  r.selectNodeContents(x);
+  const cs = getComputedStyle(x);
+  return r.getBoundingClientRect().width > x.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) + 0.5;
+}
+
+function fit(el, body, max, min = 9, box = body, wide = false) {
+  // wide: stat faces scale as a whole (their title bar too) and must also fit across — tables
+  // and the title never run past the edge; instruction faces only have to fit down the card.
+  const target = wide ? el : body;
+  const over = () => body.scrollHeight > box.clientHeight + 0.5
+    || (wide && (body.scrollWidth > body.clientWidth + 0.5
+      || [...body.querySelectorAll(".cf-table")].some((t) => t.getBoundingClientRect().width > t.parentElement.clientWidth + 0.5)
+      || [...el.querySelectorAll(".cf-bar, .cf-sub")].some(textTooWide)));
   let seen = false;
   const run = () => {
     if (!el.isConnected) { if (seen) ro.disconnect(); return; }      // redrawn away: stop watching
@@ -32,10 +47,10 @@ function fit(el, body, max, min = 9, box = body) {
     let lo = min, hi = max;
     for (let i = 0; i < 8 && hi - lo > 0.25; i++) {
       const mid = (lo + hi) / 2;
-      body.style.fontSize = `${mid}px`;
-      if (body.scrollHeight > box.clientHeight + 0.5) hi = mid; else lo = mid;
+      target.style.fontSize = `${mid}px`;
+      if (over()) hi = mid; else lo = mid;
     }
-    body.style.fontSize = `${lo}px`;
+    target.style.fontSize = `${lo}px`;
   };
   const ro = new ResizeObserver(run);
   ro.observe(el);
@@ -61,24 +76,24 @@ export function cardFace(face, { maxFont = 24 } = {}) {
 }
 
 /** A stat face — the GM's side of the card. */
-export function statFace(face, { maxFont = 18 } = {}) {
+export function statFace(face, { maxFont = 17 } = {}) {
   const body = h("div", { class: "cf-body" },
     h("div", { class: "cf-chars" }, (face.chars || []).map(([k, v]) => h("span", {}, h("small", {}, k), v))),
     face.attacks?.length ? [h("div", { class: "cf-sec" }, "Attacks"),
       table(["Weapon", "Skill", "Value", "DMG"], face.attacks),
       (face.attack_notes || []).map((n) => h("p", { class: "cf-note" }, n))] : null,
     h("div", { class: "cf-two" },
-      h("div", {}, h("div", { class: "cf-sec" }, "Health"), table(["Statistic", "Value"], face.health || [], "kv")),
-      h("div", {}, h("div", { class: "cf-sec" }, "Other"), table(["Statistic", "Value"], face.other || [], "kv"))),
+      h("div", {}, h("div", { class: "cf-sec" }, "Health"), table(["Statistic", "Value"], face.health || [], "cf-kv")),
+      h("div", {}, h("div", { class: "cf-sec" }, "Other"), table(["Statistic", "Value"], face.other || [], "cf-kv"))),
     (face.lines || []).map(([k, v]) => h("p", {}, h("b", {}, `${k}: `), v)),
-    face.rolls ? [h("p", { class: "cf-rollt" }, h("b", {}, face.rolls.title)), table(null, face.rolls.rows, "rolls")] : null,
-    face.ransom_table ? h("div", { class: "cf-ransom-t" }, h("div", { class: "cf-sec mid" }, "Ransom"), table(face.ransom_table.head, face.ransom_table.rows, "rt"))
+    face.rolls ? [h("p", { class: "cf-rollt" }, h("b", {}, face.rolls.title)), table(null, face.rolls.rows, "cf-rolls")] : null,
+    face.ransom_table ? h("div", { class: "cf-ransom-t" }, h("div", { class: "cf-sec mid" }, "Ransom"), table(face.ransom_table.head, face.ransom_table.rows, "cf-rt-t"))
     : face.ransom ? h("div", { class: "cf-ransom" }, h("span", { class: "cf-fl" }, "Ransom"), h("span", { class: "cf-fv" }, face.ransom)) : null);
   const el = h("div", { class: "cf back" },
     h("div", { class: "cf-bar" }, face.title),
     face.subtitle ? h("div", { class: "cf-sub" }, face.subtitle) : null,
     body);
-  fit(el, body, maxFont);
+  fit(el, body, maxFont, 7, body, true);
   return el;
 }
 

@@ -25,6 +25,7 @@ import datetime
 import json
 import os
 import re
+import uuid
 
 META_TYPES = ("meta.strike", "meta.unstrike", "meta.reveal")
 
@@ -212,6 +213,24 @@ class SessionStore:
         self._write_pointer("")
         self.active = self._scratch(fresh=True)
         return s
+
+    def duplicate(self, sid, title=None, battle_id=None):
+        """A saved copy of a session, to try things on without touching the original. A battle in it gets a
+        fresh id (``battle_id`` is the one to renew), so the original and the copy are both listed as paused."""
+        if self.active is not None and not self.active.scratch and self.active.id == sid:
+            raise ValueError("That session is in progress — end it first")
+        src = self.load(sid)
+        title = (title or "").strip() or f"Copy of {src.title}"
+        text = json.dumps(src.events, ensure_ascii=False)
+        if battle_id:
+            text = text.replace(battle_id, uuid.uuid4().hex[:8])
+        base = f"{datetime.date.today().isoformat()}-{slugify(title)}"
+        new_id, n = base, 2
+        while os.path.exists(self._path(new_id)):
+            new_id, n = f"{base}-{n}", n + 1
+        copy = Session(new_id, title, _now(), src.ended or _now(), json.loads(text), self._path(new_id))
+        copy.save()
+        return copy
 
     def delete(self, sid):
         """Put a saved session in the bin (``sessions/.trash/``) — never the

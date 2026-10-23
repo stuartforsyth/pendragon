@@ -76,6 +76,7 @@ class AppState:
         self.rules_index = RulesIndex(os.path.join(root, "rules_corpus", "index.jsonl"))
         self.hub = Hub()
         self.table_mode = "auto"
+        self.table_scale = 1.0               # the GM's text-size nudge for the Table (readability over a stream)
         self.battle_cards = battle_cards.load(self.data_dir, root)
 
     @property
@@ -134,4 +135,6 @@ class AppState:
         cs = combat_state.serialise(self.combat_state(), "table")
         b = battle_state.table_view(self.battle_state(), self.party.items, self.combat_data.get("encounters", {}),
                                     self.card_faces)
-        return table.build(self.session, cs, self.table_mode, battle=b)
+        return table.build(self.session, cs, self.table_mode, battle=b, scale=self.table_scale,
+                           card_for=lambda name: battle_state.table_card(self.battle_state(), name, self.combat_data.get("encounters", {}),
+                                                                         self.card_faces))

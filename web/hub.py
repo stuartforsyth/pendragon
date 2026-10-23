@@ -15,6 +15,11 @@ class Hub:
         self._queues.add(q)
         return q
 
+    @property
+    def viewers(self):
+        """How many live streams are open (one per browser: its tabs share one)."""
+        return len(self._queues)
+
     def unsubscribe(self, q):
         self._queues.discard(q)
 

@@ -3,7 +3,7 @@
 
 import { h, clear, icon, debounce } from "./lib.js";
 import { liveStream } from "./stream.js";
-import { knightCard, rankByGlory, moraleGauge, cardFrame, deckSpread, tallyStrip, knightShield as knightShieldEl } from "./board.js";
+import { knightCard, rankByGlory, moraleBar, cardFrame, deckSpread, knightShield as knightShieldEl } from "./board.js";
 import { bandFace } from "./cardface.js";
 import { foeFace, layoutArea, linkLines, horseBadge, proneBadge, stanceBadge } from "./field.js";
 
@@ -87,11 +87,11 @@ function hero(c, fresh) {
     return h("div", { class: "hero" },
       h("div", { class: "kicker" }, t === "npc.presented" ? "Before you stands" : "A new face"),
       h("div", { class: "h-title" }, d.npc.full), h("div", { class: "h-sub" }, d.npc.subtitle),
-      flourish(), h("p", { class: "illum", style: { fontSize: "27px" } }, d.npc.description));
+      flourish(), h("p", { class: "illum", style: { fontSize: "1.6875rem" } }, d.npc.description));
   }
   if (t === "sealed") {
     return h("div", { class: "hero sealed-hero" }, waxSeal(),
-      c.title ? h("div", { class: "kicker", style: { marginTop: "12px" } }, c.title) : null,
+      c.title ? h("div", { class: "kicker", style: { marginTop: "0.75rem" } }, c.title) : null,
       h("div", { class: "msg" }, "The GM rolls in secret…"));
   }
   if (t === "roll.check" || t === "roll.dice" || t === "roll.damage") {
@@ -255,10 +255,13 @@ function volleyCard(c) {
 }
 
 function latestRollCard(p) {
-  const latestRoll = p.feed.find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow" || c.type === "combat.volley");
-  if (!latestRoll) return [null, p.feed.slice(0, 7)];
+  // The big card is the newest roll of the fight on the board — never one left over from an earlier fight
+  // (the feed is newest first: only what comes before this fight's start counts).
+  const startAt = p.combat?.active ? p.feed.findIndex((c) => c.type === "combat.started") : -1;
+  const latestRoll = (startAt >= 0 ? p.feed.slice(0, startAt) : p.feed).find((c) => c.type.startsWith("roll.") || c.type === "sealed" || c.type === "combat.check" || c.type === "combat.blow" || c.type === "combat.volley");
+  if (!latestRoll) return [null, p.feed.slice(0, 4)];
   const d = latestRoll.data || {};
-  if (latestRoll.type === "combat.volley") return [volleyCard(latestRoll), p.feed.filter((c) => c !== latestRoll).slice(0, 7)];
+  if (latestRoll.type === "combat.volley") return [volleyCard(latestRoll), p.feed.filter((c) => c !== latestRoll).slice(0, 3)];
   const dmg = isDamage(latestRoll);
   const n = latestRoll.type === "roll.check" ? d.roll : latestRoll.type === "combat.blow" ? (d.to_knight ? d.blow?.damage : d.blow?.wound)
     : d.total ?? (latestRoll.type === "sealed" ? "?" : d.roll ?? "");
@@ -288,7 +291,7 @@ function latestRollCard(p) {
     crit ? h("div", { class: "critbanner" }, "★ ", dmg ? (latestRoll.type === "combat.blow" ? "Critical hit!" : "Critical damage!") : "Critical!", " ★") : null,
     h("div", { class: "rollline" }, badge, h("div", { style: { minWidth: 0 } }, body)));
   if (crit) last.critId = latestRoll.id;
-  return [card, p.feed.filter((c) => c !== latestRoll).slice(0, 6)];
+  return [card, p.feed.filter((c) => c !== latestRoll).slice(0, 3)];
 }
 
 const FATE_WORD = { dead: "slain", fled: "fled", surrendered: "surrendered", unconscious: "unconscious" };
@@ -362,10 +365,11 @@ function fieldStage(p, knights, foes) {
   const relayout = () => {
     const W = stage.clientWidth, H = stage.clientHeight;
     if (!W || !H) return;
-    const key = `${W}x${H}`;
+    const u = rootUnit();                          // the layout is in screen px; the token art is in rem
+    const key = `${W}x${H}x${u.toFixed(3)}`;
     if (key === lastKey) return;
     lastKey = key;
-    const { placed, scale } = layoutArea(kItems, fItems, W, H, { tokW: 130, tokH: 100 });
+    const { placed, scale } = layoutArea(kItems, fItems, W, H, { tokW: 130 * u, tokH: 100 * u });
     stage.style.setProperty("--s", scale.toFixed(3));
     for (const [t, x, y] of placed) {
       let node = nodes.get(t.id);
@@ -401,15 +405,10 @@ function fight(p) {
   const banners = [bt?.countercharge ? "They countercharge!" : null,
     br ? (br.active ? `Under the barrage — round ${cs.round} of ${br.rounds} before contact` : `The barrage is over — contact!`)
       : bt?.barrage ? `${bt.barrage} round${bt.barrage === 1 ? "" : "s"} of arrows before contact` : null].filter(Boolean);
-  const head = bt ? h("div", { class: "fv-head" }, h("span", { class: "fv-battle" }, `${bt.name} · Day ${bt.day} · Turn ${bt.turn}`),
-    bt.morale ? h("span", { class: `fv-morale band-${(bt.morale.band || "").toLowerCase()}` }, h("span", { class: "lbl" }, "Morale"),
-      h("span", { class: "mb" }, h("i", { style: { width: `${Math.round(100 * bt.morale.current / Math.max(1, bt.morale.start))}%` } })),
-      h("b", {}, bt.morale.current), h("span", { class: "mw" }, bt.morale.band)) : null) : null;
-  // Beneath the Field: the running tally per knight (every fight of the battle),
-  // then who is still waiting. Foes nobody is credited with are listed too.
+  // Beneath the Field: foes nobody is credited with, and who is still waiting. (The per-knight
+  // tally is a ⚔ count on the knight's card; the ledger itself is in the finale.)
   const uncredited = defeated.filter((f) => !f.credit);
   const foot = [
-    cards.length ? tallyStrip(cards) : null,
     uncredited.length || waiting.length ? h("div", { class: "fv-foot" },
       uncredited.length ? [h("span", { class: "lbl" }, cards.length ? "Also defeated" : "Defeated"), uncredited.map((f) => h("span", { class: "dft" },
         h("s", {}, f.name), ` ${FATE_WORD[f.status]}`, f.captured_by_name ? h("span", { class: "dcr" }, ` · captive of ${f.captured_by_name}`) : null))] : null,
@@ -418,8 +417,7 @@ function fight(p) {
   return h("div", { class: `fightview ${cards.length ? "" : "no-knights"}` },
     cards.length ? h("div", { class: "fv-knights" }, glorySorted(cards)) : null,
     h("div", { class: "fv-centre" },
-      head,
-      banners.length ? h("div", { class: "row", style: { gap: "10px", flexWrap: "wrap" } }, banners.map((x) => h("div", { class: "fv-banner" }, x))) : null,
+      banners.length ? h("div", { class: "row", style: { gap: "0.625rem", flexWrap: "wrap" } }, banners.map((x) => h("div", { class: "fv-banner" }, x))) : null,
       fieldStage(p, knightRows, foes),
       foot),
     h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), latest, others.map(mini)));
@@ -468,10 +466,12 @@ function battleView(p) {
   } else if (tt.set) cards.push(cardFrame(withMin(tt.set), { kind: tt.picks?.length ? "The GM sets" : "This turn", small: tt.picks?.length > 0 }));
   for (const pk of tt.selected_card ? [] : tt.picks || []) {
     if (pk.name === tt.set?.name) continue;
-    cards.push(cardFrame(withMin(pk), { kind: pk.opportunity ? "★ Opportunity" : "Picked", token: pk.knight_name.split(" ").slice(-1)[0], crit: pk.crit }));
+    cards.push(cardFrame(withMin(pk), { kind: pk.opportunity ? "★ Opportunity" : "Picked", small: true, token: pk.knight_name.split(" ").slice(-1)[0], crit: pk.crit }));
   }
-  if (cards.length) centre.push(h("div", { class: `slots ${tt.selected ? "chosen" : ""}` }, cards));
-  else if (b.status === "mustering" || titleFresh || !tt.set) {
+  const opts = (b.options || []).filter((o) => !(cards.length && o.in_play && (b.options || []).length === 1));
+  // the deck row already shows the set card and the picks, marked: only show them again when there is no deck row
+  if (cards.length && !opts.length) centre.push(h("div", { class: `slots ${tt.selected ? "chosen" : ""}` }, cards));
+  else if (!cards.length && (b.status === "mustering" || titleFresh || !tt.set)) {
     centre.push(h("div", { class: `bv-title ${titleFresh ? "fresh" : ""}` },
       h("div", { class: "bv-kicker" }, b.size_label, b.days > 1 ? ` · ${b.days} days` : ""),
       h("div", { class: "bv-name" }, b.name),
@@ -483,25 +483,31 @@ function battleView(p) {
   for (const r of b.results || []) centre.push(h("div", { class: `bv-script ${r.kind}` }, r.text));
   // the battlefield: only the cards the rules allow at this step; hidden once
   // it would just repeat the card already shown above
-  const opts = (b.options || []).filter((o) => !(cards.length && o.in_play && (b.options || []).length === 1));
   if (opts.length) centre.push(deckSpread(opts, { label: tt.picks?.length || (b.banner?.text || "").startsWith("Intensity fails") ? "Choose your fate" : (b.banner?.text || "").startsWith("Fortune") ? "An Opportunity — or the foe before you" : "The battlefield" }));
-  const strip = tallyStrip(p.battle_knights);
-  if (strip) centre.push(strip);
   if (b.opportunity) {      // played at the table: the card's green title box fills the board
     return h("div", { class: "battleview opp" },
-      moraleGauge(b.morale),
       h("div", { class: "bv-centre opp-centre" }, h("div", { class: "cf-row" }, bandFace(b.opportunity))),
       (p.battle_knights || []).length ? h("div", { class: "bv-knights" }, glorySorted(p.battle_knights)) : null);
   }
   return h("div", { class: "battleview" },
-    moraleGauge(b.morale),
     h("div", { class: "bv-centre" }, centre),
-    h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), p.feed.slice(0, 6).map(mini)),
+    h("div", { class: "fray" }, h("div", { class: "side-head" }, "The Fray"), p.feed.slice(0, 3).map(mini)),
     (p.battle_knights || []).length ? h("div", { class: "bv-knights" }, glorySorted(p.battle_knights)) : null);
 }
 
 
+// The whole Table scales as one unit: 1rem is 16px on a 1920×1080 window and grows or shrinks with the
+// window (and with the GM's text-size nudge), so every size in rem keeps its place in the picture.
+const rootUnit = () => parseFloat(getComputedStyle(document.documentElement).fontSize) / 16;
+let tableScale = 1;
+function fitRoot() {
+  document.documentElement.style.fontSize = `${16 * Math.min(innerWidth / 1920, innerHeight / 1080) * tableScale}px`;
+}
+window.addEventListener("resize", fitRoot);
+fitRoot();
+
 function render(p) {
+  if ((p.scale ?? 1) !== tableScale) { tableScale = p.scale ?? 1; fitRoot(); }
   $("title").textContent = p.session.scratch ? "Pendragon" : p.session.title;
   document.title = `${p.session.scratch ? "Pendragon" : p.session.title} — The Table`;
   const combat = p.mode === "combat" && p.combat;
@@ -513,8 +519,35 @@ function render(p) {
         battle.intensity ? h("span", { class: "round" }, "Intensity ", h("span", { class: "rn" }, battle.intensity)) : null])
     : h("span", {}, "The Chronicle"));
   if (battle) $("title").textContent = battle.name;
+  else if (combat && p.battle && p.battle.status !== "aftermath") $("title").textContent = p.battle.name;      // a fight within the battle
+  const scrolled = document.querySelector(".bv-centre")?.scrollTop || 0;      // an update must not throw the GM back to the top
+  const bm = (battle || (combat && p.battle)) && p.battle?.status !== "aftermath" ? p.battle?.morale : null;      // Morale rides in the header
+  clear($("morale"), moraleBar(bm));
   clear($("view"), combat ? fight(p) : battle ? battleView(p) : chronicle(p));
+  const centre = document.querySelector(".bv-centre");
+  if (centre && scrolled) centre.scrollTop = scrolled;
   ruleOverlay(p.rule);
+  spotlightOverlay(p.spotlight);
+}
+
+// A card the GM has "exploded": big enough to read across the room (or a compressed stream), over whatever
+// is showing, until the GM takes it off, the Table is cleared or the battle moves on.
+let spotShown = null;
+function spotlightOverlay(sp) {
+  const old = document.getElementById("spotOverlay");
+  if (!sp?.card) { old?.remove(); spotShown = null; return; }
+  if (old && spotShown === sp.id) return;
+  old?.remove();
+  spotShown = sp.id;
+  const card = cardFrame(sp.card, { kind: sp.card.opportunity ? "★ Opportunity" : null });
+  const overlay = h("div", { class: "spot-overlay", id: "spotOverlay" }, card);
+  document.body.append(overlay);
+  // the biggest text that still leaves the whole card on the screen
+  let fs = 5;
+  for (; fs > 1.5; fs -= 0.1) {
+    card.style.setProperty("--pc-fs", `${fs}rem`);
+    if (card.getBoundingClientRect().height <= innerHeight * 0.9) break;
+  }
 }
 
 // A rule the GM has put on the Table: a parchment laid over whatever is

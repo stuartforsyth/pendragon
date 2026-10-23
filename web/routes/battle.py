@@ -185,6 +185,27 @@ async def resume(request: Request, body: dict):
     return {"event": ev}
 
 
+@router.post("/api/battle/duplicate")
+async def duplicate(request: Request, body: dict):
+    """Copy a paused battle's saved session to a new one (its own battle id): the original stays as it is,
+    the copy is there to be tried, played and deleted."""
+    state = st(request)
+    sid, bid = body.get("session_id"), body.get("battle_id")
+    try:
+        src = state.sessions.load(sid or "")
+    except (KeyError, OSError):
+        bad("No such session", 404)
+    b = BS.reduce(live_events(src.events))
+    if not b or b["id"] != bid or b["status"] != "paused":
+        bad("No such paused battle", 404)
+    try:
+        copy = state.sessions.duplicate(sid, body.get("title"), bid)
+    except ValueError as exc:
+        bad(str(exc), 409)
+    state.notify("session")
+    return {"session": copy.meta()}
+
+
 # -- mustering -------------------------------------------------------------------
 
 def _mustering(request):

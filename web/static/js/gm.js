@@ -43,6 +43,7 @@ const ctx = {
   },
   onEvent(fn) { S.listeners.add(fn); return () => S.listeners.delete(fn); },
   get session() { return S.session; },
+  get spot() { return S.spot; },
   get events() { return S.events; },
 
   async rollCheck({ label, value, kind = "skill", actor = "", modifier = 0, masked }) {
@@ -313,7 +314,16 @@ async function fetchNew() {
   notify(r.events);
 }
 
+// The card on the Table right now (the spotlight): a chip in the bar takes it off from any tool.
+async function refreshSpot() {
+  try { S.spot = (await api("/api/spotlight")).spotlight?.name || null; } catch { return; }
+  const chip = $("spotChip");
+  chip.hidden = !S.spot;
+  if (S.spot) { clear(chip, icon("present"), `On the Table: ${S.spot}  ✕`); chip.onclick = () => post("/api/spotlight/off"); }
+}
+
 function notify(events, reset = false) {
+  if (reset || events.some((e) => e.type.startsWith("table.") || e.type.startsWith("battle.") || e.type.startsWith("session."))) refreshSpot();
   for (const fn of S.listeners) { try { fn(events, { reset }); } catch (e) { console.error(e); } }
 }
 
@@ -359,10 +369,20 @@ async function endSession() {
 
 // ------------------------------------------------------------------ table mode
 let tableMode = "auto";
+let tableScale = 1;
+const TABLE_SCALES = [0.9, 1, 1.15, 1.3];
 function renderTableMode() {
+  const step = async (dir) => {
+    const i = Math.max(0, Math.min(TABLE_SCALES.length - 1, TABLE_SCALES.indexOf(tableScale) + dir));
+    await post("/api/table/scale", { scale: TABLE_SCALES[i] }); tableScale = TABLE_SCALES[i]; renderTableMode();
+  };
   clear($("tableMode"), [["auto", "Auto"], ["chronicle", "Story"], ["combat", "Fight"], ["battle", "Battle"]].map(([m, label]) =>
     h("button", { class: `chip ${m === tableMode ? "on" : ""}`, title: m === "auto" ? "Table shows the fight during combat, the battle while one runs, otherwise the story" : `Pin the Table to ${label}`,
-      onclick: async () => { await post("/api/table/mode", { mode: m }); tableMode = m; renderTableMode(); } }, label)));
+      onclick: async () => { await post("/api/table/mode", { mode: m }); tableMode = m; renderTableMode(); } }, label)),
+    h("button", { class: "chip", id: "scaleDown", title: `Table text size ${Math.round(tableScale * 100)}% — smaller`, "aria-label": "Smaller Table text",
+      disabled: tableScale <= TABLE_SCALES[0] || null, onclick: () => step(-1) }, "A−"),
+    h("button", { class: "chip", id: "scaleUp", title: `Table text size ${Math.round(tableScale * 100)}% — bigger, for a stream that is hard to read`, "aria-label": "Bigger Table text",
+      disabled: tableScale >= TABLE_SCALES.at(-1) || null, onclick: () => step(1) }, "A+"));
 }
 
 // ------------------------------------------------------------------ dice tray
@@ -546,9 +566,10 @@ async function boot() {
   $("openTable").onclick = () => window.open("/table", "pendragon-table", "width=1280,height=760");
   $("toggleLog").replaceChildren(icon("panel"));
   $("toggleLog").onclick = () => $("shell").classList.toggle("log-collapsed");
-  try { tableMode = (await api("/api/table")).pinned; } catch {}
+  try { const t = await api("/api/table"); tableMode = t.pinned; tableScale = t.scale ?? 1; } catch {}
   renderTableMode();
   await loadSession();
+  refreshSpot();
   window.addEventListener("hashchange", route);
   await route();
   connect();

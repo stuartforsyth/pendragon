@@ -95,9 +95,29 @@ def shown_rule(events, fl):
     return None
 
 
+# A card the GM has "exploded" over the Table so everyone reads it together — like a rule, an overlay and not
+# a Fray entry. It ends when the GM removes it, the Table is cleared, or the battle moves on a step.
+SPOTLIGHT_TYPES = ("table.spotlight", "table.spotlight_off")
+
+
+def shown_spotlight(events, fl):
+    """What the GM has on the Table right now (``{id, kind, name}``), or None."""
+    from web.battle_state import STEP_EVENTS
+    for ev in reversed(events):
+        if fl.get(ev["id"], {}).get("struck"):
+            continue
+        t = ev["type"]
+        if t in CUTOFF_TYPES or t == "table.spotlight_off" or t in STEP_EVENTS:
+            return None
+        if t == "table.spotlight":
+            d = ev.get("data", {})
+            return {"id": ev["id"], "kind": d.get("kind", "card"), "name": d.get("name", "")}
+    return None
+
+
 def card(ev, fl):
     """A player-safe card for one event, or None if it must not be shown."""
-    if ev["type"] in META_TYPES or ev["type"] in RULE_TYPES or ev.get("visibility") == "gm":
+    if ev["type"] in META_TYPES or ev["type"] in RULE_TYPES or ev["type"] in SPOTLIGHT_TYPES or ev.get("visibility") == "gm":
         return None
     f = fl.get(ev["id"], {})
     if f.get("struck"):
@@ -300,7 +320,15 @@ def battle_knight_cards(events, fl, battle):
     return cards
 
 
-def build(session, combat, pinned_mode="auto", battle=None):
+def _spotlight_payload(sp, card_for):
+    """The spotlit thing as the players may see it: resolved from the library here, so no event carries a secret."""
+    if not sp or not card_for:
+        return None
+    card = card_for(sp["name"])
+    return {"id": sp["id"], "kind": sp["kind"], "card": card} if card else None
+
+
+def build(session, combat, pinned_mode="auto", battle=None, scale=1.0, card_for=None):
     fl = flags(session.events)
     feed = []
     for ev in reversed(session.events):
@@ -319,7 +347,8 @@ def build(session, combat, pinned_mode="auto", battle=None):
         auto = "chronicle"
     mode = auto if pinned_mode == "auto" else pinned_mode
     return {"session": {"title": session.title, "scratch": session.scratch},
-            "mode": mode, "pinned": pinned_mode, "feed": feed, "combat": combat, "battle": battle,
+            "mode": mode, "pinned": pinned_mode, "scale": scale, "feed": feed, "combat": combat, "battle": battle,
             "rule": shown_rule(session.events, fl),
+            "spotlight": _spotlight_payload(shown_spotlight(session.events, fl), card_for),
             "knights": knight_cards(session.events, fl, combat, battle),
             **({"battle_knights": battle_knight_cards(session.events, fl, battle)} if battle else {})}

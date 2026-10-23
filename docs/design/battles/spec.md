@@ -1514,3 +1514,26 @@ decision unless marked as one for the user to confirm.
 - **P9 K2 vs §3.5.** P9 K2's cascade covers "every later step in the same turn". Design §3.5 extends it
   to the linked fight's `combat.*` events and Glory. This is consistent with the intent, and the spec
   follows the design.
+
+## Players' board — readability over a stream (2026-10-24)
+
+The Table is shared over Discord, which compresses video, so nothing players read may be small.
+Plan: `.claude/plans/2026-10-24-table-readability.md`. What changed:
+
+- **One scale.** `table.js` sets the root font-size from the window against a 1920×1080 design
+  (`16px × min(w/1920, h/1080) × text-size`), and `table.css`/`board.css` are in `rem` (`scripts/rem_convert.py`), so the
+  composition is the same at every window size. The GM's **A− / A+** buttons (bar, next to Auto/Story/Fight/Battle)
+  nudge the text size (0.9 / 1 / 1.15 / 1.3, `POST /api/table/scale`).
+- **A floor.** Nothing a player reads is under 16px at design size; labels are 18px, body 20px+.
+  `tests/e2e/test_table_text.py` measures the rendered text of the busiest screens at 1080p and 720p and fails on anything smaller.
+  `scripts/stream_sim.py` renders each state at 540p/JPEG q35 (what a compressed share looks like) to look at.
+- **Space re-spent.** Morale is one wide line in the header (`moraleBar`), freeing the battle view's left column; the Fray
+  keeps the newest three entries; knight cards drop the "Last…" line and the micro-labels and gain a **⚔ count**; the
+  **Defeated tally is gone from the board** (the count is on the knight, the ledger is in the finale);
+  **Mustering shows the title only** (the cards come with the choices); at "Choose your fate" the set card and the
+  picks are marked on the deck row itself ("The GM sets", "Picked · Surname") instead of a second row.
+- **Spotlight.** The GM clicks the present icon on a card (Set Encounter tiles, picks/select cards, the Opportunity
+  step) and the card is blown up over the Table — name, green-box flavour and Morale Minimum only. Events
+  `table.spotlight` / `table.spotlight_off`; `table.shown_spotlight()` ends it at "off", Clear Table, or the next battle
+  step; the payload resolves the card server-side (`battle_state.table_card`). A chip in the GM bar removes it from any tool.
+- Also fixed: a long session title could widen the whole Table page (its grid column is now `minmax(0, 1fr)`).

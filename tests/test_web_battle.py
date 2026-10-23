@@ -662,7 +662,7 @@ def test_table_battle_view_cards_and_deck_names_only(client):
         assert set(c) <= {"name", "in_play", "spent"}
     # the battlefield the players choose from: name, flavour, the Morale needed, playable
     for c in t["battle"]["options"]:
-        assert set(c) == {"name", "flavour", "opportunity", "minimum", "playable", "spent", "in_play"}
+        assert set(c) == {"name", "flavour", "opportunity", "minimum", "playable", "spent", "in_play", "set", "picked_by"}
     raw = client.get("/api/table").text
     for secret in ("morale_minimum", "morale_loss", '"kv', "has_roster", "definition", "mounted_charge"):
         assert secret not in raw, secret
@@ -1143,3 +1143,57 @@ def test_table_gets_only_the_title_box_after_morale(client):
     assert "conroi commander" not in json.dumps(_tb(client)["battle"])
     gm = _battle(client)["opportunity"]
     assert gm["back"][0]["subtitle"] == "Champion" and gm["rewards"][0]["amount"] == 50
+
+
+def test_table_cards_carry_the_official_green_box_text_only(client):
+    _running(client)
+    _step(client, "set", encounter="Pictish Knifemen")
+    tb = _tb(client)["battle"]
+    set_card = tb["this_turn"]["set"]
+    assert set_card["flavour"].startswith("Rushing forward at a half-crouch")          # the printed flavour, not a paraphrase
+    assert "three Pictish Knifemen for every Player-knight" not in json.dumps(tb)      # the card's instructions are the GM's
+    assert "Hit Points" not in json.dumps(tb)
+    assert {o["name"]: o["flavour"] for o in tb["options"]}["Pictish Knifemen"] == set_card["flavour"]
+
+
+def _paused_battle(client):
+    pids = _party(client, "Sir Bors")
+    a = ok(client.post("/api/session/start", json={"title": "Night one"}))["session"]["id"]
+    _quick(client, "clash", 2, name="Ford")
+    _muster(client, pids, start=18)
+    ok(client.post("/api/battle/morale", json={"delta": -4, "reason": "arrows"}))
+    ok(client.post("/api/session/end"))
+    ok(client.post("/api/session/start", json={"title": "Night two"}))
+    return a, ok(client.get("/api/battle/paused"))["paused"][0]
+
+
+def test_duplicate_a_paused_battle_to_test_on(client):
+    a, orig = _paused_battle(client)
+    assert client.post("/api/battle/duplicate", json={"battle_id": "nope", "session_id": a}).status_code == 404
+    copy = ok(client.post("/api/battle/duplicate", json={"battle_id": orig["battle_id"], "session_id": a}))["session"]
+    assert copy["title"] == "Copy of Night one" and copy["id"] != a
+    rows = {p["session_id"]: p for p in ok(client.get("/api/battle/paused"))["paused"]}
+    assert set(rows) == {a, copy["id"]} and rows[copy["id"]]["battle_id"] != orig["battle_id"]       # a fresh id: both are listed
+    assert rows[copy["id"]]["morale"] == orig["morale"] == [14, 18]
+    # play the copy through to another pause — the original is untouched, and still paused where it was
+    ok(client.post("/api/battle/resume", json={"battle_id": rows[copy["id"]]["battle_id"], "session_id": copy["id"]}))
+    ok(client.post("/api/battle/morale", json={"delta": -6, "reason": "testing"}))
+    ok(client.post("/api/session/end"))
+    ok(client.post("/api/session/start", json={"title": "Night three"}))
+    morales = sorted(p["morale"] for p in ok(client.get("/api/battle/paused"))["paused"])
+    assert morales == [[8, 18], [14, 18]]
+
+
+def test_delete_a_paused_battle_bins_its_session(client):
+    a, orig = _paused_battle(client)
+    copy = ok(client.post("/api/battle/duplicate", json={"battle_id": orig["battle_id"], "session_id": a}))["session"]
+    ok(client.delete(f"/api/sessions/{copy['id']}"))
+    assert [p["session_id"] for p in ok(client.get("/api/battle/paused"))["paused"]] == [a]
+    assert (client.tmp / "sessions" / ".trash" / f"{copy['id']}.json").exists()        # in the bin, not destroyed
+
+
+def test_cannot_duplicate_the_session_in_progress(client):
+    ok(client.post("/api/session/start", json={"title": "Tonight"}))
+    import pytest
+    with pytest.raises(ValueError):
+        client.app.state.pd.sessions.duplicate(client.app.state.pd.session.id)

@@ -100,6 +100,7 @@ def test_feedback_queue_records_where_it_came_from(client):
 
 def test_healthz_reports_a_boot_id(client):
     assert len(client.get("/healthz").json()["boot"]) == 8
+    assert client.get("/healthz").json()["viewers"] == 0            # launch.sh opens a browser when no tab is connected
 
 
 def test_delete_session_bins_it_but_not_the_active_one(client):

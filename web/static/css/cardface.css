@@ -38,8 +38,8 @@
 .cf-table th { background: #231a14; color: #fbf4e2; font-family: "Cinzel", Georgia, serif; font-variant: small-caps; font-size: .85em; text-align: left; padding: .12em .35em; }
 .cf-table td, .cf-table tbody th { padding: .1em .35em; }
 .cf-table tbody tr:nth-child(odd) td { background: rgba(78, 58, 40, .12); }
-.cf-table.kv tbody tr td:first-child { font-weight: 700; }
-.cf-table.kv td:last-child { text-align: right; }
+.cf-table.cf-kv tbody tr td:first-child { font-weight: 700; }
+.cf-table.cf-kv td:last-child { text-align: right; }
 .cf-two { display: grid; grid-template-columns: 1fr 1fr; gap: .6em; }
 .cf-note { font-size: .85em; margin: 0 0 .3em; }
 .cf-ransom { display: grid; justify-items: center; line-height: 1; margin-top: .3em; font-family: "Cinzel", Georgia, serif; color: var(--cf-red); font-weight: 700; }
@@ -50,7 +50,7 @@
 
 /* the players' card: just the green box with the red border, as large as fits */
 .cf-bandcard { height: 100%; max-height: 100%; aspect-ratio: 3 / 2; max-width: 100%; margin: 0 auto; box-sizing: border-box; display: grid; place-items: center;
-  background: linear-gradient(180deg, #5a6b2c, #3f5020); color: #fbf4e2; border: 6px solid #8e2219; border-radius: 10px; text-align: center;
+  background: linear-gradient(180deg, #b08a36, #7a5a14); color: #fbf4e2; border: 6px solid #8e2219; border-radius: 10px; text-align: center;       /* gold: an Opportunity */
   box-shadow: 0 0 0 4px #e8dcc2, 0 14px 40px rgba(0, 0, 0, .45); font-family: "EB Garamond", Garamond, Georgia, serif; overflow: hidden; }
 .cf-bandbody { width: 100%; box-sizing: border-box; padding: 5% 7%; overflow: hidden; }
 .cf-bandbody .cf-title { font-size: 1.9em; margin-bottom: .35em; }
@@ -64,5 +64,6 @@
 
 .cf-sec.mid { text-align: center; font-size: 1.15em; }
 .cf-rollt { margin: .4em 0 .1em; }
-.cf-table.rolls th { background: none; color: var(--cf-ink); font-family: inherit; font-variant: normal; font-size: 1em; width: 3.2em; }
-.cf-table.rt td:last-child { text-align: right; }
+.cf-table.cf-rolls th { background: none; color: var(--cf-ink); font-family: inherit; font-variant: normal; font-size: 1em; width: 3.2em; }
+.cf-table.cf-rt-t td:last-child { text-align: right; }
+.cf-two > div { min-width: 0; }

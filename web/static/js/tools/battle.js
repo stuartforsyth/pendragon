@@ -59,6 +59,20 @@ export default {
     let bannerEl = null;
     const banner = () => (bannerEl ||= examplesBanner({ onAdded: () => { bannerEl = null; toast("Battle cards added", "ok"); load(); } }));
 
+    // A paused battle lives in a saved session: Duplicate copies that session (the battle gets a fresh id),
+    // Delete bins it (sessions/.trash — a file you can move back, not oblivion).
+    async function duplicateBattle(p) {
+      const r = await post("/api/battle/duplicate", { battle_id: p.battle_id, session_id: p.session_id });
+      toast(`Copied to “${r.session.title}”`, "ok");
+      load();
+    }
+    async function binBattle(p) {
+      if (!await confirmBox("Delete this battle?", `“${p.session_title}” — the whole session, battle and log — goes to the bin folder, sessions/.trash, and can no longer be resumed from here.`, "Delete it", true)) return;
+      await api(`/api/sessions/${encodeURIComponent(p.session_id)}`, { method: "DELETE" });
+      toast("Moved to the bin", "ok");
+      load();
+    }
+
     // ------------------------------------------------------------ idle: launch
     function launchPanel() {
       const here = b && b.status === "paused" ? [{ battle_id: b.id, session_id: session.id, session_title: "this session",
@@ -73,7 +87,11 @@ export default {
           rows.map((p) => h("div", { class: "bl-row" },
             h("span", {}, h("b", {}, p.name), ` · Day ${p.day} · Turn ${p.turn}`, p.morale ? ` · Morale ${p.morale[0]} / ${p.morale[1]}` : "",
               h("span", { class: "faint small" }, ` · ${p.session_title}`)),
-            h("button", { class: "btn primary sm", onclick: () => post("/api/battle/resume", { battle_id: p.battle_id, session_id: p.session_id }) }, icon("play"), "Resume")))) : null,
+            h("span", { class: "row", style: { gap: "6px" } },
+              h("button", { class: "btn primary sm", onclick: () => post("/api/battle/resume", { battle_id: p.battle_id, session_id: p.session_id }) }, icon("play"), "Resume"),
+              p.session_id === session.id ? null : [
+                h("button", { class: "btn ghost sm", title: "Copy this battle to a new session — to test on, the original stays as it is", onclick: () => duplicateBattle(p) }, icon("copy"), "Duplicate"),
+                h("button", { class: "btn ghost sm danger", title: "Bin this session and the battle in it", onclick: () => binBattle(p) }, icon("x"), "Delete")])))) : null,
         h("div", { class: "split bl-split" },
           h("div", { class: "panel" }, h("h3", {}, "Quick battle"),
             h("div", { class: "chips bl-sizes" }, Object.entries(SIZES).map(([k, s]) => h("button", { class: `chip ${quick.size === k ? "on" : ""}`,
@@ -370,6 +388,12 @@ export default {
       } }, "reopen");
     }
 
+    // Put a card over the Table so everyone reads it together (and take it off again).
+    const showBtn = (name, cls = "ct-show") => h("button", { class: cls, "aria-label": "Show on the Table",
+      title: ctx.spot === name ? "Take it off the Table" : "Show this card big on the Table",
+      onclick: (e) => { e.stopPropagation(); return ctx.spot === name ? post("/api/spotlight/off") : post("/api/spotlight", { kind: "card", name }); } },
+      icon("present"));
+
     // A whole printed card to choose from: the front (what the players are told), flipped
     // with the corner toggle to the back (the stat block) — no physical card needed.
     function cardTile(key, c, onPick, onHover) {
@@ -381,6 +405,7 @@ export default {
           h("div", { class: "ct-face" }, (faces.front.length ? faces.front : [{ title: key, flavour: c.description || "", blocks: [] }]).slice(0, 1).map((f) => cardFace(f))),
           h("div", { class: "ct-face ct-back" }, faces.back.length ? faces.back.map((f) => statFace(f)).slice(0, 1) : h("div", { class: "ct-noback" }, "No stat block for this card."))),
         faces.back.length > 1 ? h("span", { class: "ct-more" }, `+${faces.back.length - 1} more on the back`) : null,
+        showBtn(key),
         h("button", { class: "ct-flip", title: flipped ? "Show the front" : "Flip to the stat block", "aria-label": "Flip the card",
           onclick: (e) => { e.stopPropagation(); ui.flipped.has(key) ? ui.flipped.delete(key) : ui.flipped.add(key); tile.classList.toggle("flipped");
             e.currentTarget.title = ui.flipped.has(key) ? "Show the front" : "Flip to the stat block"; } }, "⟳"));
@@ -490,7 +515,7 @@ export default {
         const isSet = b.t.set?.encounter === k;
         return h("div", { class: `gcard ${opp ? "opp" : ""} ${spent ? "dis" : ""} ${isSet ? "set" : ""} ${ui.pickCard === k ? "picked" : ""}`,
           onclick: () => { if (!spent) { ui.pickCard = ui.pickCard === k ? null : k; render(); } } },
-          h("span", { class: "cn" }, k), gmMeta(c), spent ? h("span", { class: "cm" }, "already played") : null,
+          h("span", { class: "cn" }, k), showBtn(k, "gc-show"), gmMeta(c), spent ? h("span", { class: "cm" }, "already played") : null,
           h("span", { class: "picks" }, tokensOn(k).map(([pid, p]) => h("button", { class: `ptok ${p.crit ? "crit" : ""}`, title: "Toggle critical, or remove",
             onclick: (e) => { e.stopPropagation(); menu(e.currentTarget, [
               [p.crit ? "Not a critical" : "Mark critical", () => step("pick", { knight: pid, encounter: k, crit: !p.crit })],
@@ -549,7 +574,7 @@ export default {
           const c = cardOf(k);
           const ok = b.morale.current >= (c.morale_minimum || 0);
           return h("button", { class: `gcard ${deckKeys("opportunity").includes(k) ? "opp" : ""}`, onclick: () => step("select", { encounter: k, via: "commander" }) },
-            h("span", { class: "cn" }, k), gmMeta(c), h("span", { class: `cm ${ok ? "ok" : "bad"}` }, ok ? "within Morale ✓" : "below Minimum ✗"));
+            h("span", { class: "cn" }, k), showBtn(k, "gc-show"), gmMeta(c), h("span", { class: `cm ${ok ? "ok" : "bad"}` }, ok ? "within Morale ✓" : "below Minimum ✗"));
         }))];
     }
 
@@ -656,6 +681,9 @@ export default {
       };
       const chip = (label, on, onclick, cls = "") => h("button", { class: `chip ${on ? "on" : ""} ${cls}`, onclick }, label);
       return [
+        h("div", { class: "row" }, h("button", { class: `btn sm ${ctx.spot === o.name ? "primary" : ""}`,
+          onclick: () => ctx.spot === o.name ? post("/api/spotlight/off") : post("/api/spotlight", { kind: "card", name: o.name }) },
+          icon("present"), ctx.spot === o.name ? "Remove from Table" : "Show on Table")),
         h("div", { class: "hint" }, h("b", {}, o.name), " is played at the table — no postures, no combat tracker. The players read the card on the Table; the stats are yours."),
         h("div", { class: "cf-gm" }, o.front.map((f) => cardFace(f)), o.back.map((f) => statFace(f))),
         h("div", { class: "opp-glory" },
@@ -888,7 +916,7 @@ export default {
     // ------------------------------------------------------------ wiring
     const loadSoon = debounce(load, 60);
     ctx.onEvent((evs, { reset }) => {
-      if (reset || evs.some((e) => e.type.startsWith("battle.") || (e.type.startsWith("glory.") && e.data?.battle) || e.type.startsWith("meta.") || e.type.startsWith("session."))) loadSoon();
+      if (reset || evs.some((e) => e.type.startsWith("battle.") || e.type.startsWith("table.") || (e.type.startsWith("glory.") && e.data?.battle) || e.type.startsWith("meta.") || e.type.startsWith("session."))) loadSoon();
     });
     // Catch up after typing — but only if something changed meanwhile, and only
     // once the click that moved the cursor away has landed.

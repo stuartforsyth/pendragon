@@ -46,11 +46,26 @@ fi
 
 echo "GM console:   $URL/"
 echo "Table screen: $URL/table   (open it from the console and share that window on Discord)"
-# Open the console only on a fresh start: after a restart the open tabs reload
-# themselves when the server comes back (set PENDRAGON_NO_BROWSER=1 to never open one).
-if [ -n "$RESTART" ] || [ -n "$PENDRAGON_NO_BROWSER" ]; then
-  echo "(Open tabs reload themselves; no new window opened.)"
-elif command -v xdg-open >/dev/null 2>&1; then
+# Launch means a browser session too — unless one is already open: after a restart the
+# open tabs reload themselves and reconnect within a couple of seconds, so wait for them
+# (set PENDRAGON_NO_BROWSER=1 to never open one).
+if [ -n "$PENDRAGON_NO_BROWSER" ]; then
+  echo "(PENDRAGON_NO_BROWSER is set; no window opened.)"
+  exit 0
+fi
+if [ -n "$RESTART" ]; then
+  echo -n "Looking for open tabs"
+  for _ in $(seq 1 14); do
+    if curl -s "$URL/healthz" | grep -Eq '"viewers": ?[1-9]'; then
+      echo " — found; they reload themselves, no new window opened."
+      exit 0
+    fi
+    echo -n "."
+    sleep 0.5
+  done
+  echo " none."
+fi
+if command -v xdg-open >/dev/null 2>&1; then
   xdg-open "$URL/" >/dev/null 2>&1 &
 elif command -v open >/dev/null 2>&1; then
   open "$URL/"

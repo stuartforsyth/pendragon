@@ -107,4 +107,14 @@ table.gt select { padding: 2px 4px; height: 28px; }
 .ct-more { position: absolute; bottom: 6px; left: 0; right: 0; text-align: center; font-size: 11px; color: #8e2219; z-index: 2; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .ct-inner { transition: none; } }
 .ct-flip { font-size: 18px; line-height: 1; }
-.ct .cf-band, .ct .cf-bar { padding-left: 30px; padding-right: 30px; }
+.ct .cf-band, .ct .cf-bar { padding-left: 38px; padding-right: 38px; }
+
+/* put a card over the Table (the spotlight) */
+.ct-show { position: absolute; top: 7px; left: 7px; z-index: 3; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid #fbf4e2; background: rgba(35, 26, 20, .82); color: #fbf4e2;
+  display: grid; place-items: center; cursor: pointer; padding: 0; }
+.ct-show:hover { background: var(--or-deep); }
+.ct .cf-band, .ct .cf-bar { padding-left: 42px; padding-right: 42px; }
+.gc-show { all: unset; cursor: pointer; position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: var(--ink-dim); }
+.gc-show:hover { background: var(--panel-3); color: var(--or-bright); }
+.gc-show .i { width: 15px; height: 15px; }
+.ct-show .i, .ct-show svg, .gc-show svg { width: 17px; height: 17px; display: block; }

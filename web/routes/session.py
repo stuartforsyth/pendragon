@@ -181,6 +181,21 @@ async def clear_table(request: Request):
     return {"event": ev}
 
 
+TABLE_SCALES = (0.9, 1.0, 1.15, 1.3)
+
+
+@router.post("/api/table/scale")
+async def table_scale(request: Request, body: dict):
+    """The Table's text size: a nudge on top of the window-fit scale, for when a stream makes it hard to read."""
+    scale = body.get("scale")
+    if scale not in TABLE_SCALES:
+        bad(f"scale must be one of {', '.join(str(x) for x in TABLE_SCALES)}")
+    state = st(request)
+    state.table_scale = float(scale)
+    state.notify("table")
+    return {"scale": state.table_scale}
+
+
 @router.post("/api/table/mode")
 async def table_mode(request: Request, body: dict):
     mode = body.get("mode")

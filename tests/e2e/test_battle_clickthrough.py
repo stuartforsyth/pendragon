@@ -382,3 +382,24 @@ def test_encounter_cards_flip_to_their_stat_block(page, app_url):
     expect(tile).not_to_have_class(re.compile(r"flipped"))
     tile.click()
     expect(page.locator(".step.done", has_text="Set Encounter")).to_contain_text("Pictish Knifemen")
+
+
+def test_duplicate_and_delete_a_paused_battle(page, app_url):
+    r = page.request
+    r.post(app_url + "/api/session/start", data={"title": "Night one"})
+    r.post(app_url + "/api/battle/start", data={"quick": {"size": "clash", "days": 1, "name": "Ford"}})
+    r.post(app_url + "/api/battle/day", data={"intensity": 12})
+    r.post(app_url + "/api/battle/muster", data={"start": 21, "commander": "k1", "knights": ["k1", "k2", "k3"]})
+    r.post(app_url + "/api/session/end")
+    r.post(app_url + "/api/session/start", data={"title": "Night two"})
+    page.goto(app_url + "/#/battle")
+    rows = page.locator(".bl-row")
+    expect(rows).to_have_count(1)
+    rows.first.get_by_role("button", name="Duplicate").click()                       # a copy to test on
+    expect(rows).to_have_count(2)
+    copy = page.locator(".bl-row", has_text="Copy of Night one")
+    expect(copy).to_have_count(1)
+    copy.get_by_role("button", name="Delete").click()                                # …and bin it again
+    confirm(page, "Delete it")
+    expect(rows).to_have_count(1)
+    expect(page.locator(".bl-row", has_text="Night one")).to_have_count(1)           # the original is still there
