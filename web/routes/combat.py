@@ -113,7 +113,7 @@ def _descriptions(combatants):
 
 
 def _active_party(state):
-    return [m for m in state.party.items if m.get("active", True)]
+    return state.present_party()
 
 
 def _glory_tally(state, cs, final):

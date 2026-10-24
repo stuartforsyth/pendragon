@@ -20,19 +20,23 @@ export default {
 
     async function load() {
       party = (await api("/api/party")).party;
-      const n = party.filter((m) => m.active !== false).length;
-      summary.textContent = `${n} active knight${n === 1 ? "" : "s"} — encounters scale for ${n || 4} players.`;
+      const n = party.filter((m) => m.active !== false && !m.away).length;
+      const away = party.filter((m) => m.active !== false && m.away).length;
+      summary.textContent = `${n} active knight${n === 1 ? "" : "s"}${away ? ` (${away} away tonight)` : ""} — encounters scale for ${n || 4} players.`;
       clear(list, party.length ? party.map(card) : h("div", { class: "empty" }, icon("party"), "No knights yet — add your players' knights."));
     }
 
     function card(m) {
       const active = m.active !== false;
-      return h("div", { class: `panel party-row ${active ? "" : "inactive"}` },
+      return h("div", { class: `panel party-row ${active ? "" : "inactive"} ${m.away ? "away" : ""}` },
         h("div", { class: "party-shield" }, icon("shield")),
         h("div", { class: "party-main" },
           h("div", { class: "party-name" }, m.name),
           h("div", { class: "faint small" }, m.player ? `played by ${m.player}` : ""),
           m.notes ? h("div", { class: "muted small party-notes" }, m.notes) : null),
+        m.away ? h("span", { class: "badge party-away" }, "away this session") : null,
+        active ? h("button", { class: "btn sm", title: "Away for this session only; a new session starts with everyone back",
+          onclick: async () => { await post(`/api/party/${m.id}/away`, { away: !m.away }); load(); } }, m.away ? "Back" : "Away tonight") : null,
         h("label", { class: "check" }, h("input", { type: "checkbox", checked: active,
           onchange: async (e) => { await patch(`/api/party/${m.id}`, { active: e.target.checked }); load(); } }), "Active"),
         h("button", { class: "btn sm", onclick: () => edit(m) }, "Edit"),

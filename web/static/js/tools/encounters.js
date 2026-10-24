@@ -97,7 +97,7 @@ export default {
 
     async function defaultPlayers() {
       try {
-        const p = (await api("/api/party")).party.filter((m) => m.active !== false);
+        const p = (await api("/api/party")).party.filter((m) => m.active !== false && !m.away);
         players = p.length || 4;
       } catch { players = 4; }
     }

@@ -6,3 +6,6 @@
 .party-main { flex: 1; min-width: 0; }
 .party-name { font-family: var(--f-display); font-size: 19px; letter-spacing: .03em; color: #a9c9ee; }
 .party-notes { margin-top: 4px; white-space: pre-wrap; }
+.party-row.away { opacity: .55; }
+.party-row.away .party-name { text-decoration: none; filter: grayscale(1); }
+.party-away { font-size: 12px; color: var(--ink-soft, #aaa); }

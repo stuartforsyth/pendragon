@@ -409,6 +409,7 @@ function fight(p) {
   // tally is a ⚔ count on the knight's card; the ledger itself is in the finale.)
   const uncredited = defeated.filter((f) => !f.credit);
   const foot = [
+    p.away?.length ? h("div", { class: "fv-foot fv-away" }, h("span", { class: "lbl" }, "Away tonight"), h("span", {}, p.away.join(", "))) : null,
     uncredited.length || waiting.length ? h("div", { class: "fv-foot" },
       uncredited.length ? [h("span", { class: "lbl" }, cards.length ? "Also defeated" : "Defeated"), uncredited.map((f) => h("span", { class: "dft" },
         h("s", {}, f.name), ` ${FATE_WORD[f.status]}`, f.captured_by_name ? h("span", { class: "dcr" }, ` · captive of ${f.captured_by_name}`) : null))] : null,
@@ -569,10 +570,15 @@ function ruleOverlay(rule) {
 }
 
 // ---------------------------------------------------------------- live
+let lastTable = null;
 async function refresh() {
   try {
     const r = await fetch("/api/table");
-    if (r.ok) render(await r.json());
+    if (!r.ok) return;
+    const txt = await r.text();
+    if (txt === lastTable) return;                       // unchanged: don't redraw
+    lastTable = txt;
+    render(JSON.parse(txt));
   } catch { /* the stream reconnects and refreshes */ }
 }
 
@@ -595,6 +601,11 @@ function connect() {
     message: () => go(),
   });
 }
+
+// Safety net: the shared stream relays through whichever browser tab holds it,
+// and a backgrounded or frozen holder tab silently starves this one. Poll
+// gently; refresh() skips the redraw when nothing changed.
+setInterval(() => { if (!document.hidden) refresh(); }, 3000);
 
 $("view").style.cssText = "min-height:0;display:grid";
 refresh();

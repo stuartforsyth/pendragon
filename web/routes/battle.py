@@ -120,7 +120,7 @@ async def start(request: Request, body: dict):
                                          q.get("where", ""), q.get("against", ""), q.get("notes", ""))
         except ValueError as exc:
             bad(str(exc))
-    knights = [m["id"] for m in state.party.items if m.get("active", True)]
+    knights = [m["id"] for m in state.present_party()]
     size = B.SIZES[definition["size"]]["label"]
     days = len(definition["days"])
     name = definition["name"] or "The battle"

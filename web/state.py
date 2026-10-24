@@ -108,6 +108,19 @@ class AppState:
         self.notify("event", seq=ev["id"], type=etype)
         return ev
 
+    def away_ids(self):
+        """Knights marked away for this session, folded from its live ``party.away`` events."""
+        away = set()
+        for ev in live_events(self.session.events):
+            if ev["type"] == "party.away":
+                (away.add if ev["data"].get("away") else away.discard)(ev["data"].get("pid"))
+        return away
+
+    def present_party(self):
+        """Active knights who are not away tonight — who joins combats and sets encounter scaling."""
+        away = self.away_ids()
+        return [m for m in self.party.items if m.get("active", True) and m["id"] not in away]
+
     def notify(self, reason, **extra):
         self.hub.publish({"reason": reason, "session": self.session.id, **extra})
 
@@ -135,6 +148,8 @@ class AppState:
         cs = combat_state.serialise(self.combat_state(), "table")
         b = battle_state.table_view(self.battle_state(), self.party.items, self.combat_data.get("encounters", {}),
                                     self.card_faces)
+        away = self.away_ids()
         return table.build(self.session, cs, self.table_mode, battle=b, scale=self.table_scale,
+                           away=[m["name"] for m in self.party.items if m["id"] in away and m.get("active", True)],
                            card_for=lambda name: battle_state.table_card(self.battle_state(), name, self.combat_data.get("encounters", {}),
                                                                          self.card_faces))

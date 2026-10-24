@@ -502,3 +502,4 @@ body {
 .bv-day { font-size: 2.75rem; }
 .bv-status { font-size: 1.625rem; }
 .spot-overlay .pcard .pc-face .cf-fl { font-size: 0.45em; }
+.fv-away { opacity: .5; filter: grayscale(1); }

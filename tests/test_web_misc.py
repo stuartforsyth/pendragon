@@ -35,6 +35,20 @@ def test_party_is_a_plain_roster(client):
     assert client.post("/api/party", json={"player": "nobody"}).status_code == 400
 
 
+def test_party_away_is_per_session(client):
+    a = ok(client.post("/api/party", json={"name": "Sir Kay"}))["member"]
+    b = ok(client.post("/api/party", json={"name": "Sir Bors"}))["member"]
+    ok(client.post(f"/api/party/{a['id']}/away", json={"away": True}))
+    party = {m["name"]: m for m in ok(client.get("/api/party"))["party"]}
+    assert party["Sir Kay"]["away"] and not party["Sir Bors"]["away"]
+    assert "Sir Kay" in ok(client.get("/api/table"))["away"]
+    ev = ok(client.post("/api/combat/start", json={"encounter": "Pictish Knifemen"}))["event"]
+    assert ev["data"]["players"] == 1 and "Sir Kay" not in ev["text"]
+    ok(client.post(f"/api/party/{a['id']}/away", json={"away": False}))
+    assert not any(m["away"] for m in ok(client.get("/api/party"))["party"])
+    assert client.post("/api/party/nope/away", json={}).status_code == 404
+
+
 def test_rules_browse_and_missing(client):
     allr = ok(client.get("/api/rules", params={"limit": 500}))["results"]
     assert len(allr) > 50 and all("chapter" in r for r in allr)

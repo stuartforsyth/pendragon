@@ -27,7 +27,22 @@ def _clean(body, partial=False):
 
 @router.get("/api/party")
 def list_party(request: Request):
-    return {"party": st(request).party.items}
+    state = st(request)
+    away = state.away_ids()
+    return {"party": [{**m, "away": m["id"] in away} for m in state.party.items]}
+
+
+@router.post("/api/party/{member_id}/away")
+async def set_away(request: Request, member_id: str, body: dict):
+    """Away for this session only: an event, so a new session starts with everyone back."""
+    state = st(request)
+    m = state.party.get(member_id)
+    if not m:
+        bad("No such knight", 404)
+    away = bool(body.get("away", True))
+    line = f"{m['name']} is away tonight" if away else f"{m['name']} is back"
+    state.record("party.away", line, visibility="gm", data={"pid": member_id, "away": away})
+    return {"member": {**m, "away": away}}
 
 
 @router.post("/api/party")

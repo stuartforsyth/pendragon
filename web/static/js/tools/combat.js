@@ -46,7 +46,7 @@ export default {
 
     // ------------------------------------------------------------ launcher
     function launcher() {
-      const activeParty = party.filter((m) => m.active !== false);
+      const activeParty = party.filter((m) => m.active !== false && !m.away);
       const n = players ?? (activeParty.length || 4);
       const list = h("div", { class: "list list-scroll" });
       const drawList = () => {
@@ -107,7 +107,7 @@ export default {
     }
 
     async function randomFight() {
-      const activeParty = party.filter((m) => m.active !== false);
+      const activeParty = party.filter((m) => m.active !== false && !m.away);
       const r = await post("/api/combat/random", { tags: [...randomTags], players: players ?? (activeParty.length || 4),
         include_party: includeParty, knights_mounted: knightsMounted });
       if (r?.event) toast(`Drew ${r.event.title}`, "ok");
@@ -135,7 +135,7 @@ export default {
 
     async function launch(key = selected) {
       if (!key) return toast("Search, then pick an encounter to launch", "err");
-      const activeParty = party.filter((m) => m.active !== false);
+      const activeParty = party.filter((m) => m.active !== false && !m.away);
       await post("/api/combat/start", { encounter: key, players: players ?? (activeParty.length || 4), include_party: includeParty, knights_mounted: knightsMounted });
     }
 

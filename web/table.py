@@ -328,7 +328,7 @@ def _spotlight_payload(sp, card_for):
     return {"id": sp["id"], "kind": sp["kind"], "card": card} if card else None
 
 
-def build(session, combat, pinned_mode="auto", battle=None, scale=1.0, card_for=None):
+def build(session, combat, pinned_mode="auto", battle=None, scale=1.0, card_for=None, away=()):
     fl = flags(session.events)
     feed = []
     for ev in reversed(session.events):
@@ -347,7 +347,7 @@ def build(session, combat, pinned_mode="auto", battle=None, scale=1.0, card_for=
         auto = "chronicle"
     mode = auto if pinned_mode == "auto" else pinned_mode
     return {"session": {"title": session.title, "scratch": session.scratch},
-            "mode": mode, "pinned": pinned_mode, "scale": scale, "feed": feed, "combat": combat, "battle": battle,
+            "mode": mode, "pinned": pinned_mode, "scale": scale, "away": list(away), "feed": feed, "combat": combat, "battle": battle,
             "rule": shown_rule(session.events, fl),
             "spotlight": _spotlight_payload(shown_spotlight(session.events, fl), card_for),
             "knights": knight_cards(session.events, fl, combat, battle),
